@@ -59,7 +59,8 @@ class WarehouseReconciliationListPage extends ConsumerWidget {
             SkeletonLoader(width: double.infinity, height: 120),
           ],
         ),
-        error: (e, _) => Center(child: Text('Failed to load reconciliations: $e')),
+        error: (e, _) =>
+            Center(child: Text('Failed to load reconciliations: $e')),
         data: (data) {
           if (data.isEmpty) {
             return const Center(child: Text('No active reconciliations found'));
@@ -148,12 +149,13 @@ class WarehouseReconciliationListPage extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  Text('Vendor: ${item.vendorName.isEmpty ? 'N/A' : item.vendorName}'),
+                  Text(
+                      'Vendor: ${item.vendorName.isEmpty ? 'N/A' : item.vendorName}'),
                   const SizedBox(height: 6),
                   Text('PO: ${item.poNumber.isEmpty ? 'N/A' : item.poNumber}'),
                   const SizedBox(height: 6),
                   Text(
-                    'Date: ${item.date != null ? DateFormat('MMM dd, yyyy').format(item.date!) : 'N/A'}',
+                    'Date: ${item.date != null ? DateFormat('MMM dd, yyyy • hh:mm a').format(item.date!) : 'N/A'}',
                   ),
                 ],
               ),
@@ -197,13 +199,15 @@ class WarehouseReconciliationListPage extends ConsumerWidget {
             return DataRow(
               onSelectChanged: (_) => _openDetail(context, item),
               cells: [
-                DataCell(Text(item.gateEntryNo.isEmpty ? item.id : item.gateEntryNo)),
-                DataCell(Text(item.vendorName.isEmpty ? 'N/A' : item.vendorName)),
+                DataCell(Text(
+                    item.gateEntryNo.isEmpty ? item.id : item.gateEntryNo)),
+                DataCell(
+                    Text(item.vendorName.isEmpty ? 'N/A' : item.vendorName)),
                 DataCell(Text(item.poNumber.isEmpty ? 'N/A' : item.poNumber)),
                 DataCell(_statusChip(item)),
                 DataCell(Text(
                   item.date != null
-                      ? DateFormat('MMM dd, yyyy').format(item.date!)
+                      ? DateFormat('MMM dd, yyyy • hh:mm a').format(item.date!)
                       : 'N/A',
                 )),
               ],

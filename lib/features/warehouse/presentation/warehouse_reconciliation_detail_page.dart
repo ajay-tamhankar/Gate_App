@@ -25,8 +25,10 @@ class WarehouseReconciliationDetailPage extends ConsumerWidget {
     final isManager =
         role == UserRole.warehouseManager || role == UserRole.whMgr;
     final managerId = session is Authenticated ? session.userId : '';
-    final detail = ref.watch(warehouseGateEntryDetailProvider(record.gateEntryId));
-    final actionState = ref.watch(warehouseReconciliationActionControllerProvider);
+    final detail =
+        ref.watch(warehouseGateEntryDetailProvider(record.gateEntryId));
+    final actionState =
+        ref.watch(warehouseReconciliationActionControllerProvider);
     final isMob = isMobile(context);
 
     return Scaffold(
@@ -54,9 +56,11 @@ class WarehouseReconciliationDetailPage extends ConsumerWidget {
             padding: const EdgeInsets.all(24),
             children: [
               SectionHeader(
-                title: record.gateEntryNo.isEmpty ? entry.gateEntryNo : record.gateEntryNo,
+                title: record.gateEntryNo.isEmpty
+                    ? entry.gateEntryNo
+                    : record.gateEntryNo,
                 subtitle:
-                    'Status: ${record.status} | ${record.date != null ? DateFormat('MMM dd, yyyy').format(record.date!) : 'No date'}',
+                    'Status: ${record.status} | ${record.date != null ? DateFormat('MMM dd, yyyy • hh:mm a').format(record.date!) : 'No date'}',
                 trailing: _statusChip(record),
               ),
               _sectionCard(
@@ -80,9 +84,12 @@ class WarehouseReconciliationDetailPage extends ConsumerWidget {
                   spacing: 16,
                   runSpacing: 16,
                   children: [
-                    _infoBlock(context, 'Received Qty', '${record.receivedQty}', isMob),
-                    _infoBlock(context, 'Accepted Qty', '${record.acceptedQty}', isMob),
-                    _infoBlock(context, 'Rejected Qty', '${record.rejectedQty}', isMob),
+                    _infoBlock(context, 'Received Qty', '${record.receivedQty}',
+                        isMob),
+                    _infoBlock(context, 'Accepted Qty', '${record.acceptedQty}',
+                        isMob),
+                    _infoBlock(context, 'Rejected Qty', '${record.rejectedQty}',
+                        isMob),
                   ],
                 ),
               ),
@@ -94,8 +101,10 @@ class WarehouseReconciliationDetailPage extends ConsumerWidget {
                   spacing: 16,
                   runSpacing: 16,
                   children: [
-                    _infoBlock(context, 'Expected Qty', '${record.expectedQty}', isMob),
-                    _infoBlock(context, 'Received Qty', '${record.receivedQty}', isMob),
+                    _infoBlock(context, 'Expected Qty', '${record.expectedQty}',
+                        isMob),
+                    _infoBlock(context, 'Received Qty', '${record.receivedQty}',
+                        isMob),
                     _highlightBlock(
                       context,
                       'Difference',
@@ -175,7 +184,8 @@ class WarehouseReconciliationDetailPage extends ConsumerWidget {
     final approveLabel = record.isException ? 'Approve with Remark' : 'Approve';
     final closeLabel = record.isException ? 'Close After Review' : 'Close';
     final showApprove = record.isMatched || record.isException;
-    final showClose = record.isMatched || record.isException || record.isApproved;
+    final showClose =
+        record.isMatched || record.isException || record.isApproved;
 
     return Wrap(
       spacing: 12,
@@ -276,7 +286,8 @@ class WarehouseReconciliationDetailPage extends ConsumerWidget {
       ref.invalidate(warehouseReconciliationSummaryProvider);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(isApprove ? 'Reconciliation approved' : 'Reconciliation closed'),
+          content: Text(
+              isApprove ? 'Reconciliation approved' : 'Reconciliation closed'),
           backgroundColor: Colors.green,
         ),
       );

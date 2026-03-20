@@ -93,4 +93,6 @@ class RecoRepositoryImpl implements RecoRepository {
       throw Exception(message);
     }
   }
+
+  void clearForTest() {}
 }

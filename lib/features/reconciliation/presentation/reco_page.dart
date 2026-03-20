@@ -115,15 +115,12 @@ class RecoPage extends ConsumerWidget {
   }
 
   Future<void> _importSap(BuildContext context, WidgetRef ref) async {
-    final fileResult = await ref
-        .read(importSapGrnsUseCaseProvider)
-        .pickFile();
+    final fileResult = await ref.read(importSapGrnsUseCaseProvider).pickFile();
 
     if (fileResult == null) return;
 
-    final response = await ref
-        .read(importSapGrnsUseCaseProvider)
-        .execute(fileResult);
+    final response =
+        await ref.read(importSapGrnsUseCaseProvider).execute(fileResult);
 
     ref.read(importHistoryProvider.notifier).addItem(
           ImportHistoryItem(
@@ -183,8 +180,7 @@ class RecoPage extends ConsumerWidget {
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () =>
-                Navigator.of(context).pop(controller.text.trim()),
+            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
             child: const Text('Resolve'),
           ),
         ],
@@ -209,81 +205,83 @@ class RecoPage extends ConsumerWidget {
         final icon = _getStatusIcon(exc.status);
 
         return InkWell(
-          onTap: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) =>
-                    RecoExceptionDetailPage(exceptionId: exc.id),
-              ),
-            );
-          },
-          child: Card(
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: BorderSide(
-                color: Theme.of(context)
-                    .colorScheme
-                    .outlineVariant
-                    .withValues(alpha: 0.5)),
-          ),
-          margin: const EdgeInsets.only(bottom: 12),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('Gate Entry: ${exc.gateEntryId}',
-                        style: const TextStyle(fontWeight: FontWeight.bold)),
-                    StatusChip(label: exc.status, color: color, icon: icon),
-                  ],
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => RecoExceptionDetailPage(exceptionId: exc.id),
                 ),
-                const SizedBox(height: 12),
-                Text('PO No: ${exc.poNumber}',
-                    style: Theme.of(context).textTheme.bodySmall),
-                const SizedBox(height: 4),
-                Text(exc.description,
-                    style: Theme.of(context).textTheme.bodyMedium),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              );
+            },
+            child: Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .outlineVariant
+                        .withValues(alpha: 0.5)),
+              ),
+              margin: const EdgeInsets.only(bottom: 12),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(DateFormat('MMM dd, HH:mm').format(exc.createdAt),
-                        style: TextStyle(
-                            color: Colors.grey.shade600, fontSize: 12)),
-                    OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: color,
-                        side: BorderSide(color: color),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
-                      ),
-                      onPressed: () async {
-                        if (!canResolve) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                  content:
-                                      Text('Access Denied. Mgr required.')));
-                          return;
-                        }
-                        final notes =
-                            await _showResolveDialog(context, exc);
-                        if (notes == null) return;
-                        await ref
-                            .read(recoListControllerProvider.notifier)
-                            .resolveException(exc.id, notes);
-                      },
-                      child: const Text('Resolve'),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Gate Entry: ${exc.gateEntryId}',
+                            style:
+                                const TextStyle(fontWeight: FontWeight.bold)),
+                        StatusChip(label: exc.status, color: color, icon: icon),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text('PO No: ${exc.poNumber}',
+                        style: Theme.of(context).textTheme.bodySmall),
+                    const SizedBox(height: 4),
+                    Text(exc.description,
+                        style: Theme.of(context).textTheme.bodyMedium),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                            DateFormat('MMM dd, yyyy • hh:mm a')
+                                .format(exc.createdAt),
+                            style: TextStyle(
+                                color: Colors.grey.shade600, fontSize: 12)),
+                        OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: color,
+                            side: BorderSide(color: color),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 8),
+                          ),
+                          onPressed: () async {
+                            if (!canResolve) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                      content: Text(
+                                          'Access Denied. Mgr required.')));
+                              return;
+                            }
+                            final notes =
+                                await _showResolveDialog(context, exc);
+                            if (notes == null) return;
+                            await ref
+                                .read(recoListControllerProvider.notifier)
+                                .resolveException(exc.id, notes);
+                          },
+                          child: const Text('Resolve'),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
-          ),
-        ));
+              ),
+            ));
       },
     );
   }
@@ -342,8 +340,8 @@ class RecoPage extends ConsumerWidget {
                 DataCell(Text(exc.poNumber)),
                 DataCell(Text(exc.description,
                     maxLines: 2, overflow: TextOverflow.ellipsis)),
-                DataCell(
-                    Text(DateFormat('MMM dd, y HH:mm').format(exc.createdAt))),
+                DataCell(Text(DateFormat('MMM dd, yyyy • hh:mm a')
+                    .format(exc.createdAt))),
                 DataCell(FilledButton.tonal(
                   style: FilledButton.styleFrom(
                     foregroundColor: Theme.of(context).colorScheme.primary,
@@ -398,7 +396,7 @@ class RecoPage extends ConsumerWidget {
             const SizedBox(height: 8),
             ...history.take(5).map((item) {
               final time =
-                  DateFormat('MMM dd, HH:mm').format(item.timestamp);
+                  DateFormat('MMM dd, yyyy • hh:mm a').format(item.timestamp);
               return ListTile(
                 dense: true,
                 contentPadding: EdgeInsets.zero,

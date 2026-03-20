@@ -71,11 +71,11 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
 
       try {
         await ref.read(gateEntryFormControllerProvider.notifier).submit(
-          params,
-          attachmentFileName: _attachmentFile?.name,
-          attachmentPath: kIsWeb ? null : _attachmentFile?.path,
-          bytes: _attachmentFile?.bytes,
-        );
+              params,
+              attachmentFileName: _attachmentFile?.name,
+              attachmentPath: kIsWeb ? null : _attachmentFile?.path,
+              bytes: _attachmentFile?.bytes,
+            );
 
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -214,7 +214,7 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
                           TextFormField(
                             controller: _challanCtrl,
                             decoration: const InputDecoration(
-                                labelText: 'Challan Number',
+                                labelText: 'Invoice/Challan Number',
                                 prefixIcon: Icon(Icons.receipt_long)),
                             validator: (value) => value == null || value.isEmpty
                                 ? 'Challan is required for tracking'
@@ -319,44 +319,61 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
                       ),
                       _buildSectionHeader('4. Attachments', Icons.attachment),
                       Container(
-                          padding: const EdgeInsets.all(24),
-                          decoration: BoxDecoration(
-                            border: Border.all(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .outlineVariant,
-                                style: BorderStyle.solid),
-                            borderRadius: BorderRadius.circular(12),
-                            color: Theme.of(context)
-                                .colorScheme
-                                .surfaceContainerHighest
-                                .withValues(alpha: 0.3),
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: Theme.of(context).colorScheme.outlineVariant,
                           ),
-                          child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                OutlinedButton.icon(
-                                  onPressed: _pickAttachment,
-                                  icon: const Icon(Icons.cloud_upload),
-                                  label: const Text('Browse Files'),
-                                ),
-                                const SizedBox(width: 24),
-                                Expanded(
-                                  child: Text(
-                                    _attachmentFile?.name ??
-                                        'No file selected. Drag and drop tracking slip.',
-                                    style: TextStyle(
-                                      color: _attachmentFile != null
-                                          ? Colors.green
-                                          : Colors.grey.shade600,
-                                      fontWeight: _attachmentFile != null
-                                          ? FontWeight.bold
-                                          : FontWeight.normal,
+                          borderRadius: BorderRadius.circular(12),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest
+                              .withValues(alpha: 0.3),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            OutlinedButton.icon(
+                              onPressed: _pickAttachment,
+                              icon: const Icon(Icons.cloud_upload),
+                              label: const Text('Browse Files'),
+                            ),
+                            const SizedBox(height: 12),
+                            if (_attachmentFile != null)
+                              Row(
+                                children: [
+                                  const Icon(Icons.insert_drive_file,
+                                      color: Colors.green),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      _attachmentFile!.name,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.green,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                ),
-                              ])),
+                                  IconButton(
+                                    icon: const Icon(Icons.close,
+                                        color: Colors.red),
+                                    onPressed: () {
+                                      setState(() {
+                                        _attachmentFile = null;
+                                      });
+                                    },
+                                  )
+                                ],
+                              )
+                            else
+                              Text(
+                                'No file selected',
+                                style: TextStyle(color: Colors.grey.shade600),
+                              ),
+                          ],
+                        ),
+                      ),
                       const SizedBox(height: 48),
                       SizedBox(
                         width: double.infinity,

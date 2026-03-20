@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
+import 'package:flutter_svg/flutter_svg.dart';
 import '../../../core/auth/session_controller.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
@@ -81,26 +81,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   children: [
                     ClipRRect(
                       borderRadius: BorderRadius.circular(20),
-                      child: Image.asset(
-                        'images/app_logo.png',
-                        height: 150,
+                      child: SvgPicture.asset(
+                        'assets/images/gate-reco-logo-icon.svg',
+                        height: 100,
                         fit: BoxFit.contain,
-                         errorBuilder: (_, __, ___) => Container(
-                         height: 120,
-                         width: 120,
-                          decoration: BoxDecoration(
-                            color: colorScheme.primary.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Icon(
-                            Icons.warehouse,
-                            size: 56,
-                            color: colorScheme.primary,
-                          ),
-                        ),
                       ),
                     ),
-                  //  const SizedBox(height: 12),
+                    //  const SizedBox(height: 12),
                     Text(
                       'GateReco',
                       style:

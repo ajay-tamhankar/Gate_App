@@ -66,7 +66,7 @@ final reportsPreviewProvider =
     final repo = ref.read(reportsRepositoryProvider);
     final filter = ReportFilter(
       startDate: query.startDate,
-      endDate: query.endDate,
+      endDate: query.endDate?.add(const Duration(days: 1)),
       vendorFilter: query.vendor,
       poFilter: query.po,
     );
@@ -239,7 +239,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
   @override
   Widget build(BuildContext context) {
     final isMob = isMobile(context);
-    final df = DateFormat('MMM dd, yyyy');
+    final df = DateFormat('MMM dd, yyyy • hh:mm a');
     final dfShort = DateFormat('MMM dd');
     final dateText = _startDate != null && _endDate != null
         ? (isMob
@@ -626,7 +626,8 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
               .map(
                 (e) => DataRow(cells: [
                   DataCell(Text(e.gateEntryNo)),
-                  DataCell(Text(DateFormat('MMM dd, yyyy').format(e.date))),
+                  DataCell(Text(
+                      DateFormat('MMM dd, yyyy • hh:mm a').format(e.date))),
                   DataCell(Text(e.vendor)),
                   DataCell(Text(e.vehicleNo)),
                   DataCell(Text(e.poNumber)),
@@ -728,8 +729,8 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                     label: e.status,
                     color: _statusColor(e.status),
                   )),
-                  DataCell(
-                      Text(DateFormat('MMM dd, yyyy').format(e.createdAt))),
+                  DataCell(Text(DateFormat('MMM dd, yyyy • hh:mm a')
+                      .format(e.createdAt))),
                 ]),
               )
               .toList(),

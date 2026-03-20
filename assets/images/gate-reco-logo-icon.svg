@@ -1,0 +1,43 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Outer circular sync arrows -->
+  <path d="M100 20 C144.183 20 180 55.817 180 100 L165 100 C165 64.101 135.899 35 100 35 L100 20 Z" fill="url(#gradient1)"/>
+  <path d="M100 180 C55.817 180 20 144.183 20 100 L35 100 C35 135.899 64.101 165 100 165 L100 180 Z" fill="url(#gradient2)"/>
+  
+  <!-- Arrow heads for sync -->
+  <path d="M180 100 L172 93 L172 107 Z" fill="url(#gradient1)"/>
+  <path d="M20 100 L28 93 L28 107 Z" fill="url(#gradient2)"/>
+  
+  <!-- Warehouse structure - left side -->
+  <path d="M60 80 L80 65 L80 115 L60 115 Z" fill="#1e293b" opacity="0.9"/>
+  <path d="M80 65 L100 50 L100 100 L80 100 Z" fill="#334155" opacity="0.9"/>
+  
+  <!-- Gate/Truck element -->
+  <rect x="65" y="100" width="30" height="15" fill="#0ea5e9" opacity="0.8"/>
+  
+  <!-- Digital grid structure - right side -->
+  <g opacity="0.9">
+    <rect x="110" y="70" width="25" height="8" fill="#059669" rx="1"/>
+    <rect x="110" y="82" width="25" height="8" fill="#059669" rx="1"/>
+    <rect x="110" y="94" width="25" height="8" fill="#059669" rx="1"/>
+    <rect x="110" y="106" width="25" height="8" fill="#10b981" rx="1"/>
+  </g>
+  
+  <!-- Transformation arrow in center -->
+  <path d="M95 85 L105 85 L105 80 L115 90 L105 100 L105 95 L95 95 Z" fill="#0ea5e9" opacity="0.7"/>
+  
+  <!-- Verification checkmark - integrated -->
+  <circle cx="140" cy="65" r="18" fill="#059669" stroke="#fff" stroke-width="3"/>
+  <path d="M132 65 L137 70 L148 59" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  
+  <!-- Gradients -->
+  <defs>
+    <linearGradient id="gradient1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0ea5e9"/>
+      <stop offset="100%" stop-color="#0284c7"/>
+    </linearGradient>
+    <linearGradient id="gradient2" x1="100%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#4f46e5"/>
+    </linearGradient>
+  </defs>
+</svg>

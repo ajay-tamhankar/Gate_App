@@ -8,7 +8,6 @@ import '../../../core/auth/session_state.dart';
 import '../../../core/auth/user_role.dart';
 import '../../../core/ui/responsive.dart';
 import '../../../core/ui/widgets/filter_bar.dart';
-import '../../../core/ui/widgets/section_header.dart';
 import '../../../core/ui/widgets/skeleton_loader.dart';
 import '../../../core/ui/widgets/status_chip.dart';
 import '../../../core/ui/widgets/logout_action.dart';
@@ -368,8 +367,9 @@ class _GateEntryPageState extends ConsumerState<GateEntryPage> {
                                       fontSize: 12)),
                               Text(
                                   entry.gateTimestamp != null
-                                      ? DateFormat('MMM dd, HH:mm')
-                                          .format(entry.gateTimestamp!)
+                                      ? DateFormat('MMM dd, yyyy • hh:mm a')
+                                          .format(
+                                              entry.gateTimestamp!.toLocal())
                                       : 'N/A',
                                   style: const TextStyle(
                                       fontWeight: FontWeight.w500)),
@@ -452,9 +452,14 @@ class _GateEntryPageState extends ConsumerState<GateEntryPage> {
                     style: const TextStyle(fontWeight: FontWeight.w600))),
                 DataCell(Text(entry.vendorName)),
                 DataCell(Text(entry.transporterName)),
-                DataCell(Text(entry.gateTimestamp != null
-                    ? DateFormat('MMM dd, HH:mm').format(entry.gateTimestamp!)
-                    : '-')),
+                DataCell(
+                  Text(
+                    entry.gateTimestamp != null
+                        ? DateFormat('MMM dd, yyyy • hh:mm a')
+                            .format(entry.gateTimestamp!.toLocal())
+                        : '-',
+                  ),
+                ),
                 DataCell(
                   StatusChip(
                     label: entry.status,

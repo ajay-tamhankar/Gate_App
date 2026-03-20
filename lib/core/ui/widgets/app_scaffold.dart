@@ -95,7 +95,7 @@ class _DesktopSidebar extends StatelessWidget {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(16),
                   child: Image.asset(
-                    'assets/images/app_logo.png',
+                    'assets/images/ap',
                     width: 52,
                     height: 52,
                     fit: BoxFit.cover,

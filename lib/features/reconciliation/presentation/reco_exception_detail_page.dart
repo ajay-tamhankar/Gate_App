@@ -44,17 +44,16 @@ class RecoExceptionDetailPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildContent(
-      BuildContext context, WidgetRef ref, RecoException exc) {
+  Widget _buildContent(BuildContext context, WidgetRef ref, RecoException exc) {
     final session = ref.watch(sessionControllerProvider);
     final role = session is Authenticated ? session.role : null;
     final canResolve =
         role == UserRole.warehouseManager || role == UserRole.admin;
 
-    final createdAt = DateFormat('MMM dd, yyyy • HH:mm').format(exc.createdAt);
-    final resolvedAt = exc.resolvedAt != null
-        ? exc.resolvedAt!
-        : 'Not resolved';
+    final createdAt =
+        DateFormat('MMM dd, yyyy • hh:mm a').format(exc.createdAt.toLocal());
+    final resolvedAt =
+        exc.resolvedAt != null ? exc.resolvedAt! : 'Not resolved';
 
     return ListView(
       padding: const EdgeInsets.all(24),
@@ -159,8 +158,7 @@ class RecoExceptionDetailPage extends ConsumerWidget {
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () =>
-                Navigator.of(context).pop(controller.text.trim()),
+            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
             child: const Text('Resolve'),
           ),
         ],

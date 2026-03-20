@@ -366,7 +366,7 @@ class _ReconciliationSecurityViewState
 
   String _formatDate(DateTime? date) {
     if (date == null) return 'N/A';
-    return DateFormat('MMM dd, yyyy').format(date);
+    return DateFormat('MMM dd, yyyy • hh:mm a').format(date);
   }
 
   Widget _buildEmptyState(BuildContext context) {

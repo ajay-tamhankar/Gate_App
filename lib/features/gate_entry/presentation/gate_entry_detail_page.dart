@@ -25,9 +25,6 @@ class GateEntryDetailPage extends ConsumerStatefulWidget {
 }
 
 class _GateEntryDetailPageState extends ConsumerState<GateEntryDetailPage> {
-
-
-
   Future<void> _openAttachment(String attachmentId) async {
     final controller =
         ref.read(gateEntryDetailControllerProvider(widget.entryId).notifier);
@@ -94,7 +91,8 @@ class _GateEntryDetailPageState extends ConsumerState<GateEntryDetailPage> {
     final isMob = isMobile(context);
     final isGateIn = entry.gateMovement == GateMovement.inMovement;
     final timestamp = entry.gateTimestamp != null
-        ? DateFormat('MMM dd, yyyy • HH:mm').format(entry.gateTimestamp!)
+        ? DateFormat('MMM dd, yyyy • hh:mm a')
+            .format(entry.gateTimestamp!.toLocal())
         : 'N/A';
     final session = ref.watch(sessionControllerProvider);
     final role = session is Authenticated ? session.role : null;
@@ -323,7 +321,6 @@ class _GateEntryDetailPageState extends ConsumerState<GateEntryDetailPage> {
     }
   }
 
-
   Widget _buildItemList(GateEntry entry) {
     return Column(
       children: entry.items.map((item) {
@@ -406,7 +403,3 @@ class _GateEntryDetailPageState extends ConsumerState<GateEntryDetailPage> {
     );
   }
 }
-
-
-
-

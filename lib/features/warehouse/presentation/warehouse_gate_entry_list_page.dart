@@ -54,7 +54,8 @@ class WarehouseGateEntryListPage extends ConsumerWidget {
         data: (data) {
           if (data.isEmpty) {
             return Center(
-              child: Text(isManager ? 'No gate entries found' : 'No pending GRNs'),
+              child:
+                  Text(isManager ? 'No gate entries found' : 'No pending GRNs'),
             );
           }
 
@@ -156,7 +157,7 @@ class WarehouseGateEntryListPage extends ConsumerWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Date: ${entry.entryTime != null ? DateFormat('MMM dd, yyyy').format(entry.entryTime!) : 'N/A'}',
+                    'Date: ${entry.entryTime != null ? DateFormat('MMM dd, yyyy • hh:mm a').format(entry.entryTime!) : 'N/A'}',
                   ),
                 ],
               ),
@@ -212,7 +213,8 @@ class WarehouseGateEntryListPage extends ConsumerWidget {
                 DataCell(Text(entry.vehicleNo)),
                 DataCell(Text(
                   entry.entryTime != null
-                      ? DateFormat('MMM dd, yyyy').format(entry.entryTime!)
+                      ? DateFormat('MMM dd, yyyy • hh:mm a')
+                          .format(entry.entryTime!)
                       : 'N/A',
                 )),
                 DataCell(
