@@ -1,0 +1,14 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../auth/session_controller.dart';
+class LogoutAction extends ConsumerWidget {
+  const LogoutAction({super.key});
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return IconButton(
+      tooltip: 'Logout',
+      onPressed: () => ref.read(sessionControllerProvider.notifier).logout(),
+      icon: const Icon(Icons.logout),
+    );
+  }
+}
