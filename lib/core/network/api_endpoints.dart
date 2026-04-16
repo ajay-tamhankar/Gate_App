@@ -14,13 +14,16 @@ class ApiEndpoints {
   static String gateEntryDetails(String id) => '/gate-entries/$id';
 
   // Reconciliation & Exceptions
-  static const String reconciliation = '/reconciliation';
-  static const String exceptions = '/reconciliation';
+  static const String reconciliation = '/reconciliations';
+  static const String exceptions = '/reconciliation/exceptions';
 
   // Reports
   static const String reportGateEntries = '/reports/gate-entries';
   static const String reportReconciliation = '/reports/reconciliation';
   static const String reportExceptions = '/reports/exceptions';
+
+  // SAP / GRN
+  static const String grnImport = '/sap/grns/import';
 
   // Users
   static const String users = '/users';

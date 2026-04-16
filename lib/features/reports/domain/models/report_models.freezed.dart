@@ -235,11 +235,17 @@ GateEntryReportItem _$GateEntryReportItemFromJson(Map<String, dynamic> json) {
 /// @nodoc
 mixin _$GateEntryReportItem {
   String get gateEntryNo => throw _privateConstructorUsedError;
+  String get direction => throw _privateConstructorUsedError;
+  String get challanNo => throw _privateConstructorUsedError;
+  String get lrNo => throw _privateConstructorUsedError;
   DateTime get date => throw _privateConstructorUsedError;
-  String get vendor => throw _privateConstructorUsedError;
-  String get poNumber => throw _privateConstructorUsedError;
-  String get vehicleNo => throw _privateConstructorUsedError;
+  DateTime? get gateOutDate => throw _privateConstructorUsedError;
   String get material => throw _privateConstructorUsedError;
+  int get qty => throw _privateConstructorUsedError;
+  String get vendor => throw _privateConstructorUsedError;
+  String get transporter => throw _privateConstructorUsedError;
+  String get vehicleNo => throw _privateConstructorUsedError;
+  String get poNumber => throw _privateConstructorUsedError;
   String get status => throw _privateConstructorUsedError;
 
   /// Serializes this GateEntryReportItem to a JSON map.
@@ -260,11 +266,17 @@ abstract class $GateEntryReportItemCopyWith<$Res> {
   @useResult
   $Res call(
       {String gateEntryNo,
+      String direction,
+      String challanNo,
+      String lrNo,
       DateTime date,
-      String vendor,
-      String poNumber,
-      String vehicleNo,
+      DateTime? gateOutDate,
       String material,
+      int qty,
+      String vendor,
+      String transporter,
+      String vehicleNo,
+      String poNumber,
       String status});
 }
 
@@ -284,11 +296,17 @@ class _$GateEntryReportItemCopyWithImpl<$Res, $Val extends GateEntryReportItem>
   @override
   $Res call({
     Object? gateEntryNo = null,
+    Object? direction = null,
+    Object? challanNo = null,
+    Object? lrNo = null,
     Object? date = null,
-    Object? vendor = null,
-    Object? poNumber = null,
-    Object? vehicleNo = null,
+    Object? gateOutDate = freezed,
     Object? material = null,
+    Object? qty = null,
+    Object? vendor = null,
+    Object? transporter = null,
+    Object? vehicleNo = null,
+    Object? poNumber = null,
     Object? status = null,
   }) {
     return _then(_value.copyWith(
@@ -296,25 +314,49 @@ class _$GateEntryReportItemCopyWithImpl<$Res, $Val extends GateEntryReportItem>
           ? _value.gateEntryNo
           : gateEntryNo // ignore: cast_nullable_to_non_nullable
               as String,
+      direction: null == direction
+          ? _value.direction
+          : direction // ignore: cast_nullable_to_non_nullable
+              as String,
+      challanNo: null == challanNo
+          ? _value.challanNo
+          : challanNo // ignore: cast_nullable_to_non_nullable
+              as String,
+      lrNo: null == lrNo
+          ? _value.lrNo
+          : lrNo // ignore: cast_nullable_to_non_nullable
+              as String,
       date: null == date
           ? _value.date
           : date // ignore: cast_nullable_to_non_nullable
               as DateTime,
+      gateOutDate: freezed == gateOutDate
+          ? _value.gateOutDate
+          : gateOutDate // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
+      material: null == material
+          ? _value.material
+          : material // ignore: cast_nullable_to_non_nullable
+              as String,
+      qty: null == qty
+          ? _value.qty
+          : qty // ignore: cast_nullable_to_non_nullable
+              as int,
       vendor: null == vendor
           ? _value.vendor
           : vendor // ignore: cast_nullable_to_non_nullable
               as String,
-      poNumber: null == poNumber
-          ? _value.poNumber
-          : poNumber // ignore: cast_nullable_to_non_nullable
+      transporter: null == transporter
+          ? _value.transporter
+          : transporter // ignore: cast_nullable_to_non_nullable
               as String,
       vehicleNo: null == vehicleNo
           ? _value.vehicleNo
           : vehicleNo // ignore: cast_nullable_to_non_nullable
               as String,
-      material: null == material
-          ? _value.material
-          : material // ignore: cast_nullable_to_non_nullable
+      poNumber: null == poNumber
+          ? _value.poNumber
+          : poNumber // ignore: cast_nullable_to_non_nullable
               as String,
       status: null == status
           ? _value.status
@@ -334,11 +376,17 @@ abstract class _$$GateEntryReportItemImplCopyWith<$Res>
   @useResult
   $Res call(
       {String gateEntryNo,
+      String direction,
+      String challanNo,
+      String lrNo,
       DateTime date,
-      String vendor,
-      String poNumber,
-      String vehicleNo,
+      DateTime? gateOutDate,
       String material,
+      int qty,
+      String vendor,
+      String transporter,
+      String vehicleNo,
+      String poNumber,
       String status});
 }
 
@@ -356,11 +404,17 @@ class __$$GateEntryReportItemImplCopyWithImpl<$Res>
   @override
   $Res call({
     Object? gateEntryNo = null,
+    Object? direction = null,
+    Object? challanNo = null,
+    Object? lrNo = null,
     Object? date = null,
-    Object? vendor = null,
-    Object? poNumber = null,
-    Object? vehicleNo = null,
+    Object? gateOutDate = freezed,
     Object? material = null,
+    Object? qty = null,
+    Object? vendor = null,
+    Object? transporter = null,
+    Object? vehicleNo = null,
+    Object? poNumber = null,
     Object? status = null,
   }) {
     return _then(_$GateEntryReportItemImpl(
@@ -368,25 +422,49 @@ class __$$GateEntryReportItemImplCopyWithImpl<$Res>
           ? _value.gateEntryNo
           : gateEntryNo // ignore: cast_nullable_to_non_nullable
               as String,
+      direction: null == direction
+          ? _value.direction
+          : direction // ignore: cast_nullable_to_non_nullable
+              as String,
+      challanNo: null == challanNo
+          ? _value.challanNo
+          : challanNo // ignore: cast_nullable_to_non_nullable
+              as String,
+      lrNo: null == lrNo
+          ? _value.lrNo
+          : lrNo // ignore: cast_nullable_to_non_nullable
+              as String,
       date: null == date
           ? _value.date
           : date // ignore: cast_nullable_to_non_nullable
               as DateTime,
+      gateOutDate: freezed == gateOutDate
+          ? _value.gateOutDate
+          : gateOutDate // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
+      material: null == material
+          ? _value.material
+          : material // ignore: cast_nullable_to_non_nullable
+              as String,
+      qty: null == qty
+          ? _value.qty
+          : qty // ignore: cast_nullable_to_non_nullable
+              as int,
       vendor: null == vendor
           ? _value.vendor
           : vendor // ignore: cast_nullable_to_non_nullable
               as String,
-      poNumber: null == poNumber
-          ? _value.poNumber
-          : poNumber // ignore: cast_nullable_to_non_nullable
+      transporter: null == transporter
+          ? _value.transporter
+          : transporter // ignore: cast_nullable_to_non_nullable
               as String,
       vehicleNo: null == vehicleNo
           ? _value.vehicleNo
           : vehicleNo // ignore: cast_nullable_to_non_nullable
               as String,
-      material: null == material
-          ? _value.material
-          : material // ignore: cast_nullable_to_non_nullable
+      poNumber: null == poNumber
+          ? _value.poNumber
+          : poNumber // ignore: cast_nullable_to_non_nullable
               as String,
       status: null == status
           ? _value.status
@@ -401,11 +479,17 @@ class __$$GateEntryReportItemImplCopyWithImpl<$Res>
 class _$GateEntryReportItemImpl implements _GateEntryReportItem {
   const _$GateEntryReportItemImpl(
       {required this.gateEntryNo,
+      required this.direction,
+      required this.challanNo,
+      required this.lrNo,
       required this.date,
-      required this.vendor,
-      required this.poNumber,
-      required this.vehicleNo,
+      this.gateOutDate,
       required this.material,
+      required this.qty,
+      required this.vendor,
+      required this.transporter,
+      required this.vehicleNo,
+      required this.poNumber,
       required this.status});
 
   factory _$GateEntryReportItemImpl.fromJson(Map<String, dynamic> json) =>
@@ -414,21 +498,33 @@ class _$GateEntryReportItemImpl implements _GateEntryReportItem {
   @override
   final String gateEntryNo;
   @override
+  final String direction;
+  @override
+  final String challanNo;
+  @override
+  final String lrNo;
+  @override
   final DateTime date;
+  @override
+  final DateTime? gateOutDate;
+  @override
+  final String material;
+  @override
+  final int qty;
   @override
   final String vendor;
   @override
-  final String poNumber;
+  final String transporter;
   @override
   final String vehicleNo;
   @override
-  final String material;
+  final String poNumber;
   @override
   final String status;
 
   @override
   String toString() {
-    return 'GateEntryReportItem(gateEntryNo: $gateEntryNo, date: $date, vendor: $vendor, poNumber: $poNumber, vehicleNo: $vehicleNo, material: $material, status: $status)';
+    return 'GateEntryReportItem(gateEntryNo: $gateEntryNo, direction: $direction, challanNo: $challanNo, lrNo: $lrNo, date: $date, gateOutDate: $gateOutDate, material: $material, qty: $qty, vendor: $vendor, transporter: $transporter, vehicleNo: $vehicleNo, poNumber: $poNumber, status: $status)';
   }
 
   @override
@@ -438,21 +534,44 @@ class _$GateEntryReportItemImpl implements _GateEntryReportItem {
             other is _$GateEntryReportItemImpl &&
             (identical(other.gateEntryNo, gateEntryNo) ||
                 other.gateEntryNo == gateEntryNo) &&
+            (identical(other.direction, direction) ||
+                other.direction == direction) &&
+            (identical(other.challanNo, challanNo) ||
+                other.challanNo == challanNo) &&
+            (identical(other.lrNo, lrNo) || other.lrNo == lrNo) &&
             (identical(other.date, date) || other.date == date) &&
-            (identical(other.vendor, vendor) || other.vendor == vendor) &&
-            (identical(other.poNumber, poNumber) ||
-                other.poNumber == poNumber) &&
-            (identical(other.vehicleNo, vehicleNo) ||
-                other.vehicleNo == vehicleNo) &&
+            (identical(other.gateOutDate, gateOutDate) ||
+                other.gateOutDate == gateOutDate) &&
             (identical(other.material, material) ||
                 other.material == material) &&
+            (identical(other.qty, qty) || other.qty == qty) &&
+            (identical(other.vendor, vendor) || other.vendor == vendor) &&
+            (identical(other.transporter, transporter) ||
+                other.transporter == transporter) &&
+            (identical(other.vehicleNo, vehicleNo) ||
+                other.vehicleNo == vehicleNo) &&
+            (identical(other.poNumber, poNumber) ||
+                other.poNumber == poNumber) &&
             (identical(other.status, status) || other.status == status));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(runtimeType, gateEntryNo, date, vendor,
-      poNumber, vehicleNo, material, status);
+  int get hashCode => Object.hash(
+      runtimeType,
+      gateEntryNo,
+      direction,
+      challanNo,
+      lrNo,
+      date,
+      gateOutDate,
+      material,
+      qty,
+      vendor,
+      transporter,
+      vehicleNo,
+      poNumber,
+      status);
 
   /// Create a copy of GateEntryReportItem
   /// with the given fields replaced by the non-null parameter values.
@@ -474,11 +593,17 @@ class _$GateEntryReportItemImpl implements _GateEntryReportItem {
 abstract class _GateEntryReportItem implements GateEntryReportItem {
   const factory _GateEntryReportItem(
       {required final String gateEntryNo,
+      required final String direction,
+      required final String challanNo,
+      required final String lrNo,
       required final DateTime date,
-      required final String vendor,
-      required final String poNumber,
-      required final String vehicleNo,
+      final DateTime? gateOutDate,
       required final String material,
+      required final int qty,
+      required final String vendor,
+      required final String transporter,
+      required final String vehicleNo,
+      required final String poNumber,
       required final String status}) = _$GateEntryReportItemImpl;
 
   factory _GateEntryReportItem.fromJson(Map<String, dynamic> json) =
@@ -487,15 +612,27 @@ abstract class _GateEntryReportItem implements GateEntryReportItem {
   @override
   String get gateEntryNo;
   @override
+  String get direction;
+  @override
+  String get challanNo;
+  @override
+  String get lrNo;
+  @override
   DateTime get date;
+  @override
+  DateTime? get gateOutDate;
+  @override
+  String get material;
+  @override
+  int get qty;
   @override
   String get vendor;
   @override
-  String get poNumber;
+  String get transporter;
   @override
   String get vehicleNo;
   @override
-  String get material;
+  String get poNumber;
   @override
   String get status;
 
@@ -507,21 +644,98 @@ abstract class _GateEntryReportItem implements GateEntryReportItem {
       throw _privateConstructorUsedError;
 }
 
-GrnReconReportItem _$GrnReconReportItemFromJson(Map<String, dynamic> json) {
-  return _GrnReconReportItem.fromJson(json);
-}
-
 /// @nodoc
 mixin _$GrnReconReportItem {
-  String get gateEntryNo => throw _privateConstructorUsedError;
-  String get grnNo => throw _privateConstructorUsedError;
-  String get poNumber => throw _privateConstructorUsedError;
-  String get challanNo => throw _privateConstructorUsedError;
-  String get matchedStatus => throw _privateConstructorUsedError;
-  double get quantityDiff => throw _privateConstructorUsedError;
-
-  /// Serializes this GrnReconReportItem to a JSON map.
-  Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
+  @JsonKey(name: 'gate_entry_no')
+  String? get gateEntryNo => throw _privateConstructorUsedError;
+  @JsonKey(name: 'grn_no')
+  String? get grnNo => throw _privateConstructorUsedError;
+  @JsonKey(name: 'po_number')
+  String? get poNumber => throw _privateConstructorUsedError;
+  @JsonKey(name: 'challan_no')
+  String? get challanNo => throw _privateConstructorUsedError;
+  @JsonKey(name: 'matched_status')
+  String? get matchedStatus => throw _privateConstructorUsedError;
+  @JsonKey(name: 'quantity_diff')
+  double? get quantityDiff => throw _privateConstructorUsedError;
+  @JsonKey(name: 'vendor_name')
+  String? get vendorName => throw _privateConstructorUsedError;
+  @JsonKey(name: 'reconciled_at')
+  String? get reconciledAt => throw _privateConstructorUsedError;
+  @JsonKey(name: 'sr_no')
+  String? get srNo => throw _privateConstructorUsedError;
+  @JsonKey(name: 'remarks')
+  String? get remarks => throw _privateConstructorUsedError;
+  @JsonKey(name: 'duplicate_reference')
+  String? get duplicateReference => throw _privateConstructorUsedError;
+  @JsonKey(name: 'dublicate')
+  String? get dublicate => throw _privateConstructorUsedError;
+  @JsonKey(name: 'reference_no')
+  String? get referenceNo => throw _privateConstructorUsedError;
+  @JsonKey(name: 'reference')
+  String? get reference => throw _privateConstructorUsedError;
+  @JsonKey(name: 'document_date')
+  String? get documentDate => throw _privateConstructorUsedError;
+  @JsonKey(name: 'quantity')
+  String? get quantity => throw _privateConstructorUsedError;
+  @JsonKey(name: 'material')
+  String? get material => throw _privateConstructorUsedError;
+  @JsonKey(name: 'material_document')
+  String? get materialDocument => throw _privateConstructorUsedError;
+  @JsonKey(name: 'posting_date')
+  String? get postingDate => throw _privateConstructorUsedError;
+  @JsonKey(name: 'plant')
+  String? get plant => throw _privateConstructorUsedError;
+  @JsonKey(name: 'material_description')
+  String? get materialDescription => throw _privateConstructorUsedError;
+  @JsonKey(name: 'movement_type')
+  String? get movementType => throw _privateConstructorUsedError;
+  @JsonKey(name: 'movement_type_text')
+  String? get movementTypeText => throw _privateConstructorUsedError;
+  @JsonKey(name: 'supplier')
+  String? get supplier => throw _privateConstructorUsedError;
+  @JsonKey(name: 'purchase_order')
+  String? get purchaseOrder => throw _privateConstructorUsedError;
+  @JsonKey(name: 'document_header_text')
+  String? get documentHeaderText => throw _privateConstructorUsedError;
+  @JsonKey(name: 'user_name')
+  String? get userName => throw _privateConstructorUsedError;
+  @JsonKey(name: 'entry_date')
+  String? get entryDate => throw _privateConstructorUsedError;
+  @JsonKey(name: 'time_of_entry')
+  String? get timeOfEntry => throw _privateConstructorUsedError;
+  @JsonKey(name: 'amount_in_local_currency')
+  String? get amountInLocalCurrency => throw _privateConstructorUsedError;
+  @JsonKey(name: 'qty_in_opun')
+  String? get qtyInOpun => throw _privateConstructorUsedError;
+  @JsonKey(name: 'qty_in_order_unit')
+  String? get qtyInOrderUnit => throw _privateConstructorUsedError;
+  @JsonKey(name: 'local_time')
+  String? get localTime => throw _privateConstructorUsedError;
+  @JsonKey(name: 'local_date')
+  String? get localDate => throw _privateConstructorUsedError;
+  @JsonKey(name: 'shift')
+  String? get shift => throw _privateConstructorUsedError;
+  @JsonKey(name: 'store_remarks')
+  String? get storeRemarks => throw _privateConstructorUsedError;
+  @JsonKey(name: 'status')
+  String? get status => throw _privateConstructorUsedError;
+  @JsonKey(name: 'aging')
+  String? get aging => throw _privateConstructorUsedError;
+  @JsonKey(name: 'mdr')
+  String? get mdr => throw _privateConstructorUsedError;
+  @JsonKey(name: 'scanning_invoice_status')
+  String? get scanningInvoiceStatus => throw _privateConstructorUsedError;
+  @JsonKey(name: 'scanning_date')
+  String? get scanningDate => throw _privateConstructorUsedError;
+  @JsonKey(name: 'vendor')
+  String? get vendor => throw _privateConstructorUsedError;
+  @JsonKey(name: 'source_vendor_name')
+  String? get sourceVendorName => throw _privateConstructorUsedError;
+  @JsonKey(name: 'buyer_name')
+  String? get buyerName => throw _privateConstructorUsedError;
+  @JsonKey(name: 'maker_checker')
+  String? get makerChecker => throw _privateConstructorUsedError;
 
   /// Create a copy of GrnReconReportItem
   /// with the given fields replaced by the non-null parameter values.
@@ -537,12 +751,51 @@ abstract class $GrnReconReportItemCopyWith<$Res> {
       _$GrnReconReportItemCopyWithImpl<$Res, GrnReconReportItem>;
   @useResult
   $Res call(
-      {String gateEntryNo,
-      String grnNo,
-      String poNumber,
-      String challanNo,
-      String matchedStatus,
-      double quantityDiff});
+      {@JsonKey(name: 'gate_entry_no') String? gateEntryNo,
+      @JsonKey(name: 'grn_no') String? grnNo,
+      @JsonKey(name: 'po_number') String? poNumber,
+      @JsonKey(name: 'challan_no') String? challanNo,
+      @JsonKey(name: 'matched_status') String? matchedStatus,
+      @JsonKey(name: 'quantity_diff') double? quantityDiff,
+      @JsonKey(name: 'vendor_name') String? vendorName,
+      @JsonKey(name: 'reconciled_at') String? reconciledAt,
+      @JsonKey(name: 'sr_no') String? srNo,
+      @JsonKey(name: 'remarks') String? remarks,
+      @JsonKey(name: 'duplicate_reference') String? duplicateReference,
+      @JsonKey(name: 'dublicate') String? dublicate,
+      @JsonKey(name: 'reference_no') String? referenceNo,
+      @JsonKey(name: 'reference') String? reference,
+      @JsonKey(name: 'document_date') String? documentDate,
+      @JsonKey(name: 'quantity') String? quantity,
+      @JsonKey(name: 'material') String? material,
+      @JsonKey(name: 'material_document') String? materialDocument,
+      @JsonKey(name: 'posting_date') String? postingDate,
+      @JsonKey(name: 'plant') String? plant,
+      @JsonKey(name: 'material_description') String? materialDescription,
+      @JsonKey(name: 'movement_type') String? movementType,
+      @JsonKey(name: 'movement_type_text') String? movementTypeText,
+      @JsonKey(name: 'supplier') String? supplier,
+      @JsonKey(name: 'purchase_order') String? purchaseOrder,
+      @JsonKey(name: 'document_header_text') String? documentHeaderText,
+      @JsonKey(name: 'user_name') String? userName,
+      @JsonKey(name: 'entry_date') String? entryDate,
+      @JsonKey(name: 'time_of_entry') String? timeOfEntry,
+      @JsonKey(name: 'amount_in_local_currency') String? amountInLocalCurrency,
+      @JsonKey(name: 'qty_in_opun') String? qtyInOpun,
+      @JsonKey(name: 'qty_in_order_unit') String? qtyInOrderUnit,
+      @JsonKey(name: 'local_time') String? localTime,
+      @JsonKey(name: 'local_date') String? localDate,
+      @JsonKey(name: 'shift') String? shift,
+      @JsonKey(name: 'store_remarks') String? storeRemarks,
+      @JsonKey(name: 'status') String? status,
+      @JsonKey(name: 'aging') String? aging,
+      @JsonKey(name: 'mdr') String? mdr,
+      @JsonKey(name: 'scanning_invoice_status') String? scanningInvoiceStatus,
+      @JsonKey(name: 'scanning_date') String? scanningDate,
+      @JsonKey(name: 'vendor') String? vendor,
+      @JsonKey(name: 'source_vendor_name') String? sourceVendorName,
+      @JsonKey(name: 'buyer_name') String? buyerName,
+      @JsonKey(name: 'maker_checker') String? makerChecker});
 }
 
 /// @nodoc
@@ -560,38 +813,233 @@ class _$GrnReconReportItemCopyWithImpl<$Res, $Val extends GrnReconReportItem>
   @pragma('vm:prefer-inline')
   @override
   $Res call({
-    Object? gateEntryNo = null,
-    Object? grnNo = null,
-    Object? poNumber = null,
-    Object? challanNo = null,
-    Object? matchedStatus = null,
-    Object? quantityDiff = null,
+    Object? gateEntryNo = freezed,
+    Object? grnNo = freezed,
+    Object? poNumber = freezed,
+    Object? challanNo = freezed,
+    Object? matchedStatus = freezed,
+    Object? quantityDiff = freezed,
+    Object? vendorName = freezed,
+    Object? reconciledAt = freezed,
+    Object? srNo = freezed,
+    Object? remarks = freezed,
+    Object? duplicateReference = freezed,
+    Object? dublicate = freezed,
+    Object? referenceNo = freezed,
+    Object? reference = freezed,
+    Object? documentDate = freezed,
+    Object? quantity = freezed,
+    Object? material = freezed,
+    Object? materialDocument = freezed,
+    Object? postingDate = freezed,
+    Object? plant = freezed,
+    Object? materialDescription = freezed,
+    Object? movementType = freezed,
+    Object? movementTypeText = freezed,
+    Object? supplier = freezed,
+    Object? purchaseOrder = freezed,
+    Object? documentHeaderText = freezed,
+    Object? userName = freezed,
+    Object? entryDate = freezed,
+    Object? timeOfEntry = freezed,
+    Object? amountInLocalCurrency = freezed,
+    Object? qtyInOpun = freezed,
+    Object? qtyInOrderUnit = freezed,
+    Object? localTime = freezed,
+    Object? localDate = freezed,
+    Object? shift = freezed,
+    Object? storeRemarks = freezed,
+    Object? status = freezed,
+    Object? aging = freezed,
+    Object? mdr = freezed,
+    Object? scanningInvoiceStatus = freezed,
+    Object? scanningDate = freezed,
+    Object? vendor = freezed,
+    Object? sourceVendorName = freezed,
+    Object? buyerName = freezed,
+    Object? makerChecker = freezed,
   }) {
     return _then(_value.copyWith(
-      gateEntryNo: null == gateEntryNo
+      gateEntryNo: freezed == gateEntryNo
           ? _value.gateEntryNo
           : gateEntryNo // ignore: cast_nullable_to_non_nullable
-              as String,
-      grnNo: null == grnNo
+              as String?,
+      grnNo: freezed == grnNo
           ? _value.grnNo
           : grnNo // ignore: cast_nullable_to_non_nullable
-              as String,
-      poNumber: null == poNumber
+              as String?,
+      poNumber: freezed == poNumber
           ? _value.poNumber
           : poNumber // ignore: cast_nullable_to_non_nullable
-              as String,
-      challanNo: null == challanNo
+              as String?,
+      challanNo: freezed == challanNo
           ? _value.challanNo
           : challanNo // ignore: cast_nullable_to_non_nullable
-              as String,
-      matchedStatus: null == matchedStatus
+              as String?,
+      matchedStatus: freezed == matchedStatus
           ? _value.matchedStatus
           : matchedStatus // ignore: cast_nullable_to_non_nullable
-              as String,
-      quantityDiff: null == quantityDiff
+              as String?,
+      quantityDiff: freezed == quantityDiff
           ? _value.quantityDiff
           : quantityDiff // ignore: cast_nullable_to_non_nullable
-              as double,
+              as double?,
+      vendorName: freezed == vendorName
+          ? _value.vendorName
+          : vendorName // ignore: cast_nullable_to_non_nullable
+              as String?,
+      reconciledAt: freezed == reconciledAt
+          ? _value.reconciledAt
+          : reconciledAt // ignore: cast_nullable_to_non_nullable
+              as String?,
+      srNo: freezed == srNo
+          ? _value.srNo
+          : srNo // ignore: cast_nullable_to_non_nullable
+              as String?,
+      remarks: freezed == remarks
+          ? _value.remarks
+          : remarks // ignore: cast_nullable_to_non_nullable
+              as String?,
+      duplicateReference: freezed == duplicateReference
+          ? _value.duplicateReference
+          : duplicateReference // ignore: cast_nullable_to_non_nullable
+              as String?,
+      dublicate: freezed == dublicate
+          ? _value.dublicate
+          : dublicate // ignore: cast_nullable_to_non_nullable
+              as String?,
+      referenceNo: freezed == referenceNo
+          ? _value.referenceNo
+          : referenceNo // ignore: cast_nullable_to_non_nullable
+              as String?,
+      reference: freezed == reference
+          ? _value.reference
+          : reference // ignore: cast_nullable_to_non_nullable
+              as String?,
+      documentDate: freezed == documentDate
+          ? _value.documentDate
+          : documentDate // ignore: cast_nullable_to_non_nullable
+              as String?,
+      quantity: freezed == quantity
+          ? _value.quantity
+          : quantity // ignore: cast_nullable_to_non_nullable
+              as String?,
+      material: freezed == material
+          ? _value.material
+          : material // ignore: cast_nullable_to_non_nullable
+              as String?,
+      materialDocument: freezed == materialDocument
+          ? _value.materialDocument
+          : materialDocument // ignore: cast_nullable_to_non_nullable
+              as String?,
+      postingDate: freezed == postingDate
+          ? _value.postingDate
+          : postingDate // ignore: cast_nullable_to_non_nullable
+              as String?,
+      plant: freezed == plant
+          ? _value.plant
+          : plant // ignore: cast_nullable_to_non_nullable
+              as String?,
+      materialDescription: freezed == materialDescription
+          ? _value.materialDescription
+          : materialDescription // ignore: cast_nullable_to_non_nullable
+              as String?,
+      movementType: freezed == movementType
+          ? _value.movementType
+          : movementType // ignore: cast_nullable_to_non_nullable
+              as String?,
+      movementTypeText: freezed == movementTypeText
+          ? _value.movementTypeText
+          : movementTypeText // ignore: cast_nullable_to_non_nullable
+              as String?,
+      supplier: freezed == supplier
+          ? _value.supplier
+          : supplier // ignore: cast_nullable_to_non_nullable
+              as String?,
+      purchaseOrder: freezed == purchaseOrder
+          ? _value.purchaseOrder
+          : purchaseOrder // ignore: cast_nullable_to_non_nullable
+              as String?,
+      documentHeaderText: freezed == documentHeaderText
+          ? _value.documentHeaderText
+          : documentHeaderText // ignore: cast_nullable_to_non_nullable
+              as String?,
+      userName: freezed == userName
+          ? _value.userName
+          : userName // ignore: cast_nullable_to_non_nullable
+              as String?,
+      entryDate: freezed == entryDate
+          ? _value.entryDate
+          : entryDate // ignore: cast_nullable_to_non_nullable
+              as String?,
+      timeOfEntry: freezed == timeOfEntry
+          ? _value.timeOfEntry
+          : timeOfEntry // ignore: cast_nullable_to_non_nullable
+              as String?,
+      amountInLocalCurrency: freezed == amountInLocalCurrency
+          ? _value.amountInLocalCurrency
+          : amountInLocalCurrency // ignore: cast_nullable_to_non_nullable
+              as String?,
+      qtyInOpun: freezed == qtyInOpun
+          ? _value.qtyInOpun
+          : qtyInOpun // ignore: cast_nullable_to_non_nullable
+              as String?,
+      qtyInOrderUnit: freezed == qtyInOrderUnit
+          ? _value.qtyInOrderUnit
+          : qtyInOrderUnit // ignore: cast_nullable_to_non_nullable
+              as String?,
+      localTime: freezed == localTime
+          ? _value.localTime
+          : localTime // ignore: cast_nullable_to_non_nullable
+              as String?,
+      localDate: freezed == localDate
+          ? _value.localDate
+          : localDate // ignore: cast_nullable_to_non_nullable
+              as String?,
+      shift: freezed == shift
+          ? _value.shift
+          : shift // ignore: cast_nullable_to_non_nullable
+              as String?,
+      storeRemarks: freezed == storeRemarks
+          ? _value.storeRemarks
+          : storeRemarks // ignore: cast_nullable_to_non_nullable
+              as String?,
+      status: freezed == status
+          ? _value.status
+          : status // ignore: cast_nullable_to_non_nullable
+              as String?,
+      aging: freezed == aging
+          ? _value.aging
+          : aging // ignore: cast_nullable_to_non_nullable
+              as String?,
+      mdr: freezed == mdr
+          ? _value.mdr
+          : mdr // ignore: cast_nullable_to_non_nullable
+              as String?,
+      scanningInvoiceStatus: freezed == scanningInvoiceStatus
+          ? _value.scanningInvoiceStatus
+          : scanningInvoiceStatus // ignore: cast_nullable_to_non_nullable
+              as String?,
+      scanningDate: freezed == scanningDate
+          ? _value.scanningDate
+          : scanningDate // ignore: cast_nullable_to_non_nullable
+              as String?,
+      vendor: freezed == vendor
+          ? _value.vendor
+          : vendor // ignore: cast_nullable_to_non_nullable
+              as String?,
+      sourceVendorName: freezed == sourceVendorName
+          ? _value.sourceVendorName
+          : sourceVendorName // ignore: cast_nullable_to_non_nullable
+              as String?,
+      buyerName: freezed == buyerName
+          ? _value.buyerName
+          : buyerName // ignore: cast_nullable_to_non_nullable
+              as String?,
+      makerChecker: freezed == makerChecker
+          ? _value.makerChecker
+          : makerChecker // ignore: cast_nullable_to_non_nullable
+              as String?,
     ) as $Val);
   }
 }
@@ -605,12 +1053,51 @@ abstract class _$$GrnReconReportItemImplCopyWith<$Res>
   @override
   @useResult
   $Res call(
-      {String gateEntryNo,
-      String grnNo,
-      String poNumber,
-      String challanNo,
-      String matchedStatus,
-      double quantityDiff});
+      {@JsonKey(name: 'gate_entry_no') String? gateEntryNo,
+      @JsonKey(name: 'grn_no') String? grnNo,
+      @JsonKey(name: 'po_number') String? poNumber,
+      @JsonKey(name: 'challan_no') String? challanNo,
+      @JsonKey(name: 'matched_status') String? matchedStatus,
+      @JsonKey(name: 'quantity_diff') double? quantityDiff,
+      @JsonKey(name: 'vendor_name') String? vendorName,
+      @JsonKey(name: 'reconciled_at') String? reconciledAt,
+      @JsonKey(name: 'sr_no') String? srNo,
+      @JsonKey(name: 'remarks') String? remarks,
+      @JsonKey(name: 'duplicate_reference') String? duplicateReference,
+      @JsonKey(name: 'dublicate') String? dublicate,
+      @JsonKey(name: 'reference_no') String? referenceNo,
+      @JsonKey(name: 'reference') String? reference,
+      @JsonKey(name: 'document_date') String? documentDate,
+      @JsonKey(name: 'quantity') String? quantity,
+      @JsonKey(name: 'material') String? material,
+      @JsonKey(name: 'material_document') String? materialDocument,
+      @JsonKey(name: 'posting_date') String? postingDate,
+      @JsonKey(name: 'plant') String? plant,
+      @JsonKey(name: 'material_description') String? materialDescription,
+      @JsonKey(name: 'movement_type') String? movementType,
+      @JsonKey(name: 'movement_type_text') String? movementTypeText,
+      @JsonKey(name: 'supplier') String? supplier,
+      @JsonKey(name: 'purchase_order') String? purchaseOrder,
+      @JsonKey(name: 'document_header_text') String? documentHeaderText,
+      @JsonKey(name: 'user_name') String? userName,
+      @JsonKey(name: 'entry_date') String? entryDate,
+      @JsonKey(name: 'time_of_entry') String? timeOfEntry,
+      @JsonKey(name: 'amount_in_local_currency') String? amountInLocalCurrency,
+      @JsonKey(name: 'qty_in_opun') String? qtyInOpun,
+      @JsonKey(name: 'qty_in_order_unit') String? qtyInOrderUnit,
+      @JsonKey(name: 'local_time') String? localTime,
+      @JsonKey(name: 'local_date') String? localDate,
+      @JsonKey(name: 'shift') String? shift,
+      @JsonKey(name: 'store_remarks') String? storeRemarks,
+      @JsonKey(name: 'status') String? status,
+      @JsonKey(name: 'aging') String? aging,
+      @JsonKey(name: 'mdr') String? mdr,
+      @JsonKey(name: 'scanning_invoice_status') String? scanningInvoiceStatus,
+      @JsonKey(name: 'scanning_date') String? scanningDate,
+      @JsonKey(name: 'vendor') String? vendor,
+      @JsonKey(name: 'source_vendor_name') String? sourceVendorName,
+      @JsonKey(name: 'buyer_name') String? buyerName,
+      @JsonKey(name: 'maker_checker') String? makerChecker});
 }
 
 /// @nodoc
@@ -626,72 +1113,427 @@ class __$$GrnReconReportItemImplCopyWithImpl<$Res>
   @pragma('vm:prefer-inline')
   @override
   $Res call({
-    Object? gateEntryNo = null,
-    Object? grnNo = null,
-    Object? poNumber = null,
-    Object? challanNo = null,
-    Object? matchedStatus = null,
-    Object? quantityDiff = null,
+    Object? gateEntryNo = freezed,
+    Object? grnNo = freezed,
+    Object? poNumber = freezed,
+    Object? challanNo = freezed,
+    Object? matchedStatus = freezed,
+    Object? quantityDiff = freezed,
+    Object? vendorName = freezed,
+    Object? reconciledAt = freezed,
+    Object? srNo = freezed,
+    Object? remarks = freezed,
+    Object? duplicateReference = freezed,
+    Object? dublicate = freezed,
+    Object? referenceNo = freezed,
+    Object? reference = freezed,
+    Object? documentDate = freezed,
+    Object? quantity = freezed,
+    Object? material = freezed,
+    Object? materialDocument = freezed,
+    Object? postingDate = freezed,
+    Object? plant = freezed,
+    Object? materialDescription = freezed,
+    Object? movementType = freezed,
+    Object? movementTypeText = freezed,
+    Object? supplier = freezed,
+    Object? purchaseOrder = freezed,
+    Object? documentHeaderText = freezed,
+    Object? userName = freezed,
+    Object? entryDate = freezed,
+    Object? timeOfEntry = freezed,
+    Object? amountInLocalCurrency = freezed,
+    Object? qtyInOpun = freezed,
+    Object? qtyInOrderUnit = freezed,
+    Object? localTime = freezed,
+    Object? localDate = freezed,
+    Object? shift = freezed,
+    Object? storeRemarks = freezed,
+    Object? status = freezed,
+    Object? aging = freezed,
+    Object? mdr = freezed,
+    Object? scanningInvoiceStatus = freezed,
+    Object? scanningDate = freezed,
+    Object? vendor = freezed,
+    Object? sourceVendorName = freezed,
+    Object? buyerName = freezed,
+    Object? makerChecker = freezed,
   }) {
     return _then(_$GrnReconReportItemImpl(
-      gateEntryNo: null == gateEntryNo
+      gateEntryNo: freezed == gateEntryNo
           ? _value.gateEntryNo
           : gateEntryNo // ignore: cast_nullable_to_non_nullable
-              as String,
-      grnNo: null == grnNo
+              as String?,
+      grnNo: freezed == grnNo
           ? _value.grnNo
           : grnNo // ignore: cast_nullable_to_non_nullable
-              as String,
-      poNumber: null == poNumber
+              as String?,
+      poNumber: freezed == poNumber
           ? _value.poNumber
           : poNumber // ignore: cast_nullable_to_non_nullable
-              as String,
-      challanNo: null == challanNo
+              as String?,
+      challanNo: freezed == challanNo
           ? _value.challanNo
           : challanNo // ignore: cast_nullable_to_non_nullable
-              as String,
-      matchedStatus: null == matchedStatus
+              as String?,
+      matchedStatus: freezed == matchedStatus
           ? _value.matchedStatus
           : matchedStatus // ignore: cast_nullable_to_non_nullable
-              as String,
-      quantityDiff: null == quantityDiff
+              as String?,
+      quantityDiff: freezed == quantityDiff
           ? _value.quantityDiff
           : quantityDiff // ignore: cast_nullable_to_non_nullable
-              as double,
+              as double?,
+      vendorName: freezed == vendorName
+          ? _value.vendorName
+          : vendorName // ignore: cast_nullable_to_non_nullable
+              as String?,
+      reconciledAt: freezed == reconciledAt
+          ? _value.reconciledAt
+          : reconciledAt // ignore: cast_nullable_to_non_nullable
+              as String?,
+      srNo: freezed == srNo
+          ? _value.srNo
+          : srNo // ignore: cast_nullable_to_non_nullable
+              as String?,
+      remarks: freezed == remarks
+          ? _value.remarks
+          : remarks // ignore: cast_nullable_to_non_nullable
+              as String?,
+      duplicateReference: freezed == duplicateReference
+          ? _value.duplicateReference
+          : duplicateReference // ignore: cast_nullable_to_non_nullable
+              as String?,
+      dublicate: freezed == dublicate
+          ? _value.dublicate
+          : dublicate // ignore: cast_nullable_to_non_nullable
+              as String?,
+      referenceNo: freezed == referenceNo
+          ? _value.referenceNo
+          : referenceNo // ignore: cast_nullable_to_non_nullable
+              as String?,
+      reference: freezed == reference
+          ? _value.reference
+          : reference // ignore: cast_nullable_to_non_nullable
+              as String?,
+      documentDate: freezed == documentDate
+          ? _value.documentDate
+          : documentDate // ignore: cast_nullable_to_non_nullable
+              as String?,
+      quantity: freezed == quantity
+          ? _value.quantity
+          : quantity // ignore: cast_nullable_to_non_nullable
+              as String?,
+      material: freezed == material
+          ? _value.material
+          : material // ignore: cast_nullable_to_non_nullable
+              as String?,
+      materialDocument: freezed == materialDocument
+          ? _value.materialDocument
+          : materialDocument // ignore: cast_nullable_to_non_nullable
+              as String?,
+      postingDate: freezed == postingDate
+          ? _value.postingDate
+          : postingDate // ignore: cast_nullable_to_non_nullable
+              as String?,
+      plant: freezed == plant
+          ? _value.plant
+          : plant // ignore: cast_nullable_to_non_nullable
+              as String?,
+      materialDescription: freezed == materialDescription
+          ? _value.materialDescription
+          : materialDescription // ignore: cast_nullable_to_non_nullable
+              as String?,
+      movementType: freezed == movementType
+          ? _value.movementType
+          : movementType // ignore: cast_nullable_to_non_nullable
+              as String?,
+      movementTypeText: freezed == movementTypeText
+          ? _value.movementTypeText
+          : movementTypeText // ignore: cast_nullable_to_non_nullable
+              as String?,
+      supplier: freezed == supplier
+          ? _value.supplier
+          : supplier // ignore: cast_nullable_to_non_nullable
+              as String?,
+      purchaseOrder: freezed == purchaseOrder
+          ? _value.purchaseOrder
+          : purchaseOrder // ignore: cast_nullable_to_non_nullable
+              as String?,
+      documentHeaderText: freezed == documentHeaderText
+          ? _value.documentHeaderText
+          : documentHeaderText // ignore: cast_nullable_to_non_nullable
+              as String?,
+      userName: freezed == userName
+          ? _value.userName
+          : userName // ignore: cast_nullable_to_non_nullable
+              as String?,
+      entryDate: freezed == entryDate
+          ? _value.entryDate
+          : entryDate // ignore: cast_nullable_to_non_nullable
+              as String?,
+      timeOfEntry: freezed == timeOfEntry
+          ? _value.timeOfEntry
+          : timeOfEntry // ignore: cast_nullable_to_non_nullable
+              as String?,
+      amountInLocalCurrency: freezed == amountInLocalCurrency
+          ? _value.amountInLocalCurrency
+          : amountInLocalCurrency // ignore: cast_nullable_to_non_nullable
+              as String?,
+      qtyInOpun: freezed == qtyInOpun
+          ? _value.qtyInOpun
+          : qtyInOpun // ignore: cast_nullable_to_non_nullable
+              as String?,
+      qtyInOrderUnit: freezed == qtyInOrderUnit
+          ? _value.qtyInOrderUnit
+          : qtyInOrderUnit // ignore: cast_nullable_to_non_nullable
+              as String?,
+      localTime: freezed == localTime
+          ? _value.localTime
+          : localTime // ignore: cast_nullable_to_non_nullable
+              as String?,
+      localDate: freezed == localDate
+          ? _value.localDate
+          : localDate // ignore: cast_nullable_to_non_nullable
+              as String?,
+      shift: freezed == shift
+          ? _value.shift
+          : shift // ignore: cast_nullable_to_non_nullable
+              as String?,
+      storeRemarks: freezed == storeRemarks
+          ? _value.storeRemarks
+          : storeRemarks // ignore: cast_nullable_to_non_nullable
+              as String?,
+      status: freezed == status
+          ? _value.status
+          : status // ignore: cast_nullable_to_non_nullable
+              as String?,
+      aging: freezed == aging
+          ? _value.aging
+          : aging // ignore: cast_nullable_to_non_nullable
+              as String?,
+      mdr: freezed == mdr
+          ? _value.mdr
+          : mdr // ignore: cast_nullable_to_non_nullable
+              as String?,
+      scanningInvoiceStatus: freezed == scanningInvoiceStatus
+          ? _value.scanningInvoiceStatus
+          : scanningInvoiceStatus // ignore: cast_nullable_to_non_nullable
+              as String?,
+      scanningDate: freezed == scanningDate
+          ? _value.scanningDate
+          : scanningDate // ignore: cast_nullable_to_non_nullable
+              as String?,
+      vendor: freezed == vendor
+          ? _value.vendor
+          : vendor // ignore: cast_nullable_to_non_nullable
+              as String?,
+      sourceVendorName: freezed == sourceVendorName
+          ? _value.sourceVendorName
+          : sourceVendorName // ignore: cast_nullable_to_non_nullable
+              as String?,
+      buyerName: freezed == buyerName
+          ? _value.buyerName
+          : buyerName // ignore: cast_nullable_to_non_nullable
+              as String?,
+      makerChecker: freezed == makerChecker
+          ? _value.makerChecker
+          : makerChecker // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }
 
 /// @nodoc
-@JsonSerializable()
+
+@JsonSerializable(createToJson: false)
 class _$GrnReconReportItemImpl implements _GrnReconReportItem {
   const _$GrnReconReportItemImpl(
-      {required this.gateEntryNo,
-      required this.grnNo,
-      required this.poNumber,
-      required this.challanNo,
-      required this.matchedStatus,
-      required this.quantityDiff});
+      {@JsonKey(name: 'gate_entry_no') this.gateEntryNo,
+      @JsonKey(name: 'grn_no') this.grnNo,
+      @JsonKey(name: 'po_number') this.poNumber,
+      @JsonKey(name: 'challan_no') this.challanNo,
+      @JsonKey(name: 'matched_status') this.matchedStatus,
+      @JsonKey(name: 'quantity_diff') this.quantityDiff,
+      @JsonKey(name: 'vendor_name') this.vendorName,
+      @JsonKey(name: 'reconciled_at') this.reconciledAt,
+      @JsonKey(name: 'sr_no') this.srNo,
+      @JsonKey(name: 'remarks') this.remarks,
+      @JsonKey(name: 'duplicate_reference') this.duplicateReference,
+      @JsonKey(name: 'dublicate') this.dublicate,
+      @JsonKey(name: 'reference_no') this.referenceNo,
+      @JsonKey(name: 'reference') this.reference,
+      @JsonKey(name: 'document_date') this.documentDate,
+      @JsonKey(name: 'quantity') this.quantity,
+      @JsonKey(name: 'material') this.material,
+      @JsonKey(name: 'material_document') this.materialDocument,
+      @JsonKey(name: 'posting_date') this.postingDate,
+      @JsonKey(name: 'plant') this.plant,
+      @JsonKey(name: 'material_description') this.materialDescription,
+      @JsonKey(name: 'movement_type') this.movementType,
+      @JsonKey(name: 'movement_type_text') this.movementTypeText,
+      @JsonKey(name: 'supplier') this.supplier,
+      @JsonKey(name: 'purchase_order') this.purchaseOrder,
+      @JsonKey(name: 'document_header_text') this.documentHeaderText,
+      @JsonKey(name: 'user_name') this.userName,
+      @JsonKey(name: 'entry_date') this.entryDate,
+      @JsonKey(name: 'time_of_entry') this.timeOfEntry,
+      @JsonKey(name: 'amount_in_local_currency') this.amountInLocalCurrency,
+      @JsonKey(name: 'qty_in_opun') this.qtyInOpun,
+      @JsonKey(name: 'qty_in_order_unit') this.qtyInOrderUnit,
+      @JsonKey(name: 'local_time') this.localTime,
+      @JsonKey(name: 'local_date') this.localDate,
+      @JsonKey(name: 'shift') this.shift,
+      @JsonKey(name: 'store_remarks') this.storeRemarks,
+      @JsonKey(name: 'status') this.status,
+      @JsonKey(name: 'aging') this.aging,
+      @JsonKey(name: 'mdr') this.mdr,
+      @JsonKey(name: 'scanning_invoice_status') this.scanningInvoiceStatus,
+      @JsonKey(name: 'scanning_date') this.scanningDate,
+      @JsonKey(name: 'vendor') this.vendor,
+      @JsonKey(name: 'source_vendor_name') this.sourceVendorName,
+      @JsonKey(name: 'buyer_name') this.buyerName,
+      @JsonKey(name: 'maker_checker') this.makerChecker});
 
-  factory _$GrnReconReportItemImpl.fromJson(Map<String, dynamic> json) =>
-      _$$GrnReconReportItemImplFromJson(json);
-
   @override
-  final String gateEntryNo;
+  @JsonKey(name: 'gate_entry_no')
+  final String? gateEntryNo;
   @override
-  final String grnNo;
+  @JsonKey(name: 'grn_no')
+  final String? grnNo;
   @override
-  final String poNumber;
+  @JsonKey(name: 'po_number')
+  final String? poNumber;
   @override
-  final String challanNo;
+  @JsonKey(name: 'challan_no')
+  final String? challanNo;
   @override
-  final String matchedStatus;
+  @JsonKey(name: 'matched_status')
+  final String? matchedStatus;
   @override
-  final double quantityDiff;
+  @JsonKey(name: 'quantity_diff')
+  final double? quantityDiff;
+  @override
+  @JsonKey(name: 'vendor_name')
+  final String? vendorName;
+  @override
+  @JsonKey(name: 'reconciled_at')
+  final String? reconciledAt;
+  @override
+  @JsonKey(name: 'sr_no')
+  final String? srNo;
+  @override
+  @JsonKey(name: 'remarks')
+  final String? remarks;
+  @override
+  @JsonKey(name: 'duplicate_reference')
+  final String? duplicateReference;
+  @override
+  @JsonKey(name: 'dublicate')
+  final String? dublicate;
+  @override
+  @JsonKey(name: 'reference_no')
+  final String? referenceNo;
+  @override
+  @JsonKey(name: 'reference')
+  final String? reference;
+  @override
+  @JsonKey(name: 'document_date')
+  final String? documentDate;
+  @override
+  @JsonKey(name: 'quantity')
+  final String? quantity;
+  @override
+  @JsonKey(name: 'material')
+  final String? material;
+  @override
+  @JsonKey(name: 'material_document')
+  final String? materialDocument;
+  @override
+  @JsonKey(name: 'posting_date')
+  final String? postingDate;
+  @override
+  @JsonKey(name: 'plant')
+  final String? plant;
+  @override
+  @JsonKey(name: 'material_description')
+  final String? materialDescription;
+  @override
+  @JsonKey(name: 'movement_type')
+  final String? movementType;
+  @override
+  @JsonKey(name: 'movement_type_text')
+  final String? movementTypeText;
+  @override
+  @JsonKey(name: 'supplier')
+  final String? supplier;
+  @override
+  @JsonKey(name: 'purchase_order')
+  final String? purchaseOrder;
+  @override
+  @JsonKey(name: 'document_header_text')
+  final String? documentHeaderText;
+  @override
+  @JsonKey(name: 'user_name')
+  final String? userName;
+  @override
+  @JsonKey(name: 'entry_date')
+  final String? entryDate;
+  @override
+  @JsonKey(name: 'time_of_entry')
+  final String? timeOfEntry;
+  @override
+  @JsonKey(name: 'amount_in_local_currency')
+  final String? amountInLocalCurrency;
+  @override
+  @JsonKey(name: 'qty_in_opun')
+  final String? qtyInOpun;
+  @override
+  @JsonKey(name: 'qty_in_order_unit')
+  final String? qtyInOrderUnit;
+  @override
+  @JsonKey(name: 'local_time')
+  final String? localTime;
+  @override
+  @JsonKey(name: 'local_date')
+  final String? localDate;
+  @override
+  @JsonKey(name: 'shift')
+  final String? shift;
+  @override
+  @JsonKey(name: 'store_remarks')
+  final String? storeRemarks;
+  @override
+  @JsonKey(name: 'status')
+  final String? status;
+  @override
+  @JsonKey(name: 'aging')
+  final String? aging;
+  @override
+  @JsonKey(name: 'mdr')
+  final String? mdr;
+  @override
+  @JsonKey(name: 'scanning_invoice_status')
+  final String? scanningInvoiceStatus;
+  @override
+  @JsonKey(name: 'scanning_date')
+  final String? scanningDate;
+  @override
+  @JsonKey(name: 'vendor')
+  final String? vendor;
+  @override
+  @JsonKey(name: 'source_vendor_name')
+  final String? sourceVendorName;
+  @override
+  @JsonKey(name: 'buyer_name')
+  final String? buyerName;
+  @override
+  @JsonKey(name: 'maker_checker')
+  final String? makerChecker;
 
   @override
   String toString() {
-    return 'GrnReconReportItem(gateEntryNo: $gateEntryNo, grnNo: $grnNo, poNumber: $poNumber, challanNo: $challanNo, matchedStatus: $matchedStatus, quantityDiff: $quantityDiff)';
+    return 'GrnReconReportItem(gateEntryNo: $gateEntryNo, grnNo: $grnNo, poNumber: $poNumber, challanNo: $challanNo, matchedStatus: $matchedStatus, quantityDiff: $quantityDiff, vendorName: $vendorName, reconciledAt: $reconciledAt, srNo: $srNo, remarks: $remarks, duplicateReference: $duplicateReference, dublicate: $dublicate, referenceNo: $referenceNo, reference: $reference, documentDate: $documentDate, quantity: $quantity, material: $material, materialDocument: $materialDocument, postingDate: $postingDate, plant: $plant, materialDescription: $materialDescription, movementType: $movementType, movementTypeText: $movementTypeText, supplier: $supplier, purchaseOrder: $purchaseOrder, documentHeaderText: $documentHeaderText, userName: $userName, entryDate: $entryDate, timeOfEntry: $timeOfEntry, amountInLocalCurrency: $amountInLocalCurrency, qtyInOpun: $qtyInOpun, qtyInOrderUnit: $qtyInOrderUnit, localTime: $localTime, localDate: $localDate, shift: $shift, storeRemarks: $storeRemarks, status: $status, aging: $aging, mdr: $mdr, scanningInvoiceStatus: $scanningInvoiceStatus, scanningDate: $scanningDate, vendor: $vendor, sourceVendorName: $sourceVendorName, buyerName: $buyerName, makerChecker: $makerChecker)';
   }
 
   @override
@@ -709,13 +1551,128 @@ class _$GrnReconReportItemImpl implements _GrnReconReportItem {
             (identical(other.matchedStatus, matchedStatus) ||
                 other.matchedStatus == matchedStatus) &&
             (identical(other.quantityDiff, quantityDiff) ||
-                other.quantityDiff == quantityDiff));
+                other.quantityDiff == quantityDiff) &&
+            (identical(other.vendorName, vendorName) ||
+                other.vendorName == vendorName) &&
+            (identical(other.reconciledAt, reconciledAt) ||
+                other.reconciledAt == reconciledAt) &&
+            (identical(other.srNo, srNo) || other.srNo == srNo) &&
+            (identical(other.remarks, remarks) || other.remarks == remarks) &&
+            (identical(other.duplicateReference, duplicateReference) ||
+                other.duplicateReference == duplicateReference) &&
+            (identical(other.dublicate, dublicate) ||
+                other.dublicate == dublicate) &&
+            (identical(other.referenceNo, referenceNo) ||
+                other.referenceNo == referenceNo) &&
+            (identical(other.reference, reference) ||
+                other.reference == reference) &&
+            (identical(other.documentDate, documentDate) ||
+                other.documentDate == documentDate) &&
+            (identical(other.quantity, quantity) ||
+                other.quantity == quantity) &&
+            (identical(other.material, material) ||
+                other.material == material) &&
+            (identical(other.materialDocument, materialDocument) ||
+                other.materialDocument == materialDocument) &&
+            (identical(other.postingDate, postingDate) ||
+                other.postingDate == postingDate) &&
+            (identical(other.plant, plant) || other.plant == plant) &&
+            (identical(other.materialDescription, materialDescription) ||
+                other.materialDescription == materialDescription) &&
+            (identical(other.movementType, movementType) ||
+                other.movementType == movementType) &&
+            (identical(other.movementTypeText, movementTypeText) ||
+                other.movementTypeText == movementTypeText) &&
+            (identical(other.supplier, supplier) ||
+                other.supplier == supplier) &&
+            (identical(other.purchaseOrder, purchaseOrder) ||
+                other.purchaseOrder == purchaseOrder) &&
+            (identical(other.documentHeaderText, documentHeaderText) ||
+                other.documentHeaderText == documentHeaderText) &&
+            (identical(other.userName, userName) ||
+                other.userName == userName) &&
+            (identical(other.entryDate, entryDate) ||
+                other.entryDate == entryDate) &&
+            (identical(other.timeOfEntry, timeOfEntry) ||
+                other.timeOfEntry == timeOfEntry) &&
+            (identical(other.amountInLocalCurrency, amountInLocalCurrency) ||
+                other.amountInLocalCurrency == amountInLocalCurrency) &&
+            (identical(other.qtyInOpun, qtyInOpun) ||
+                other.qtyInOpun == qtyInOpun) &&
+            (identical(other.qtyInOrderUnit, qtyInOrderUnit) ||
+                other.qtyInOrderUnit == qtyInOrderUnit) &&
+            (identical(other.localTime, localTime) ||
+                other.localTime == localTime) &&
+            (identical(other.localDate, localDate) ||
+                other.localDate == localDate) &&
+            (identical(other.shift, shift) || other.shift == shift) &&
+            (identical(other.storeRemarks, storeRemarks) ||
+                other.storeRemarks == storeRemarks) &&
+            (identical(other.status, status) || other.status == status) &&
+            (identical(other.aging, aging) || other.aging == aging) &&
+            (identical(other.mdr, mdr) || other.mdr == mdr) &&
+            (identical(other.scanningInvoiceStatus, scanningInvoiceStatus) ||
+                other.scanningInvoiceStatus == scanningInvoiceStatus) &&
+            (identical(other.scanningDate, scanningDate) ||
+                other.scanningDate == scanningDate) &&
+            (identical(other.vendor, vendor) || other.vendor == vendor) &&
+            (identical(other.sourceVendorName, sourceVendorName) ||
+                other.sourceVendorName == sourceVendorName) &&
+            (identical(other.buyerName, buyerName) ||
+                other.buyerName == buyerName) &&
+            (identical(other.makerChecker, makerChecker) ||
+                other.makerChecker == makerChecker));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(runtimeType, gateEntryNo, grnNo, poNumber,
-      challanNo, matchedStatus, quantityDiff);
+  int get hashCode => Object.hashAll([
+        runtimeType,
+        gateEntryNo,
+        grnNo,
+        poNumber,
+        challanNo,
+        matchedStatus,
+        quantityDiff,
+        vendorName,
+        reconciledAt,
+        srNo,
+        remarks,
+        duplicateReference,
+        dublicate,
+        referenceNo,
+        reference,
+        documentDate,
+        quantity,
+        material,
+        materialDocument,
+        postingDate,
+        plant,
+        materialDescription,
+        movementType,
+        movementTypeText,
+        supplier,
+        purchaseOrder,
+        documentHeaderText,
+        userName,
+        entryDate,
+        timeOfEntry,
+        amountInLocalCurrency,
+        qtyInOpun,
+        qtyInOrderUnit,
+        localTime,
+        localDate,
+        shift,
+        storeRemarks,
+        status,
+        aging,
+        mdr,
+        scanningInvoiceStatus,
+        scanningDate,
+        vendor,
+        sourceVendorName,
+        buyerName,
+        makerChecker
+      ]);
 
   /// Create a copy of GrnReconReportItem
   /// with the given fields replaced by the non-null parameter values.
@@ -725,39 +1682,194 @@ class _$GrnReconReportItemImpl implements _GrnReconReportItem {
   _$$GrnReconReportItemImplCopyWith<_$GrnReconReportItemImpl> get copyWith =>
       __$$GrnReconReportItemImplCopyWithImpl<_$GrnReconReportItemImpl>(
           this, _$identity);
-
-  @override
-  Map<String, dynamic> toJson() {
-    return _$$GrnReconReportItemImplToJson(
-      this,
-    );
-  }
 }
 
 abstract class _GrnReconReportItem implements GrnReconReportItem {
   const factory _GrnReconReportItem(
-      {required final String gateEntryNo,
-      required final String grnNo,
-      required final String poNumber,
-      required final String challanNo,
-      required final String matchedStatus,
-      required final double quantityDiff}) = _$GrnReconReportItemImpl;
+      {@JsonKey(name: 'gate_entry_no') final String? gateEntryNo,
+      @JsonKey(name: 'grn_no') final String? grnNo,
+      @JsonKey(name: 'po_number') final String? poNumber,
+      @JsonKey(name: 'challan_no') final String? challanNo,
+      @JsonKey(name: 'matched_status') final String? matchedStatus,
+      @JsonKey(name: 'quantity_diff') final double? quantityDiff,
+      @JsonKey(name: 'vendor_name') final String? vendorName,
+      @JsonKey(name: 'reconciled_at') final String? reconciledAt,
+      @JsonKey(name: 'sr_no') final String? srNo,
+      @JsonKey(name: 'remarks') final String? remarks,
+      @JsonKey(name: 'duplicate_reference') final String? duplicateReference,
+      @JsonKey(name: 'dublicate') final String? dublicate,
+      @JsonKey(name: 'reference_no') final String? referenceNo,
+      @JsonKey(name: 'reference') final String? reference,
+      @JsonKey(name: 'document_date') final String? documentDate,
+      @JsonKey(name: 'quantity') final String? quantity,
+      @JsonKey(name: 'material') final String? material,
+      @JsonKey(name: 'material_document') final String? materialDocument,
+      @JsonKey(name: 'posting_date') final String? postingDate,
+      @JsonKey(name: 'plant') final String? plant,
+      @JsonKey(name: 'material_description') final String? materialDescription,
+      @JsonKey(name: 'movement_type') final String? movementType,
+      @JsonKey(name: 'movement_type_text') final String? movementTypeText,
+      @JsonKey(name: 'supplier') final String? supplier,
+      @JsonKey(name: 'purchase_order') final String? purchaseOrder,
+      @JsonKey(name: 'document_header_text') final String? documentHeaderText,
+      @JsonKey(name: 'user_name') final String? userName,
+      @JsonKey(name: 'entry_date') final String? entryDate,
+      @JsonKey(name: 'time_of_entry') final String? timeOfEntry,
+      @JsonKey(name: 'amount_in_local_currency')
+      final String? amountInLocalCurrency,
+      @JsonKey(name: 'qty_in_opun') final String? qtyInOpun,
+      @JsonKey(name: 'qty_in_order_unit') final String? qtyInOrderUnit,
+      @JsonKey(name: 'local_time') final String? localTime,
+      @JsonKey(name: 'local_date') final String? localDate,
+      @JsonKey(name: 'shift') final String? shift,
+      @JsonKey(name: 'store_remarks') final String? storeRemarks,
+      @JsonKey(name: 'status') final String? status,
+      @JsonKey(name: 'aging') final String? aging,
+      @JsonKey(name: 'mdr') final String? mdr,
+      @JsonKey(name: 'scanning_invoice_status')
+      final String? scanningInvoiceStatus,
+      @JsonKey(name: 'scanning_date') final String? scanningDate,
+      @JsonKey(name: 'vendor') final String? vendor,
+      @JsonKey(name: 'source_vendor_name') final String? sourceVendorName,
+      @JsonKey(name: 'buyer_name') final String? buyerName,
+      @JsonKey(name: 'maker_checker')
+      final String? makerChecker}) = _$GrnReconReportItemImpl;
 
-  factory _GrnReconReportItem.fromJson(Map<String, dynamic> json) =
-      _$GrnReconReportItemImpl.fromJson;
-
   @override
-  String get gateEntryNo;
+  @JsonKey(name: 'gate_entry_no')
+  String? get gateEntryNo;
   @override
-  String get grnNo;
+  @JsonKey(name: 'grn_no')
+  String? get grnNo;
   @override
-  String get poNumber;
+  @JsonKey(name: 'po_number')
+  String? get poNumber;
   @override
-  String get challanNo;
+  @JsonKey(name: 'challan_no')
+  String? get challanNo;
   @override
-  String get matchedStatus;
+  @JsonKey(name: 'matched_status')
+  String? get matchedStatus;
   @override
-  double get quantityDiff;
+  @JsonKey(name: 'quantity_diff')
+  double? get quantityDiff;
+  @override
+  @JsonKey(name: 'vendor_name')
+  String? get vendorName;
+  @override
+  @JsonKey(name: 'reconciled_at')
+  String? get reconciledAt;
+  @override
+  @JsonKey(name: 'sr_no')
+  String? get srNo;
+  @override
+  @JsonKey(name: 'remarks')
+  String? get remarks;
+  @override
+  @JsonKey(name: 'duplicate_reference')
+  String? get duplicateReference;
+  @override
+  @JsonKey(name: 'dublicate')
+  String? get dublicate;
+  @override
+  @JsonKey(name: 'reference_no')
+  String? get referenceNo;
+  @override
+  @JsonKey(name: 'reference')
+  String? get reference;
+  @override
+  @JsonKey(name: 'document_date')
+  String? get documentDate;
+  @override
+  @JsonKey(name: 'quantity')
+  String? get quantity;
+  @override
+  @JsonKey(name: 'material')
+  String? get material;
+  @override
+  @JsonKey(name: 'material_document')
+  String? get materialDocument;
+  @override
+  @JsonKey(name: 'posting_date')
+  String? get postingDate;
+  @override
+  @JsonKey(name: 'plant')
+  String? get plant;
+  @override
+  @JsonKey(name: 'material_description')
+  String? get materialDescription;
+  @override
+  @JsonKey(name: 'movement_type')
+  String? get movementType;
+  @override
+  @JsonKey(name: 'movement_type_text')
+  String? get movementTypeText;
+  @override
+  @JsonKey(name: 'supplier')
+  String? get supplier;
+  @override
+  @JsonKey(name: 'purchase_order')
+  String? get purchaseOrder;
+  @override
+  @JsonKey(name: 'document_header_text')
+  String? get documentHeaderText;
+  @override
+  @JsonKey(name: 'user_name')
+  String? get userName;
+  @override
+  @JsonKey(name: 'entry_date')
+  String? get entryDate;
+  @override
+  @JsonKey(name: 'time_of_entry')
+  String? get timeOfEntry;
+  @override
+  @JsonKey(name: 'amount_in_local_currency')
+  String? get amountInLocalCurrency;
+  @override
+  @JsonKey(name: 'qty_in_opun')
+  String? get qtyInOpun;
+  @override
+  @JsonKey(name: 'qty_in_order_unit')
+  String? get qtyInOrderUnit;
+  @override
+  @JsonKey(name: 'local_time')
+  String? get localTime;
+  @override
+  @JsonKey(name: 'local_date')
+  String? get localDate;
+  @override
+  @JsonKey(name: 'shift')
+  String? get shift;
+  @override
+  @JsonKey(name: 'store_remarks')
+  String? get storeRemarks;
+  @override
+  @JsonKey(name: 'status')
+  String? get status;
+  @override
+  @JsonKey(name: 'aging')
+  String? get aging;
+  @override
+  @JsonKey(name: 'mdr')
+  String? get mdr;
+  @override
+  @JsonKey(name: 'scanning_invoice_status')
+  String? get scanningInvoiceStatus;
+  @override
+  @JsonKey(name: 'scanning_date')
+  String? get scanningDate;
+  @override
+  @JsonKey(name: 'vendor')
+  String? get vendor;
+  @override
+  @JsonKey(name: 'source_vendor_name')
+  String? get sourceVendorName;
+  @override
+  @JsonKey(name: 'buyer_name')
+  String? get buyerName;
+  @override
+  @JsonKey(name: 'maker_checker')
+  String? get makerChecker;
 
   /// Create a copy of GrnReconReportItem
   /// with the given fields replaced by the non-null parameter values.

@@ -30,11 +30,19 @@ _$GateEntryReportItemImpl _$$GateEntryReportItemImplFromJson(
         Map<String, dynamic> json) =>
     _$GateEntryReportItemImpl(
       gateEntryNo: json['gateEntryNo'] as String,
+      direction: json['direction'] as String,
+      challanNo: json['challanNo'] as String,
+      lrNo: json['lrNo'] as String,
       date: DateTime.parse(json['date'] as String),
-      vendor: json['vendor'] as String,
-      poNumber: json['poNumber'] as String,
-      vehicleNo: json['vehicleNo'] as String,
+      gateOutDate: json['gateOutDate'] == null
+          ? null
+          : DateTime.parse(json['gateOutDate'] as String),
       material: json['material'] as String,
+      qty: (json['qty'] as num).toInt(),
+      vendor: json['vendor'] as String,
+      transporter: json['transporter'] as String,
+      vehicleNo: json['vehicleNo'] as String,
+      poNumber: json['poNumber'] as String,
       status: json['status'] as String,
     );
 
@@ -42,35 +50,69 @@ Map<String, dynamic> _$$GateEntryReportItemImplToJson(
         _$GateEntryReportItemImpl instance) =>
     <String, dynamic>{
       'gateEntryNo': instance.gateEntryNo,
+      'direction': instance.direction,
+      'challanNo': instance.challanNo,
+      'lrNo': instance.lrNo,
       'date': instance.date.toIso8601String(),
-      'vendor': instance.vendor,
-      'poNumber': instance.poNumber,
-      'vehicleNo': instance.vehicleNo,
+      'gateOutDate': instance.gateOutDate?.toIso8601String(),
       'material': instance.material,
+      'qty': instance.qty,
+      'vendor': instance.vendor,
+      'transporter': instance.transporter,
+      'vehicleNo': instance.vehicleNo,
+      'poNumber': instance.poNumber,
       'status': instance.status,
     };
 
 _$GrnReconReportItemImpl _$$GrnReconReportItemImplFromJson(
         Map<String, dynamic> json) =>
     _$GrnReconReportItemImpl(
-      gateEntryNo: json['gateEntryNo'] as String,
-      grnNo: json['grnNo'] as String,
-      poNumber: json['poNumber'] as String,
-      challanNo: json['challanNo'] as String,
-      matchedStatus: json['matchedStatus'] as String,
-      quantityDiff: (json['quantityDiff'] as num).toDouble(),
+      gateEntryNo: json['gate_entry_no'] as String?,
+      grnNo: json['grn_no'] as String?,
+      poNumber: json['po_number'] as String?,
+      challanNo: json['challan_no'] as String?,
+      matchedStatus: json['matched_status'] as String?,
+      quantityDiff: (json['quantity_diff'] as num?)?.toDouble(),
+      vendorName: json['vendor_name'] as String?,
+      reconciledAt: json['reconciled_at'] as String?,
+      srNo: json['sr_no'] as String?,
+      remarks: json['remarks'] as String?,
+      duplicateReference: json['duplicate_reference'] as String?,
+      dublicate: json['dublicate'] as String?,
+      referenceNo: json['reference_no'] as String?,
+      reference: json['reference'] as String?,
+      documentDate: json['document_date'] as String?,
+      quantity: json['quantity'] as String?,
+      material: json['material'] as String?,
+      materialDocument: json['material_document'] as String?,
+      postingDate: json['posting_date'] as String?,
+      plant: json['plant'] as String?,
+      materialDescription: json['material_description'] as String?,
+      movementType: json['movement_type'] as String?,
+      movementTypeText: json['movement_type_text'] as String?,
+      supplier: json['supplier'] as String?,
+      purchaseOrder: json['purchase_order'] as String?,
+      documentHeaderText: json['document_header_text'] as String?,
+      userName: json['user_name'] as String?,
+      entryDate: json['entry_date'] as String?,
+      timeOfEntry: json['time_of_entry'] as String?,
+      amountInLocalCurrency: json['amount_in_local_currency'] as String?,
+      qtyInOpun: json['qty_in_opun'] as String?,
+      qtyInOrderUnit: json['qty_in_order_unit'] as String?,
+      localTime: json['local_time'] as String?,
+      localDate: json['local_date'] as String?,
+      shift: json['shift'] as String?,
+      storeRemarks: json['store_remarks'] as String?,
+      status: json['status'] as String?,
+      aging: json['aging'] as String?,
+      mdr: json['mdr'] as String?,
+      scanningInvoiceStatus: json['scanning_invoice_status'] as String?,
+      scanningDate: json['scanning_date'] as String?,
+      vendor: json['vendor'] as String?,
+      sourceVendorName: json['source_vendor_name'] as String?,
+      buyerName: json['buyer_name'] as String?,
+      makerChecker: json['maker_checker'] as String?,
     );
-
-Map<String, dynamic> _$$GrnReconReportItemImplToJson(
-        _$GrnReconReportItemImpl instance) =>
-    <String, dynamic>{
-      'gateEntryNo': instance.gateEntryNo,
-      'grnNo': instance.grnNo,
-      'poNumber': instance.poNumber,
-      'challanNo': instance.challanNo,
-      'matchedStatus': instance.matchedStatus,
-      'quantityDiff': instance.quantityDiff,
-    };
 
 _$PendingGrnReportItemImpl _$$PendingGrnReportItemImplFromJson(
         Map<String, dynamic> json) =>

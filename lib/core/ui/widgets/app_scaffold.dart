@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../auth/session_controller.dart';
+import '../../auth/session_state.dart';
+import '../../auth/user_role.dart';
 import '../responsive.dart';
 
-class AppScaffold extends StatelessWidget {
+class AppScaffold extends ConsumerWidget {
   final Widget child;
   final int selectedIndex;
   final void Function(int index) onSelect;
@@ -15,7 +19,13 @@ class AppScaffold extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final session = ref.watch(sessionControllerProvider);
+    final role = session is Authenticated ? session.role : null;
+    final showReconciliation = role != UserRole.gateSecurity;
+    final visibleIndexes = showReconciliation ? [0, 1, 2, 3] : [0, 1, 3];
+    final navigationIndex = visibleIndexes.indexOf(selectedIndex).clamp(0, visibleIndexes.length - 1);
+
     if (isDesktop(context)) {
       return Scaffold(
         body: SafeArea(
@@ -24,6 +34,7 @@ class AppScaffold extends StatelessWidget {
               _DesktopSidebar(
                 selectedIndex: selectedIndex,
                 onSelect: onSelect,
+                showReconciliation: showReconciliation,
               ),
               const VerticalDivider(width: 1, thickness: 1),
               Expanded(
@@ -41,27 +52,28 @@ class AppScaffold extends StatelessWidget {
     return Scaffold(
       body: child,
       bottomNavigationBar: NavigationBar(
-        selectedIndex: selectedIndex,
-        onDestinationSelected: onSelect,
+        selectedIndex: navigationIndex,
+        onDestinationSelected: (index) => onSelect(visibleIndexes[index]),
         elevation: 8,
         backgroundColor: Theme.of(context).colorScheme.surface,
-        destinations: const [
-          NavigationDestination(
+        destinations: [
+          const NavigationDestination(
             icon: Icon(Icons.dashboard_outlined),
             selectedIcon: Icon(Icons.dashboard),
             label: 'Dashboard',
           ),
-          NavigationDestination(
+          const NavigationDestination(
             icon: Icon(Icons.local_shipping_outlined),
             selectedIcon: Icon(Icons.local_shipping),
             label: 'Gate Entry',
           ),
-          NavigationDestination(
-            icon: Icon(Icons.rule_folder_outlined),
-            selectedIcon: Icon(Icons.rule_folder),
-            label: 'Reconciliation',
-          ),
-          NavigationDestination(
+          if (showReconciliation)
+            const NavigationDestination(
+              icon: Icon(Icons.rule_folder_outlined),
+              selectedIcon: Icon(Icons.rule_folder),
+              label: 'Reconciliation',
+            ),
+          const NavigationDestination(
             icon: Icon(Icons.bar_chart_outlined),
             selectedIcon: Icon(Icons.bar_chart),
             label: 'Reports',
@@ -75,10 +87,12 @@ class AppScaffold extends StatelessWidget {
 class _DesktopSidebar extends StatelessWidget {
   final int selectedIndex;
   final void Function(int index) onSelect;
+  final bool showReconciliation;
 
   const _DesktopSidebar({
     required this.selectedIndex,
     required this.onSelect,
+    required this.showReconciliation,
   });
 
   @override
@@ -150,15 +164,17 @@ class _DesktopSidebar extends StatelessWidget {
                   isSelected: selectedIndex == 1,
                   onTap: () => onSelect(1),
                 ),
-                const SizedBox(height: 24),
-                const _SectionLabel(label: 'RECONCILIATION'),
-                _SidebarItem(
-                  icon: Icons.rule_folder_outlined,
-                  activeIcon: Icons.rule_folder,
-                  label: 'Exceptions',
-                  isSelected: selectedIndex == 2,
-                  onTap: () => onSelect(2),
-                ),
+                if (showReconciliation) ...[
+                  const SizedBox(height: 24),
+                  const _SectionLabel(label: 'RECONCILIATION'),
+                  _SidebarItem(
+                    icon: Icons.rule_folder_outlined,
+                    activeIcon: Icons.rule_folder,
+                    label: 'Exceptions',
+                    isSelected: selectedIndex == 2,
+                    onTap: () => onSelect(2),
+                  ),
+                ],
                 const SizedBox(height: 24),
                 const _SectionLabel(label: 'ANALYTICS'),
                 _SidebarItem(

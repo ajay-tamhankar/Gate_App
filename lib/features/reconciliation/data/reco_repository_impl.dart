@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/network/dio_provider.dart';
+import '../../../core/network/pagination_model.dart';
 import '../domain/entities/reco_exception.dart';
 import '../domain/entities/reconciliation_item.dart';
 import '../domain/reco_repository.dart';
@@ -16,12 +17,16 @@ class RecoRepositoryImpl implements RecoRepository {
   RecoRepositoryImpl({required ApiClient apiClient}) : _apiClient = apiClient;
 
   @override
-  @override
-  Future<List<ReconciliationItem>> getReconciliations({
+  Future<PaginatedResponse<ReconciliationItem>> getReconciliations({
     DateTime? dateFrom,
     DateTime? dateTo,
+    int page = 1,
+    int limit = 20,
   }) async {
-    final query = <String, dynamic>{};
+    final query = <String, dynamic>{
+      'page': page,
+      'limit': limit,
+    };
     if (dateFrom != null) {
       query['dateFrom'] = dateFrom.toIso8601String();
     }
@@ -36,19 +41,31 @@ class RecoRepositoryImpl implements RecoRepository {
 
     final success = response['success'] as bool? ?? false;
     if (!success) {
-      return [];
+      return PaginatedResponse(
+        items: const [],
+        pagination: PaginationModel.fromJson(
+          response['pagination'] as Map<String, dynamic>? ??
+              const <String, dynamic>{},
+        ),
+      );
     }
 
     final data = response['data'];
     final list = data is List ? data : (response['items'] as List? ?? []);
-    return list
+    final items = list
         .map((e) => ReconciliationItem.fromJson(e as Map<String, dynamic>))
         .toList();
+    final pagination = PaginationModel.fromJson(
+      response['pagination'] as Map<String, dynamic>? ??
+          const <String, dynamic>{},
+    );
+
+    return PaginatedResponse(items: items, pagination: pagination);
   }
 
   @override
   Future<List<RecoException>> getExceptions() async {
-    final response = await _apiClient.getRaw('/reconciliations');
+    final response = await _apiClient.getRaw('/reconciliation/exceptions');
 
     final success = response['success'] as bool? ?? false;
     if (!success) {
@@ -58,28 +75,33 @@ class RecoRepositoryImpl implements RecoRepository {
     final data = response['data'];
     final list = data is List ? data : (response['items'] as List? ?? []);
 
-    return list
-        .map((e) => RecoException.fromJson(e as Map<String, dynamic>))
-        .toList();
+    return list.map((e) => _mapRecoException(e as Map<String, dynamic>)).toList();
   }
 
   @override
   Future<RecoException> getExceptionDetail(String id) async {
-    final response = await _apiClient.getRaw('/exceptions/$id');
-
-    final success = response['success'] as bool? ?? false;
-    if (!success || response['data'] == null) {
-      throw Exception(
-          response['message']?.toString() ?? 'Failed to load exception');
+    try {
+      final response = await _apiClient.getRaw('/reconciliation/exceptions/$id');
+      final success = response['success'] as bool? ?? false;
+      final data = response['data'];
+      if (success && data is Map<String, dynamic>) {
+        return _mapRecoException(data);
+      }
+    } catch (_) {
+      // Fallback for backends that expose only list endpoint.
     }
 
-    return RecoException.fromJson(response['data'] as Map<String, dynamic>);
+    final items = await getExceptions();
+    for (final item in items) {
+      if (item.id == id) return item;
+    }
+    throw Exception('Failed to load exception details');
   }
 
   @override
   Future<void> resolveException(String id, String resolutionNotes) async {
     final response = await _apiClient.postRaw(
-      '/exceptions/$id/resolve',
+      '/reconciliation/exceptions/$id/resolve',
       data: {'resolutionNotes': resolutionNotes},
     );
 
@@ -95,4 +117,66 @@ class RecoRepositoryImpl implements RecoRepository {
   }
 
   void clearForTest() {}
+
+  RecoException _mapRecoException(Map<String, dynamic> json) {
+    num readNum(dynamic value) {
+      if (value is num) return value;
+      if (value == null) return 0;
+      return num.tryParse(value.toString()) ?? 0;
+    }
+
+    String humanize(String value) {
+      if (value.trim().isEmpty) return 'Unknown';
+      return value
+          .split('_')
+          .where((part) => part.isNotEmpty)
+          .map((part) => '${part[0].toUpperCase()}${part.substring(1).toLowerCase()}')
+          .join(' ');
+    }
+
+    final id = (json['id'] ??
+            json['_id'] ??
+            json['reconciliationId'] ??
+            json['recoId'] ??
+            '')
+        .toString();
+
+    final gateEntryNo = (json['gateEntryNo'] ??
+            json['gate_entry_no'] ??
+            json['gateEntryId'] ??
+            json['gate_entry_id'] ??
+            '')
+        .toString();
+
+    final rawStatus = (json['status'] ?? '').toString();
+    final status = (json['statusLabel'] ?? '').toString().trim().isNotEmpty
+        ? (json['statusLabel'] ?? '').toString()
+        : humanize(rawStatus);
+
+    final matchedGrnNumber = (json['matchedGrnNumber'] ?? '').toString();
+    final qtyVariance = readNum(json['qtyVariance']);
+    final baseReason = (json['displayReason'] ?? json['reasonCode'] ?? '-').toString();
+    final description = qtyVariance == 0
+        ? baseReason
+        : '$baseReason (Qty variance: $qtyVariance)';
+
+    final createdAtRaw = (json['createdAt'] ??
+            json['reconciledAt'] ??
+            json['created_at'] ??
+            '')
+        .toString();
+
+    final createdAt = DateTime.tryParse(createdAtRaw) ?? DateTime.now();
+
+    return RecoException(
+      id: id,
+      gateEntryId: gateEntryNo,
+      poNumber: matchedGrnNumber.isNotEmpty ? matchedGrnNumber : '-',
+      status: status,
+      description: description,
+      createdAt: createdAt,
+      resolvedAt: json['resolvedAt']?.toString(),
+      resolvedBy: json['resolvedBy']?.toString(),
+    );
+  }
 }

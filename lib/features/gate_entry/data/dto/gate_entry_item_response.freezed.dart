@@ -14,11 +14,6 @@ T _$identity<T>(T value) => value;
 final _privateConstructorUsedError = UnsupportedError(
     'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models');
 
-GateEntryItemResponse _$GateEntryItemResponseFromJson(
-    Map<String, dynamic> json) {
-  return _GateEntryItemResponse.fromJson(json);
-}
-
 /// @nodoc
 mixin _$GateEntryItemResponse {
   String? get id => throw _privateConstructorUsedError;
@@ -26,9 +21,6 @@ mixin _$GateEntryItemResponse {
   String get materialCode => throw _privateConstructorUsedError;
   int get challanQty => throw _privateConstructorUsedError;
   String get uom => throw _privateConstructorUsedError;
-
-  /// Serializes this GateEntryItemResponse to a JSON map.
-  Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
 
   /// Create a copy of GateEntryItemResponse
   /// with the given fields replaced by the non-null parameter values.
@@ -161,7 +153,7 @@ class __$$GateEntryItemResponseImplCopyWithImpl<$Res>
 }
 
 /// @nodoc
-@JsonSerializable()
+
 class _$GateEntryItemResponseImpl implements _GateEntryItemResponse {
   const _$GateEntryItemResponseImpl(
       {this.id,
@@ -169,9 +161,6 @@ class _$GateEntryItemResponseImpl implements _GateEntryItemResponse {
       required this.materialCode,
       required this.challanQty,
       required this.uom});
-
-  factory _$GateEntryItemResponseImpl.fromJson(Map<String, dynamic> json) =>
-      _$$GateEntryItemResponseImplFromJson(json);
 
   @override
   final String? id;
@@ -204,7 +193,6 @@ class _$GateEntryItemResponseImpl implements _GateEntryItemResponse {
             (identical(other.uom, uom) || other.uom == uom));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
   @override
   int get hashCode =>
       Object.hash(runtimeType, id, poNumber, materialCode, challanQty, uom);
@@ -217,13 +205,6 @@ class _$GateEntryItemResponseImpl implements _GateEntryItemResponse {
   _$$GateEntryItemResponseImplCopyWith<_$GateEntryItemResponseImpl>
       get copyWith => __$$GateEntryItemResponseImplCopyWithImpl<
           _$GateEntryItemResponseImpl>(this, _$identity);
-
-  @override
-  Map<String, dynamic> toJson() {
-    return _$$GateEntryItemResponseImplToJson(
-      this,
-    );
-  }
 }
 
 abstract class _GateEntryItemResponse implements GateEntryItemResponse {
@@ -233,9 +214,6 @@ abstract class _GateEntryItemResponse implements GateEntryItemResponse {
       required final String materialCode,
       required final int challanQty,
       required final String uom}) = _$GateEntryItemResponseImpl;
-
-  factory _GateEntryItemResponse.fromJson(Map<String, dynamic> json) =
-      _$GateEntryItemResponseImpl.fromJson;
 
   @override
   String? get id;

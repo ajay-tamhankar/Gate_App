@@ -2,10 +2,22 @@ class WarehouseReconciliationRecord {
   final String id;
   final String gateEntryId;
   final String gateEntryNo;
+  final String status;
+  final String statusLabel;
+  final String matchedGrnNumber;
+  final num qtyVariance;
+  final String reasonCode;
+  final String displayReason;
+  final DateTime? date;
+  final String reconciledBy;
+  final bool isResolved;
+  final DateTime? resolvedAt;
+  final String resolvedBy;
+  final String resolutionNotes;
+
+  // Legacy/compat fields retained for existing UI call sites.
   final String vendorName;
   final String poNumber;
-  final String status;
-  final DateTime? date;
   final num expectedQty;
   final num receivedQty;
   final num acceptedQty;
@@ -19,10 +31,20 @@ class WarehouseReconciliationRecord {
     required this.id,
     required this.gateEntryId,
     required this.gateEntryNo,
+    required this.status,
+    required this.statusLabel,
+    required this.matchedGrnNumber,
+    required this.qtyVariance,
+    required this.reasonCode,
+    required this.displayReason,
+    required this.date,
+    required this.reconciledBy,
+    required this.isResolved,
+    required this.resolvedAt,
+    required this.resolvedBy,
+    required this.resolutionNotes,
     required this.vendorName,
     required this.poNumber,
-    required this.status,
-    required this.date,
     required this.expectedQty,
     required this.receivedQty,
     required this.acceptedQty,
@@ -34,79 +56,89 @@ class WarehouseReconciliationRecord {
   });
 
   factory WarehouseReconciliationRecord.fromJson(Map<String, dynamic> json) {
-    final dateRaw = json['date'] ?? json['postingDate'] ?? json['createdAt'];
-    DateTime? parsed;
-    if (dateRaw != null) {
-      parsed = DateTime.tryParse(dateRaw.toString());
-    }
+    final statusCode = (json['status'] ?? '').toString();
+    final statusLabel = (json['statusLabel'] ?? '').toString();
 
-    final grn = json['grn'] as Map<String, dynamic>? ?? const {};
-    final sap = json['sap'] as Map<String, dynamic>? ?? const {};
-
-    num readNum(List<dynamic> values) {
-      for (final value in values) {
-        if (value is num) return value;
-        if (value != null) {
-          final parsed = num.tryParse(value.toString());
-          if (parsed != null) return parsed;
-        }
-      }
-      return 0;
-    }
-
-    final receivedQty = readNum([
-      json['receivedQty'],
-      json['grnReceivedQty'],
-      grn['receivedQty'],
-      grn['totalReceivedQty'],
-    ]);
-    final expectedQty = readNum([
-      json['expectedQty'],
-      json['sapExpectedQty'],
-      sap['expectedQty'],
-      sap['quantity'],
-    ]);
+    final qtyVariance = _readNum(json['qtyVariance']);
+    final matchedGrn = (json['matchedGrnNumber'] ?? '').toString();
+    final displayReason = (json['displayReason'] ?? json['reasonCode'] ?? '').toString();
 
     return WarehouseReconciliationRecord(
       id: (json['id'] ?? '').toString(),
       gateEntryId: (json['gateEntryId'] ?? json['gate_entry_id'] ?? '').toString(),
       gateEntryNo: (json['gateEntryNo'] ?? json['gate_entry_no'] ?? '').toString(),
+      status: statusCode,
+      statusLabel: statusLabel,
+      matchedGrnNumber: matchedGrn,
+      qtyVariance: qtyVariance,
+      reasonCode: (json['reasonCode'] ?? '').toString(),
+      displayReason: displayReason,
+      date: _readDate(json['reconciledAt'] ?? json['createdAt'] ?? json['date']),
+      reconciledBy: (json['reconciledBy'] ?? '').toString(),
+      isResolved: (json['isResolved'] ?? json['is_resolved'] ?? false) == true,
+      resolvedAt: _readDate(json['resolvedAt']),
+      resolvedBy: (json['resolvedBy'] ?? '').toString(),
+      resolutionNotes: (json['resolutionNotes'] ?? '').toString(),
       vendorName: (json['vendorName'] ?? json['vendor_name'] ?? '').toString(),
-      poNumber: (json['poNumber'] ?? json['po_number'] ?? '').toString(),
-      status: (json['status'] ?? '').toString(),
-      date: parsed,
-      expectedQty: expectedQty,
-      receivedQty: receivedQty,
-      acceptedQty: readNum([
-        json['acceptedQty'],
-        json['grnAcceptedQty'],
-        grn['acceptedQty'],
-      ]),
-      rejectedQty: readNum([
-        json['rejectedQty'],
-        json['grnRejectedQty'],
-        grn['rejectedQty'],
-      ]),
-      differenceQty: readNum([
-        json['differenceQty'],
-        json['difference'],
-        expectedQty - receivedQty,
-      ]),
-      remarks: (json['remarks'] ?? json['remark'] ?? '').toString(),
+      poNumber: matchedGrn,
+      expectedQty: _readNum(json['expectedQty']),
+      receivedQty: _readNum(json['receivedQty']),
+      acceptedQty: _readNum(json['acceptedQty']),
+      rejectedQty: _readNum(json['rejectedQty']),
+      differenceQty: qtyVariance,
+      remarks: displayReason,
       approvedBy: (json['approvedBy'] ?? '').toString(),
       closedBy: (json['closedBy'] ?? '').toString(),
     );
   }
 
-  String get normalizedStatus => status.toLowerCase();
+  String get normalizedStatus => status.trim().toLowerCase();
 
-  bool get isMatched => normalizedStatus.contains('match');
-  bool get isPending => normalizedStatus.contains('pending');
+  String get displayStatus {
+    if (statusLabel.trim().isNotEmpty) return statusLabel.trim();
+    return _humanize(status);
+  }
+
+  bool get isMatched => normalizedStatus == 'matched';
+
+  bool get isPending =>
+      normalizedStatus == 'pending_grn' ||
+      normalizedStatus == 'grn_not_posted' ||
+      normalizedStatus.contains('pending');
+
   bool get isException =>
-      normalizedStatus.contains('exception') || normalizedStatus.contains('mismatch');
+      !isMatched &&
+      (normalizedStatus == 'quantity_mismatch' ||
+          normalizedStatus == 'duplicate_grn' ||
+          normalizedStatus == 'wrong_po_material' ||
+          normalizedStatus == 'grn_not_posted' ||
+          normalizedStatus == 'pending_grn' ||
+          normalizedStatus.contains('exception') ||
+          normalizedStatus.contains('mismatch'));
+
   bool get isApproved => normalizedStatus.contains('approved');
   bool get isClosed => normalizedStatus.contains('closed');
   bool get isActive => !isClosed;
+
+  static num _readNum(dynamic value) {
+    if (value is num) return value;
+    if (value == null) return 0;
+    return num.tryParse(value.toString()) ?? 0;
+  }
+
+  static DateTime? _readDate(dynamic value) {
+    if (value == null) return null;
+    return DateTime.tryParse(value.toString());
+  }
+
+  static String _humanize(String value) {
+    if (value.trim().isEmpty) return 'Unknown';
+    return value
+        .split('_')
+        .where((part) => part.isNotEmpty)
+        .map((part) => '${part[0].toUpperCase()}${part.substring(1).toLowerCase()}')
+        .join(' ');
+  }
 }
 
 class WarehouseReconciliationSummary {

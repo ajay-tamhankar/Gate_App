@@ -6,9 +6,9 @@ part of 'gate_entry_item_response.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-_$GateEntryItemResponseImpl _$$GateEntryItemResponseImplFromJson(
+GateEntryItemResponse _$GateEntryItemResponseFromJson(
         Map<String, dynamic> json) =>
-    _$GateEntryItemResponseImpl(
+    GateEntryItemResponse(
       id: json['id'] as String?,
       poNumber: json['poNumber'] as String,
       materialCode: json['materialCode'] as String,
@@ -16,8 +16,8 @@ _$GateEntryItemResponseImpl _$$GateEntryItemResponseImplFromJson(
       uom: json['uom'] as String,
     );
 
-Map<String, dynamic> _$$GateEntryItemResponseImplToJson(
-        _$GateEntryItemResponseImpl instance) =>
+Map<String, dynamic> _$GateEntryItemResponseToJson(
+        GateEntryItemResponse instance) =>
     <String, dynamic>{
       'id': instance.id,
       'poNumber': instance.poNumber,

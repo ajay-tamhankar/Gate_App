@@ -13,17 +13,20 @@ class GateEntry with _$GateEntry {
     String? gateEntryNo,
     required GateMovement gateMovement,
     required String challanNo,
+    @Default('') String lrNumber,
     required String transporterName,
     required String vehicleNo,
+    @Default('') String driverContactNo,
+    @Default('') String vendorCode,
     required String vendorName,
     required List<GateEntryItem> items,
     @Default('Pending') String status,
     DateTime? gateTimestamp,
+    DateTime? gateOutTimestamp,
+    String? gateOutBy,
     String? createdBy,
   }) = _GateEntry;
 
   factory GateEntry.fromJson(Map<String, dynamic> json) =>
       _$GateEntryFromJson(json);
 }
-
-

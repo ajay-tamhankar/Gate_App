@@ -14,10 +14,6 @@ T _$identity<T>(T value) => value;
 final _privateConstructorUsedError = UnsupportedError(
     'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models');
 
-GateEntryResponse _$GateEntryResponseFromJson(Map<String, dynamic> json) {
-  return _GateEntryResponse.fromJson(json);
-}
-
 /// @nodoc
 mixin _$GateEntryResponse {
   String get id => throw _privateConstructorUsedError;
@@ -25,14 +21,16 @@ mixin _$GateEntryResponse {
   String? get gateTimestamp => throw _privateConstructorUsedError;
   String get gateMovement => throw _privateConstructorUsedError;
   String get challanNo => throw _privateConstructorUsedError;
+  String get lrNumber => throw _privateConstructorUsedError;
   String get transporterName => throw _privateConstructorUsedError;
   String get vehicleNo => throw _privateConstructorUsedError;
+  String get driverContactNo => throw _privateConstructorUsedError;
+  String get vendorCode => throw _privateConstructorUsedError;
   String get vendorName => throw _privateConstructorUsedError;
   String? get status => throw _privateConstructorUsedError;
   List<GateEntryItemResponse> get items => throw _privateConstructorUsedError;
-
-  /// Serializes this GateEntryResponse to a JSON map.
-  Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
+  String? get gateOutTimestamp => throw _privateConstructorUsedError;
+  String? get gateOutBy => throw _privateConstructorUsedError;
 
   /// Create a copy of GateEntryResponse
   /// with the given fields replaced by the non-null parameter values.
@@ -53,11 +51,16 @@ abstract class $GateEntryResponseCopyWith<$Res> {
       String? gateTimestamp,
       String gateMovement,
       String challanNo,
+      String lrNumber,
       String transporterName,
       String vehicleNo,
+      String driverContactNo,
+      String vendorCode,
       String vendorName,
       String? status,
-      List<GateEntryItemResponse> items});
+      List<GateEntryItemResponse> items,
+      String? gateOutTimestamp,
+      String? gateOutBy});
 }
 
 /// @nodoc
@@ -80,11 +83,16 @@ class _$GateEntryResponseCopyWithImpl<$Res, $Val extends GateEntryResponse>
     Object? gateTimestamp = freezed,
     Object? gateMovement = null,
     Object? challanNo = null,
+    Object? lrNumber = null,
     Object? transporterName = null,
     Object? vehicleNo = null,
+    Object? driverContactNo = null,
+    Object? vendorCode = null,
     Object? vendorName = null,
     Object? status = freezed,
     Object? items = null,
+    Object? gateOutTimestamp = freezed,
+    Object? gateOutBy = freezed,
   }) {
     return _then(_value.copyWith(
       id: null == id
@@ -107,6 +115,10 @@ class _$GateEntryResponseCopyWithImpl<$Res, $Val extends GateEntryResponse>
           ? _value.challanNo
           : challanNo // ignore: cast_nullable_to_non_nullable
               as String,
+      lrNumber: null == lrNumber
+          ? _value.lrNumber
+          : lrNumber // ignore: cast_nullable_to_non_nullable
+              as String,
       transporterName: null == transporterName
           ? _value.transporterName
           : transporterName // ignore: cast_nullable_to_non_nullable
@@ -114,6 +126,14 @@ class _$GateEntryResponseCopyWithImpl<$Res, $Val extends GateEntryResponse>
       vehicleNo: null == vehicleNo
           ? _value.vehicleNo
           : vehicleNo // ignore: cast_nullable_to_non_nullable
+              as String,
+      driverContactNo: null == driverContactNo
+          ? _value.driverContactNo
+          : driverContactNo // ignore: cast_nullable_to_non_nullable
+              as String,
+      vendorCode: null == vendorCode
+          ? _value.vendorCode
+          : vendorCode // ignore: cast_nullable_to_non_nullable
               as String,
       vendorName: null == vendorName
           ? _value.vendorName
@@ -127,6 +147,14 @@ class _$GateEntryResponseCopyWithImpl<$Res, $Val extends GateEntryResponse>
           ? _value.items
           : items // ignore: cast_nullable_to_non_nullable
               as List<GateEntryItemResponse>,
+      gateOutTimestamp: freezed == gateOutTimestamp
+          ? _value.gateOutTimestamp
+          : gateOutTimestamp // ignore: cast_nullable_to_non_nullable
+              as String?,
+      gateOutBy: freezed == gateOutBy
+          ? _value.gateOutBy
+          : gateOutBy // ignore: cast_nullable_to_non_nullable
+              as String?,
     ) as $Val);
   }
 }
@@ -145,11 +173,16 @@ abstract class _$$GateEntryResponseImplCopyWith<$Res>
       String? gateTimestamp,
       String gateMovement,
       String challanNo,
+      String lrNumber,
       String transporterName,
       String vehicleNo,
+      String driverContactNo,
+      String vendorCode,
       String vendorName,
       String? status,
-      List<GateEntryItemResponse> items});
+      List<GateEntryItemResponse> items,
+      String? gateOutTimestamp,
+      String? gateOutBy});
 }
 
 /// @nodoc
@@ -170,11 +203,16 @@ class __$$GateEntryResponseImplCopyWithImpl<$Res>
     Object? gateTimestamp = freezed,
     Object? gateMovement = null,
     Object? challanNo = null,
+    Object? lrNumber = null,
     Object? transporterName = null,
     Object? vehicleNo = null,
+    Object? driverContactNo = null,
+    Object? vendorCode = null,
     Object? vendorName = null,
     Object? status = freezed,
     Object? items = null,
+    Object? gateOutTimestamp = freezed,
+    Object? gateOutBy = freezed,
   }) {
     return _then(_$GateEntryResponseImpl(
       id: null == id
@@ -197,6 +235,10 @@ class __$$GateEntryResponseImplCopyWithImpl<$Res>
           ? _value.challanNo
           : challanNo // ignore: cast_nullable_to_non_nullable
               as String,
+      lrNumber: null == lrNumber
+          ? _value.lrNumber
+          : lrNumber // ignore: cast_nullable_to_non_nullable
+              as String,
       transporterName: null == transporterName
           ? _value.transporterName
           : transporterName // ignore: cast_nullable_to_non_nullable
@@ -204,6 +246,14 @@ class __$$GateEntryResponseImplCopyWithImpl<$Res>
       vehicleNo: null == vehicleNo
           ? _value.vehicleNo
           : vehicleNo // ignore: cast_nullable_to_non_nullable
+              as String,
+      driverContactNo: null == driverContactNo
+          ? _value.driverContactNo
+          : driverContactNo // ignore: cast_nullable_to_non_nullable
+              as String,
+      vendorCode: null == vendorCode
+          ? _value.vendorCode
+          : vendorCode // ignore: cast_nullable_to_non_nullable
               as String,
       vendorName: null == vendorName
           ? _value.vendorName
@@ -217,12 +267,20 @@ class __$$GateEntryResponseImplCopyWithImpl<$Res>
           ? _value._items
           : items // ignore: cast_nullable_to_non_nullable
               as List<GateEntryItemResponse>,
+      gateOutTimestamp: freezed == gateOutTimestamp
+          ? _value.gateOutTimestamp
+          : gateOutTimestamp // ignore: cast_nullable_to_non_nullable
+              as String?,
+      gateOutBy: freezed == gateOutBy
+          ? _value.gateOutBy
+          : gateOutBy // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }
 
 /// @nodoc
-@JsonSerializable()
+
 class _$GateEntryResponseImpl implements _GateEntryResponse {
   const _$GateEntryResponseImpl(
       {required this.id,
@@ -230,15 +288,17 @@ class _$GateEntryResponseImpl implements _GateEntryResponse {
       this.gateTimestamp,
       required this.gateMovement,
       required this.challanNo,
+      this.lrNumber = '',
       required this.transporterName,
       required this.vehicleNo,
+      this.driverContactNo = '',
+      this.vendorCode = '',
       required this.vendorName,
       this.status,
-      required final List<GateEntryItemResponse> items})
+      required final List<GateEntryItemResponse> items,
+      this.gateOutTimestamp,
+      this.gateOutBy})
       : _items = items;
-
-  factory _$GateEntryResponseImpl.fromJson(Map<String, dynamic> json) =>
-      _$$GateEntryResponseImplFromJson(json);
 
   @override
   final String id;
@@ -251,9 +311,18 @@ class _$GateEntryResponseImpl implements _GateEntryResponse {
   @override
   final String challanNo;
   @override
+  @JsonKey()
+  final String lrNumber;
+  @override
   final String transporterName;
   @override
   final String vehicleNo;
+  @override
+  @JsonKey()
+  final String driverContactNo;
+  @override
+  @JsonKey()
+  final String vendorCode;
   @override
   final String vendorName;
   @override
@@ -267,8 +336,13 @@ class _$GateEntryResponseImpl implements _GateEntryResponse {
   }
 
   @override
+  final String? gateOutTimestamp;
+  @override
+  final String? gateOutBy;
+
+  @override
   String toString() {
-    return 'GateEntryResponse(id: $id, gateEntryNo: $gateEntryNo, gateTimestamp: $gateTimestamp, gateMovement: $gateMovement, challanNo: $challanNo, transporterName: $transporterName, vehicleNo: $vehicleNo, vendorName: $vendorName, status: $status, items: $items)';
+    return 'GateEntryResponse(id: $id, gateEntryNo: $gateEntryNo, gateTimestamp: $gateTimestamp, gateMovement: $gateMovement, challanNo: $challanNo, lrNumber: $lrNumber, transporterName: $transporterName, vehicleNo: $vehicleNo, driverContactNo: $driverContactNo, vendorCode: $vendorCode, vendorName: $vendorName, status: $status, items: $items, gateOutTimestamp: $gateOutTimestamp, gateOutBy: $gateOutBy)';
   }
 
   @override
@@ -285,17 +359,26 @@ class _$GateEntryResponseImpl implements _GateEntryResponse {
                 other.gateMovement == gateMovement) &&
             (identical(other.challanNo, challanNo) ||
                 other.challanNo == challanNo) &&
+            (identical(other.lrNumber, lrNumber) ||
+                other.lrNumber == lrNumber) &&
             (identical(other.transporterName, transporterName) ||
                 other.transporterName == transporterName) &&
             (identical(other.vehicleNo, vehicleNo) ||
                 other.vehicleNo == vehicleNo) &&
+            (identical(other.driverContactNo, driverContactNo) ||
+                other.driverContactNo == driverContactNo) &&
+            (identical(other.vendorCode, vendorCode) ||
+                other.vendorCode == vendorCode) &&
             (identical(other.vendorName, vendorName) ||
                 other.vendorName == vendorName) &&
             (identical(other.status, status) || other.status == status) &&
-            const DeepCollectionEquality().equals(other._items, _items));
+            const DeepCollectionEquality().equals(other._items, _items) &&
+            (identical(other.gateOutTimestamp, gateOutTimestamp) ||
+                other.gateOutTimestamp == gateOutTimestamp) &&
+            (identical(other.gateOutBy, gateOutBy) ||
+                other.gateOutBy == gateOutBy));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
   @override
   int get hashCode => Object.hash(
       runtimeType,
@@ -304,11 +387,16 @@ class _$GateEntryResponseImpl implements _GateEntryResponse {
       gateTimestamp,
       gateMovement,
       challanNo,
+      lrNumber,
       transporterName,
       vehicleNo,
+      driverContactNo,
+      vendorCode,
       vendorName,
       status,
-      const DeepCollectionEquality().hash(_items));
+      const DeepCollectionEquality().hash(_items),
+      gateOutTimestamp,
+      gateOutBy);
 
   /// Create a copy of GateEntryResponse
   /// with the given fields replaced by the non-null parameter values.
@@ -318,31 +406,25 @@ class _$GateEntryResponseImpl implements _GateEntryResponse {
   _$$GateEntryResponseImplCopyWith<_$GateEntryResponseImpl> get copyWith =>
       __$$GateEntryResponseImplCopyWithImpl<_$GateEntryResponseImpl>(
           this, _$identity);
-
-  @override
-  Map<String, dynamic> toJson() {
-    return _$$GateEntryResponseImplToJson(
-      this,
-    );
-  }
 }
 
 abstract class _GateEntryResponse implements GateEntryResponse {
   const factory _GateEntryResponse(
-          {required final String id,
-          required final String gateEntryNo,
-          final String? gateTimestamp,
-          required final String gateMovement,
-          required final String challanNo,
-          required final String transporterName,
-          required final String vehicleNo,
-          required final String vendorName,
-          final String? status,
-          required final List<GateEntryItemResponse> items}) =
-      _$GateEntryResponseImpl;
-
-  factory _GateEntryResponse.fromJson(Map<String, dynamic> json) =
-      _$GateEntryResponseImpl.fromJson;
+      {required final String id,
+      required final String gateEntryNo,
+      final String? gateTimestamp,
+      required final String gateMovement,
+      required final String challanNo,
+      final String lrNumber,
+      required final String transporterName,
+      required final String vehicleNo,
+      final String driverContactNo,
+      final String vendorCode,
+      required final String vendorName,
+      final String? status,
+      required final List<GateEntryItemResponse> items,
+      final String? gateOutTimestamp,
+      final String? gateOutBy}) = _$GateEntryResponseImpl;
 
   @override
   String get id;
@@ -355,15 +437,25 @@ abstract class _GateEntryResponse implements GateEntryResponse {
   @override
   String get challanNo;
   @override
+  String get lrNumber;
+  @override
   String get transporterName;
   @override
   String get vehicleNo;
+  @override
+  String get driverContactNo;
+  @override
+  String get vendorCode;
   @override
   String get vendorName;
   @override
   String? get status;
   @override
   List<GateEntryItemResponse> get items;
+  @override
+  String? get gateOutTimestamp;
+  @override
+  String? get gateOutBy;
 
   /// Create a copy of GateEntryResponse
   /// with the given fields replaced by the non-null parameter values.

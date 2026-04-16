@@ -1,8 +1,10 @@
 import '../../../../core/network/api_response.dart';
 import '../../../../core/network/pagination_model.dart';
 import '../data/dto/create_gate_entry_request.dart';
+import '../data/dto/check_challan_uniqueness_response.dart';
 import 'models/attachment.dart';
 import 'models/gate_entry.dart';
+import 'models/vendor.dart';
 
 abstract class GateEntryRepository {
   Future<ApiResponse<PaginatedResponse<GateEntry>>> getGateEntries(
@@ -23,4 +25,7 @@ abstract class GateEntryRepository {
     List<int>? bytes,
   });
   Future<ApiResponse<String>> getAttachmentUrl(String id, String attachmentId);
+  Future<ApiResponse<List<Vendor>>> searchVendors(String query);
+  Future<ApiResponse<CheckChallanUniquenessResponse>> checkChallanUniqueness(String challanNo);
+  Future<ApiResponse<GateEntry>> gateOut(String id, {String? remarks});
 }

@@ -15,7 +15,7 @@ class ReportsRepository {
   ReportsRepository({required ApiClient apiClient}) : _apiClient = apiClient;
 
   Map<String, dynamic> _buildQuery(ReportFilter filter) {
-    final query = <String, dynamic>{};
+    final query = <String, dynamic>{'limit': 100000};
     if (filter.startDate != null) {
       query['dateFrom'] = filter.startDate!.toIso8601String();
     }
@@ -31,6 +31,37 @@ class ReportsRepository {
     return query;
   }
 
+  List<dynamic> _extractList(dynamic response, {String key = 'data'}) {
+    final root = response is Map<String, dynamic> ? response : const <String, dynamic>{};
+    final data = root[key];
+
+    if (data is List) return data;
+
+    if (data is Map<String, dynamic>) {
+      final candidates = [
+        data['items'],
+        data['records'],
+        data['rows'],
+        data['results'],
+      ];
+      for (final candidate in candidates) {
+        if (candidate is List) return candidate;
+      }
+    }
+
+    final topCandidates = [
+      root['items'],
+      root['records'],
+      root['rows'],
+      root['results'],
+    ];
+    for (final candidate in topCandidates) {
+      if (candidate is List) return candidate;
+    }
+
+    return const [];
+  }
+
   Future<List<GateEntryReportItem>> getGateEntryRegister(
       ReportFilter filter) async {
     final response = await _apiClient.getRaw(
@@ -40,33 +71,69 @@ class ReportsRepository {
 
     final success = response['success'] as bool? ?? false;
     if (!success) return [];
-    final data = response['data'];
-    final list = data is List ? data : (response['items'] as List? ?? []);
+    final list = _extractList(response);
     return list.map((e) {
       final map = e as Map<String, dynamic>;
+      final items = map['items'];
+      final itemList = items is List ? items : const [];
       final gateEntryNo = (map['gateEntryNo'] ?? map['gate_entry_no'] ?? '')
           .toString();
+      final directionRaw =
+          (map['gateMovement'] ?? map['gate_movement'] ?? '').toString();
+      final direction = directionRaw == 'out' || directionRaw == 'outMovement'
+          ? 'Gate Out'
+          : 'Gate In';
+      final challanNo =
+          (map['challanNo'] ?? map['challan_no'] ?? map['invoiceNo'] ?? '')
+              .toString();
+      final lrNo = (map['lrNumber'] ?? map['lr_number'] ?? '').toString();
       final dateRaw =
           map['gateTimestamp'] ?? map['entryTime'] ?? map['createdAt'];
       final date = DateTime.tryParse(dateRaw?.toString() ?? '') ??
           DateTime.now();
+      final gateOutRaw = map['gateOutTimestamp'] ??
+          map['gate_out_timestamp'] ??
+          map['gateOutTime'];
+      final gateOutDate = DateTime.tryParse(gateOutRaw?.toString() ?? '');
       final vendor = (map['vendorName'] ?? map['vendor'] ?? '').toString();
       final poNumber =
           (map['poNumber'] ?? map['po_number'] ?? '').toString();
       final vehicleNo =
           (map['vehicleNo'] ?? map['vehicleNumber'] ?? '').toString();
-      final material =
-          (map['materialCode'] ?? map['material'] ?? '').toString();
+      final material = itemList.isNotEmpty
+          ? ((itemList.first as Map<String, dynamic>)['materialCode'] ??
+                  (itemList.first as Map<String, dynamic>)['material'] ??
+                  '')
+              .toString()
+          : (map['materialCode'] ?? map['material'] ?? '').toString();
+      final qty = itemList.isNotEmpty
+          ? itemList.fold<int>(0, (sum, item) {
+              final itemMap = item as Map<String, dynamic>;
+              final value = itemMap['challanQty'] ?? itemMap['challan_qty'] ?? 0;
+              return sum + ((value is num) ? value.toInt() : 0);
+            })
+          : ((map['qty'] ?? map['quantity'] ?? 0) is num
+              ? (map['qty'] ?? map['quantity'] ?? 0) as num
+              : 0)
+                  .toInt();
+      final transporter =
+          (map['transporterName'] ?? map['transporter'] ?? '').toString();
       final status =
           (map['statusLabel'] ?? map['status'] ?? 'Pending').toString();
 
       return GateEntryReportItem(
         gateEntryNo: gateEntryNo,
+        direction: direction,
+        challanNo: challanNo,
+        lrNo: lrNo,
         date: date,
-        vendor: vendor,
-        poNumber: poNumber,
-        vehicleNo: vehicleNo,
+        gateOutDate: gateOutDate,
         material: material,
+        qty: qty,
+        vendor: vendor,
+        transporter: transporter,
+        vehicleNo: vehicleNo,
+        poNumber: poNumber,
         status: status,
       );
     }).toList();
@@ -81,10 +148,30 @@ class ReportsRepository {
 
     final success = response['success'] as bool? ?? false;
     if (!success) return [];
-    final data = response['data'];
-    final list = data is List ? data : (response['items'] as List? ?? []);
+    final list = _extractList(response);
     return list
-        .map((e) => GrnReconReportItem.fromJson(e as Map<String, dynamic>))
+        .whereType<Map<String, dynamic>>()
+        .map((json) {
+          try {
+            return GrnReconReportItem.fromJson(json);
+          } catch (_) {
+            // Keep reports resilient even when one record has inconsistent typing.
+            return GrnReconReportItem.fromJson({
+              'gateEntryNo': (json['gateEntryNo'] ?? json['gate_entry_no'] ?? '').toString(),
+              'grnNo': (json['grnNo'] ?? json['matchedGrnNumber'] ?? json['materialDocument'] ?? '').toString(),
+              'poNumber': (json['poNumber'] ?? json['po_number'] ?? json['purchaseOrder'] ?? '').toString(),
+              'challanNo': (json['challanNo'] ?? json['challan_no'] ?? json['referenceNo'] ?? '').toString(),
+              'matchedStatus': (json['matchedStatus'] ?? json['statusLabel'] ?? json['status'] ?? '').toString(),
+              'quantityDiff': json['quantityDiff'] ?? json['quantity_diff'] ?? json['qtyVariance'] ?? 0,
+              'vendorName': (json['vendorName'] ?? json['vendor_name'] ?? json['vendor'] ?? '').toString(),
+              'reconciledAt': (json['reconciledAt'] ?? json['createdAt'] ?? json['date'] ?? '').toString(),
+              'remarks': (json['remarks'] ?? json['displayReason'] ?? '').toString(),
+              'status': (json['status'] ?? json['statusLabel'] ?? '').toString(),
+              'mdr': (json['mdr'] ?? json['reasonCode'] ?? '').toString(),
+              'userName': (json['userName'] ?? json['reconciledBy'] ?? '').toString(),
+            });
+          }
+        })
         .toList();
   }
 
@@ -97,17 +184,17 @@ class ReportsRepository {
 
     final success = response['success'] as bool? ?? false;
     if (!success) return [];
-    final data = response['data'];
-    final list = data is List ? data : (response['items'] as List? ?? []);
+    final list = _extractList(response);
     return list.map((e) {
       final map = e as Map<String, dynamic>;
       return ExceptionReportItem(
         id: map['id']?.toString() ?? '',
         gateEntryId: map['gateEntryId']?.toString() ?? '',
-        poNumber: map['poNumber']?.toString() ?? '',
-        status: map['status']?.toString() ?? '',
-        description: map['description']?.toString() ?? '',
-        createdAt: DateTime.tryParse(map['createdAt']?.toString() ?? '') ??
+        poNumber: (map['matchedGrnNumber'] ?? '').toString(),
+        status: (map['statusLabel'] ?? map['status'] ?? '').toString(),
+        description: (map['displayReason'] ?? map['reasonCode'] ?? '').toString(),
+        createdAt: DateTime.tryParse(
+                (map['reconciledAt'] ?? map['createdAt'])?.toString() ?? '') ??
             DateTime.now(),
       );
     }).toList();

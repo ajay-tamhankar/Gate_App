@@ -1,13 +1,14 @@
+// ignore_for_file: uri_does_not_exist, creation_with_non_type
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/auth/presentation/login_page.dart';
 import '../../features/dashboard/presentation/dashboard_page.dart';
-import '../../features/warehouse/presentation/warehouse_dashboard_page.dart';
+import '../../features/dashboard/presentation/controllers/dashboard_controller.dart';
+import '../../features/warehouse/presentation/controllers/warehouse_providers.dart';
 import '../../features/gate_entry/presentation/gate_entry_page.dart';
-import '../../features/warehouse/presentation/warehouse_gate_entry_list_page.dart';
-import '../../features/warehouse/presentation/warehouse_reconciliation_list_page.dart';
 import '../../features/reconciliation/presentation/reco_page.dart';
 import '../../features/reports/presentation/reports_page.dart';
 import '../auth/session_controller.dart';
@@ -24,9 +25,14 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       final goingToLogin = state.matchedLocation == '/login';
       final authed = session is Authenticated;
+      final role = session is Authenticated ? session.role : null;
 
       if (!authed && !goingToLogin) return '/login';
       if (authed && goingToLogin) return '/app/dashboard';
+      if (role == UserRole.gateSecurity &&
+          state.matchedLocation == '/app/reconciliation') {
+        return '/app/dashboard';
+      }
 
       return null;
     },
@@ -39,6 +45,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             onSelect: (i) {
               switch (i) {
                 case 0:
+                  ref.invalidate(dashboardControllerProvider);
+                  ref.invalidate(warehouseDashboardProvider);
+                  ref.invalidate(warehouseReconciliationSummaryProvider);
+                  ref.invalidate(warehouseManagerDashboardSummaryProvider);
+                  ref.invalidate(warehouseManagerReconciliationsProvider);
                   context.go('/app/dashboard');
                   break;
                 case 1:
@@ -58,40 +69,15 @@ final routerProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(
             path: '/app/dashboard',
-            builder: (context, state) {
-              final session = ref.read(sessionControllerProvider);
-              final role = session is Authenticated ? session.role : null;
-              if (role == UserRole.warehouseExecutive ||
-                  role == UserRole.warehouseManager ||
-                  role == UserRole.whMgr) {
-                return const WarehouseDashboardPage();
-              }
-              return const DashboardPage();
-            },
+            builder: (context, state) => const DashboardPage(),
           ),
           GoRoute(
             path: '/app/gate-entry',
-            builder: (context, state) {
-              final session = ref.read(sessionControllerProvider);
-              final role = session is Authenticated ? session.role : null;
-              if (role == UserRole.warehouseExecutive ||
-                  role == UserRole.warehouseManager ||
-                  role == UserRole.whMgr) {
-                return const WarehouseGateEntryListPage();
-              }
-              return const GateEntryPage();
-            },
+            builder: (context, state) => const GateEntryPage(),
           ),
           GoRoute(
             path: '/app/reconciliation',
-            builder: (context, state) {
-              final session = ref.read(sessionControllerProvider);
-              final role = session is Authenticated ? session.role : null;
-              if (role == UserRole.warehouseManager || role == UserRole.whMgr) {
-                return const WarehouseReconciliationListPage();
-              }
-              return const RecoPage();
-            },
+            builder: (context, state) => const RecoPage(),
           ),
           GoRoute(
             path: '/app/reports',
@@ -120,4 +106,5 @@ class _RouterRefresh extends ChangeNotifier {
   }
   final Ref ref;
 }
+
 

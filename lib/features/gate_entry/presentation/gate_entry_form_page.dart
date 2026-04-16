@@ -1,43 +1,492 @@
+import 'dart:async';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart';
+import 'package:intl/intl.dart';
 
 import 'controllers/gate_entry_form_controller.dart';
 import '../../../core/ui/responsive.dart';
 import '../../../core/ui/widgets/logout_action.dart';
+import '../data/gate_entry_repository_impl.dart';
 import '../domain/models/gate_entry.dart';
+import '../domain/models/vendor.dart';
+import 'gate_entry_detail_page.dart';
+
+class _ChallanFieldState {
+  _ChallanFieldState({
+    String initialValue = '',
+    String initialDocumentDate = '',
+    String initialPoNumber = '',
+    String initialPartNumber = '',
+    String initialQuantity = '',
+    String initialUom = 'EA',
+  })
+      : controller = TextEditingController(text: initialValue),
+        documentDateController =
+            TextEditingController(text: initialDocumentDate),
+        poNumberController = TextEditingController(text: initialPoNumber),
+        partNumberController = TextEditingController(text: initialPartNumber),
+        quantityController = TextEditingController(text: initialQuantity),
+        uomController = TextEditingController(text: initialUom),
+        focusNode = FocusNode();
+
+  final TextEditingController controller;
+  final TextEditingController documentDateController;
+  final TextEditingController poNumberController;
+  final TextEditingController partNumberController;
+  final TextEditingController quantityController;
+  final TextEditingController uomController;
+  final FocusNode focusNode;
+
+  bool isChecking = false;
+  bool? isUnique;
+  String? localError;
+  String? serverError;
+  String? lastCheckedValue;
+  String? duplicateGateEntryId;
+  String? duplicateGateEntryNo;
+
+  String? get errorText => localError ?? serverError;
+
+  void clearRemoteState() {
+    isUnique = null;
+    serverError = null;
+    lastCheckedValue = null;
+    duplicateGateEntryId = null;
+    duplicateGateEntryNo = null;
+  }
+
+  void dispose() {
+    controller.dispose();
+    documentDateController.dispose();
+    poNumberController.dispose();
+    partNumberController.dispose();
+    quantityController.dispose();
+    uomController.dispose();
+    focusNode.dispose();
+  }
+}
 
 class GateEntryFormPage extends ConsumerStatefulWidget {
-  const GateEntryFormPage({super.key});
+  const GateEntryFormPage({super.key, this.initialEntry});
+
+  final GateEntry? initialEntry;
 
   @override
   ConsumerState<GateEntryFormPage> createState() => _GateEntryFormPageState();
 }
 
 class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
+  static const List<String> _baseMaterialOptions = [
+    'Parts',
+    'Consumables',
+    'Stationary',
+    'Other',
+  ];
+
   final _formKey = GlobalKey<FormState>();
 
-  final _challanCtrl = TextEditingController();
+  final List<_ChallanFieldState> _challanFields = [];
+  final _vendorCodeCtrl = TextEditingController();
   final _vendorCtrl = TextEditingController();
+  final _lrNumberCtrl = TextEditingController();
+  final _driverContactCtrl = TextEditingController();
   final _vehicleCtrl = TextEditingController();
   final _poCtrl = TextEditingController();
   final _transporterCtrl = TextEditingController();
   final _quantityCtrl = TextEditingController();
 
   GateMovement _gateDirection = GateMovement.inMovement;
-  String _materialCode = 'MAT-A123';
+  String _materialCode = 'Parts';
   PlatformFile? _attachmentFile;
+
+  // Vendor lookup states
+  bool _isVendorFound = false;
+  bool _isVendorNameReadOnly = false;
+  bool _isLoadingVendorSuggestions = false;
+  String? _lastLookedUpVendorCode;
+  bool _isSelectingVendor = false;
+  final List<Vendor> _vendorSuggestions = [];
+  Timer? _vendorSuggestionDebounce;
+  late final FocusNode _vendorCodeFocusNode;
+  late final FocusNode _vendorNameFocusNode;
+
+  // Challan uniqueness states
+  bool _allowAlphaNumericChallan = false;
+
+  List<TextInputFormatter> get _challanInputFormatters {
+    if (_allowAlphaNumericChallan) {
+      return [
+        FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9/-]')),
+      ];
+    }
+    return [
+      FilteringTextInputFormatter.allow(RegExp(r'[0-9/-]')),
+    ];
+  }
+
+  List<String> get _materialOptions {
+    if (_materialCode.trim().isEmpty) {
+      return _baseMaterialOptions;
+    }
+    if (_baseMaterialOptions.contains(_materialCode)) {
+      return _baseMaterialOptions;
+    }
+    return [_materialCode, ..._baseMaterialOptions];
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _vendorCodeFocusNode = FocusNode();
+    _vendorNameFocusNode = FocusNode()
+      ..addListener(() {
+        if (!_vendorNameFocusNode.hasFocus && _vendorSuggestions.isNotEmpty) {
+          // Delay clearing suggestions to allow the onTap gesture to complete
+          Future.delayed(const Duration(milliseconds: 150), () {
+            if (mounted && !_isSelectingVendor) {
+              setState(() => _vendorSuggestions.clear());
+            }
+          });
+        }
+      });
+
+    if (widget.initialEntry != null) {
+      final entry = widget.initialEntry!;
+      _addChallanField(initialValue: entry.challanNo);
+      _allowAlphaNumericChallan =
+          !RegExp(r'^\d+$').hasMatch(entry.challanNo.trim());
+      _vendorCodeCtrl.text = entry.vendorCode;
+      _vendorCtrl.text = entry.vendorName;
+      _lrNumberCtrl.text = entry.lrNumber;
+      _driverContactCtrl.text = entry.driverContactNo;
+      _vehicleCtrl.text = entry.vehicleNo;
+      _transporterName();
+      _gateDirection = entry.gateMovement;
+      
+      if (entry.items.isNotEmpty) {
+        final first = entry.items.first;
+        _poCtrl.text = first.poNumber;
+        _materialCode = first.materialCode.isNotEmpty
+            ? first.materialCode
+            : _baseMaterialOptions.first;
+        _quantityCtrl.text = first.challanQty.toString();
+        _challanFields.first.poNumberController.text = first.poNumber;
+        _challanFields.first.partNumberController.text = first.materialCode;
+        _challanFields.first.quantityController.text =
+            first.challanQty.toString();
+        _challanFields.first.uomController.text =
+            first.uom.isNotEmpty ? first.uom : 'EA';
+      }
+      
+      _isVendorFound = true;
+      _isVendorNameReadOnly = true;
+      _lastLookedUpVendorCode = entry.vendorCode;
+    } else {
+      _addChallanField();
+    }
+  }
+
+  void _addChallanField({
+    String initialValue = '',
+    String initialDocumentDate = '',
+    String initialPoNumber = '',
+    String initialPartNumber = '',
+    String initialQuantity = '',
+    String initialUom = 'EA',
+  }) {
+    final field = _ChallanFieldState(
+      initialValue: initialValue,
+      initialDocumentDate: initialDocumentDate,
+      initialPoNumber: initialPoNumber,
+      initialPartNumber: initialPartNumber,
+      initialQuantity: initialQuantity,
+      initialUom: initialUom,
+    );
+    field.focusNode.addListener(() {
+      if (!field.focusNode.hasFocus) {
+        final index = _challanFields.indexOf(field);
+        if (index != -1) {
+          _checkSingleChallan(index);
+        }
+      }
+    });
+    _challanFields.add(field);
+  }
+
+  void _removeChallanField(int index) {
+    if (_challanFields.length == 1) {
+      _challanFields.first.controller.clear();
+      _challanFields.first.documentDateController.clear();
+      _challanFields.first.poNumberController.clear();
+      _challanFields.first.partNumberController.clear();
+      _challanFields.first.quantityController.clear();
+      _challanFields.first.uomController.text = 'EA';
+      _challanFields.first.clearRemoteState();
+      _refreshLocalDuplicateErrors();
+      setState(() {});
+      return;
+    }
+    final field = _challanFields.removeAt(index);
+    field.dispose();
+    _refreshLocalDuplicateErrors();
+    setState(() {});
+  }
+
+  List<String> _currentChallanNos() {
+    return _challanFields
+        .map((f) => f.controller.text.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+  }
+
+  bool _hasAnyChallanChecking() {
+    return _challanFields.any((f) => f.isChecking);
+  }
+
+  bool _refreshLocalDuplicateErrors() {
+    final counts = <String, int>{};
+    for (final f in _challanFields) {
+      final text = f.controller.text.trim();
+      if (text.isEmpty) continue;
+      counts[text] = (counts[text] ?? 0) + 1;
+    }
+
+    var hasErrors = false;
+    for (final f in _challanFields) {
+      final text = f.controller.text.trim();
+      if (text.isNotEmpty && (counts[text] ?? 0) > 1) {
+        f.localError = 'Duplicate challan in this entry';
+        hasErrors = true;
+      } else {
+        f.localError = null;
+      }
+    }
+    return hasErrors;
+  }
+
+  bool _isCurrentEntryDuplicate({
+    String? duplicateGateEntryId,
+    String? duplicateGateEntryNo,
+  }) {
+    final editingEntry = widget.initialEntry;
+    if (editingEntry == null) return false;
+
+    final currentId = editingEntry.id.trim().toLowerCase();
+    final currentNo = (editingEntry.gateEntryNo ?? '').trim().toLowerCase();
+    final duplicateId = (duplicateGateEntryId ?? '').trim().toLowerCase();
+    final duplicateNo = (duplicateGateEntryNo ?? '').trim().toLowerCase();
+
+    if (duplicateId.isNotEmpty &&
+        currentId.isNotEmpty &&
+        duplicateId == currentId) {
+      return true;
+    }
+    if (duplicateNo.isNotEmpty &&
+        currentNo.isNotEmpty &&
+        duplicateNo == currentNo) {
+      return true;
+    }
+    return false;
+  }
+
+  Future<void> _checkSingleChallan(int index) async {
+    if (index < 0 || index >= _challanFields.length) return;
+    final field = _challanFields[index];
+    final challanNo = field.controller.text.trim();
+
+    _refreshLocalDuplicateErrors();
+    if (field.localError != null) {
+      setState(() {});
+      return;
+    }
+
+    if (challanNo.isEmpty) {
+      field.clearRemoteState();
+      setState(() {});
+      return;
+    }
+
+    if (field.isChecking || field.lastCheckedValue == challanNo) {
+      return;
+    }
+
+    final formatOk = _allowAlphaNumericChallan
+        ? RegExp(r'^[a-zA-Z0-9/-]+$').hasMatch(challanNo)
+        : RegExp(r'^[0-9/-]+$').hasMatch(challanNo);
+    if (!formatOk) return;
+
+    setState(() {
+      field.isChecking = true;
+      field.serverError = null;
+      field.isUnique = null;
+    });
+
+    try {
+      final repo = ref.read(gateEntryRepositoryProvider);
+      final result = await repo.checkChallanUniqueness(challanNo);
+      if (!mounted) return;
+
+      setState(() {
+        field.isChecking = false;
+        field.lastCheckedValue = challanNo;
+        if (result.success && result.data != null) {
+          final unique = result.data!.data?.isUnique ?? false;
+          final duplicateGateEntryId = result.data!.data?.existingGateEntryId;
+          final duplicateGateEntryNo = result.data!.data?.existingGateEntryNo;
+          final isCurrentEditEntry = _isCurrentEntryDuplicate(
+            duplicateGateEntryId: duplicateGateEntryId,
+            duplicateGateEntryNo: duplicateGateEntryNo,
+          );
+
+          field.isUnique = unique || isCurrentEditEntry;
+          if (field.isUnique == true) {
+            field.serverError = null;
+            field.duplicateGateEntryId = null;
+            field.duplicateGateEntryNo = null;
+          } else {
+            field.serverError =
+                'Challan already exists (Entry: ${result.data!.data?.existingGateEntryNo ?? '-'})';
+            field.duplicateGateEntryId = duplicateGateEntryId;
+            field.duplicateGateEntryNo = duplicateGateEntryNo;
+          }
+        } else {
+          final duplicateGateEntryId = result.data?.data?.existingGateEntryId;
+          final duplicateGateEntryNo = result.data?.data?.existingGateEntryNo;
+          final isCurrentEditEntry = _isCurrentEntryDuplicate(
+            duplicateGateEntryId: duplicateGateEntryId,
+            duplicateGateEntryNo: duplicateGateEntryNo,
+          );
+
+          field.isUnique = isCurrentEditEntry;
+          if (isCurrentEditEntry) {
+            field.serverError = null;
+            field.duplicateGateEntryId = null;
+            field.duplicateGateEntryNo = null;
+          } else {
+            field.serverError = result.message.isNotEmpty
+                ? result.message
+                : 'Failed to verify challan';
+            field.duplicateGateEntryId = duplicateGateEntryId;
+            field.duplicateGateEntryNo = duplicateGateEntryNo;
+          }
+        }
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        field.isChecking = false;
+        field.isUnique = false;
+        field.lastCheckedValue = challanNo;
+        field.serverError = 'Error checking challan uniqueness';
+        field.duplicateGateEntryId = null;
+        field.duplicateGateEntryNo = null;
+      });
+    }
+  }
+
+  Future<bool> _checkAllChallansBeforeSubmit() async {
+    final hasLocalDuplicates = _refreshLocalDuplicateErrors();
+    setState(() {});
+    if (hasLocalDuplicates) return false;
+
+    for (var i = 0; i < _challanFields.length; i++) {
+      final text = _challanFields[i].controller.text.trim();
+      if (text.isEmpty) continue;
+      await _checkSingleChallan(i);
+    }
+
+    return !_challanFields.any((f) {
+      final hasText = f.controller.text.trim().isNotEmpty;
+      return hasText && (f.localError != null || f.serverError != null);
+    });
+  }
+
+  void _transporterName() {
+    final entry = widget.initialEntry;
+    final name = entry?.transporterName;
+    if (name != null) {
+      _transporterCtrl.text = name;
+    }
+  }
 
   @override
   void dispose() {
-    _challanCtrl.dispose();
+    for (final field in _challanFields) {
+      field.dispose();
+    }
+    _vendorCodeFocusNode.dispose();
+    _vendorNameFocusNode.dispose();
+    _vendorSuggestionDebounce?.cancel();
     _vendorCtrl.dispose();
+    _vendorCodeCtrl.dispose();
+    _lrNumberCtrl.dispose();
+    _driverContactCtrl.dispose();
     _vehicleCtrl.dispose();
     _poCtrl.dispose();
     _transporterCtrl.dispose();
     _quantityCtrl.dispose();
     super.dispose();
+  }
+
+  void _resetVendorLookupState({bool clearVendorName = false}) {
+    setState(() {
+      _isVendorFound = false;
+      _isVendorNameReadOnly = false;
+      _isLoadingVendorSuggestions = false;
+      _lastLookedUpVendorCode = null;
+      _vendorSuggestions.clear();
+      if (clearVendorName) {
+        _vendorCtrl.clear();
+      }
+    });
+  }
+
+  void _onVendorNameChanged(String value) {
+    if (_isVendorNameReadOnly) return;
+    final query = value.trim();
+    _vendorSuggestionDebounce?.cancel();
+
+    if (query.length < 2) {
+      if (_vendorSuggestions.isNotEmpty || _isLoadingVendorSuggestions) {
+        setState(() {
+          _vendorSuggestions.clear();
+          _isLoadingVendorSuggestions = false;
+        });
+      }
+      return;
+    }
+
+    _vendorSuggestionDebounce = Timer(const Duration(milliseconds: 350), () {
+      _fetchVendorSuggestions(query);
+    });
+  }
+
+  Future<void> _fetchVendorSuggestions(String query) async {
+    if (!mounted || _isVendorNameReadOnly) return;
+    setState(() {
+      _isLoadingVendorSuggestions = true;
+    });
+
+    final repo = ref.read(gateEntryRepositoryProvider);
+    final result = await repo.searchVendors(query);
+
+    if (!mounted) return;
+    final currentQuery = _vendorCtrl.text.trim();
+    if (currentQuery != query) {
+      setState(() => _isLoadingVendorSuggestions = false);
+      return;
+    }
+
+    setState(() {
+      _isLoadingVendorSuggestions = false;
+      _vendorSuggestions
+        ..clear()
+        ..addAll(result.success && result.data != null ? result.data! : const []);
+    });
   }
 
   Future<void> _pickAttachment() async {
@@ -49,29 +498,115 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
     }
   }
 
+  Future<void> _pickDocumentDate(_ChallanFieldState field) async {
+    final now = DateTime.now();
+    final parsed = DateTime.tryParse(field.documentDateController.text.trim());
+    final initialDate = parsed ?? now;
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    if (pickedDate == null) return;
+    setState(() {
+      field.documentDateController.text =
+          DateFormat('yyyy-MM-dd').format(pickedDate);
+    });
+  }
+
+  bool _isInvoiceRowTouched(_ChallanFieldState field) {
+    return field.controller.text.trim().isNotEmpty ||
+        field.documentDateController.text.trim().isNotEmpty ||
+        field.poNumberController.text.trim().isNotEmpty ||
+        field.partNumberController.text.trim().isNotEmpty ||
+        field.quantityController.text.trim().isNotEmpty;
+  }
+
+  List<Map<String, dynamic>> _collectInvoiceEntries() {
+    final entries = <Map<String, dynamic>>[];
+    for (final field in _challanFields) {
+      if (!_isInvoiceRowTouched(field)) continue;
+      final qty = int.tryParse(field.quantityController.text.trim());
+      final uom = field.uomController.text.trim().isEmpty
+          ? 'EA'
+          : field.uomController.text.trim().toUpperCase();
+      entries.add({
+        'challanNo': field.controller.text.trim(),
+        'documentDate': field.documentDateController.text.trim(),
+        'poNumber': field.poNumberController.text.trim(),
+        'partNumber': field.partNumberController.text.trim(),
+        'quantity': qty ?? 0,
+        'uom': uom,
+      });
+    }
+    return entries;
+  }
+
   Future<void> _submit() async {
+    if (_hasAnyChallanChecking()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please wait, checking challan...')),
+      );
+      return;
+    }
+
+    final challanNos = _currentChallanNos();
     if (_formKey.currentState!.validate()) {
-      final qty = int.tryParse(_quantityCtrl.text) ?? 0;
+      if (challanNos.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('At least one challan is required')),
+        );
+        return;
+      }
+
+      final allValid = await _checkAllChallansBeforeSubmit();
+      if (!mounted) return;
+      if (!allValid) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please fix duplicate/invalid challans')),
+        );
+        return;
+      }
+
+      final isEdit = widget.initialEntry != null;
+      final invoiceEntries = _collectInvoiceEntries();
+      if (!isEdit && invoiceEntries.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('At least one invoice entry is required')),
+        );
+        return;
+      }
 
       final Map<String, dynamic> params = {
-        'challan_no': _challanCtrl.text,
-        'vendor_name': _vendorCtrl.text,
-        'vehicle_no': _vehicleCtrl.text,
-        'transporter_name': _transporterCtrl.text,
+        'challan_no': challanNos.first,
+        'challan_nos': challanNos,
+        'vendor_name': _vendorCtrl.text.trim(),
+        'vendor_code': _vendorCodeCtrl.text.trim(),
+        'lr_number': _lrNumberCtrl.text.trim(),
+        'driver_contact_no': _driverContactCtrl.text.trim(),
+        'vehicle_no': _vehicleCtrl.text.trim(),
+        'transporter_name': _transporterCtrl.text.trim(),
         'gate_movement':
             _gateDirection == GateMovement.inMovement ? 'in' : 'out',
-        'items': [
+        'invoice_entries': invoiceEntries,
+      };
+
+      if (isEdit) {
+        final qty = int.tryParse(_quantityCtrl.text) ?? 0;
+        params['items'] = [
           {
             'material_code': _materialCode,
-            'po_number': _poCtrl.text,
+            'po_number': _poCtrl.text.trim(),
             'challan_qty': qty,
           }
-        ]
-      };
+        ];
+      }
 
       try {
         await ref.read(gateEntryFormControllerProvider.notifier).submit(
               params,
+              gateEntryId: widget.initialEntry?.id,
               attachmentFileName: _attachmentFile?.name,
               attachmentPath: kIsWeb ? null : _attachmentFile?.path,
               bytes: _attachmentFile?.bytes,
@@ -79,8 +614,10 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
 
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Gate Entry successfully created!'),
+          SnackBar(
+            content: Text(isEdit 
+                ? 'Gate Entry successfully updated!' 
+                : 'Gate Entry successfully created!'),
             behavior: SnackBarBehavior.floating,
             backgroundColor: Colors.green,
           ),
@@ -97,6 +634,240 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
         );
       }
     }
+  }
+
+  Widget _buildChallanFields() {
+    final isEdit = widget.initialEntry != null;
+    final pattern = _allowAlphaNumericChallan
+        ? RegExp(r'^[a-zA-Z0-9/-]+$')
+        : RegExp(r'^[0-9/-]+$');
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (var i = 0; i < _challanFields.length; i++) ...[
+          TextFormField(
+            controller: _challanFields[i].controller,
+            focusNode: _challanFields[i].focusNode,
+            inputFormatters: _challanInputFormatters,
+            decoration: InputDecoration(
+              labelText: i == 0 ? 'Invoice/Challan Number' : 'Challan Number ${i + 1}',
+              prefixIcon: const Icon(Icons.receipt_long),
+              errorText: _challanFields[i].errorText,
+              suffixIcon: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (i == 0)
+                    IconButton(
+                      tooltip: _allowAlphaNumericChallan
+                          ? 'Alphanumeric enabled'
+                          : 'Numeric only (tap to allow alphanumeric)',
+                      onPressed: () {
+                        setState(() {
+                          _allowAlphaNumericChallan = !_allowAlphaNumericChallan;
+                          for (final field in _challanFields) {
+                            field.clearRemoteState();
+                          }
+                        });
+                      },
+                      icon: Icon(
+                        _allowAlphaNumericChallan ? Icons.text_fields : Icons.pin,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        size: 20,
+                      ),
+                    ),
+                  if (i > 0)
+                    IconButton(
+                      tooltip: 'Remove challan',
+                      onPressed: () => _removeChallanField(i),
+                      icon: const Icon(Icons.close),
+                    ),
+                  if (_challanFields[i].isChecking)
+                    const Padding(
+                      padding: EdgeInsets.all(12.0),
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    )
+                  else if (_challanFields[i].isUnique == true &&
+                      _challanFields[i].errorText == null &&
+                      _challanFields[i].controller.text.trim().isNotEmpty)
+                    const Padding(
+                      padding: EdgeInsets.only(right: 10),
+                      child: Icon(Icons.check_circle, color: Colors.green),
+                    ),
+                ],
+              ),
+            ),
+            onChanged: (_) {
+              setState(() {
+                _challanFields[i].clearRemoteState();
+                _refreshLocalDuplicateErrors();
+              });
+            },
+            onFieldSubmitted: (_) => _checkSingleChallan(i),
+            validator: (value) {
+              final text = (value ?? '').trim();
+              if (i == 0 && _currentChallanNos().isEmpty) {
+                return 'At least one challan is required';
+              }
+              if (!isEdit &&
+                  text.isEmpty &&
+                  _isInvoiceRowTouched(_challanFields[i])) {
+                return 'Invoice/Challan number is required';
+              }
+              if (text.isEmpty) return null;
+              if (!pattern.hasMatch(text)) {
+                return _allowAlphaNumericChallan
+                    ? 'Use only letters, numbers, / and -'
+                    : 'Use only numbers, / and -';
+              }
+              return _challanFields[i].errorText;
+            },
+          ),
+          const SizedBox(height: 12),
+          _buildDesktopOrMobileRow(
+            TextFormField(
+              controller: _challanFields[i].documentDateController,
+              readOnly: true,
+              onTap: () => _pickDocumentDate(_challanFields[i]),
+              decoration: const InputDecoration(
+                labelText: 'Invoice Date',
+                hintText: 'YYYY-MM-DD',
+                prefixIcon: Icon(Icons.calendar_today),
+              ),
+              validator: (value) {
+                if (isEdit) return null;
+                final required = _isInvoiceRowTouched(_challanFields[i]);
+                if (!required) return null;
+                final text = (value ?? '').trim();
+                if (text.isEmpty) return 'Invoice date is required';
+                if (DateTime.tryParse(text) == null) {
+                  return 'Use a valid date';
+                }
+                return null;
+              },
+            ),
+            TextFormField(
+              controller: _challanFields[i].poNumberController,
+              decoration: const InputDecoration(
+                labelText: 'PO Number',
+                prefixIcon: Icon(Icons.request_quote),
+              ),
+              validator: (value) {
+                if (isEdit) return null;
+                final required = _isInvoiceRowTouched(_challanFields[i]);
+                if (!required) return null;
+                final text = (value ?? '').trim();
+                if (text.isEmpty) return 'PO number is required';
+                return null;
+              },
+            ),
+          ),
+          const SizedBox(height: 12),
+          _buildDesktopOrMobileRow(
+            TextFormField(
+              controller: _challanFields[i].partNumberController,
+              decoration: const InputDecoration(
+                labelText: 'Part Number',
+                prefixIcon: Icon(Icons.category),
+              ),
+              validator: (value) {
+                if (isEdit) return null;
+                final required = _isInvoiceRowTouched(_challanFields[i]);
+                if (!required) return null;
+                final text = (value ?? '').trim();
+                if (text.isEmpty) return 'Part number is required';
+                return null;
+              },
+            ),
+            TextFormField(
+              controller: _challanFields[i].quantityController,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              decoration: const InputDecoration(
+                labelText: 'Quantity',
+                prefixIcon: Icon(Icons.production_quantity_limits),
+              ),
+              validator: (value) {
+                if (isEdit) return null;
+                final required = _isInvoiceRowTouched(_challanFields[i]);
+                if (!required) return null;
+                final text = (value ?? '').trim();
+                if (text.isEmpty) return 'Quantity is required';
+                final qty = int.tryParse(text);
+                if (qty == null || qty <= 0) return 'Enter valid quantity';
+                return null;
+              },
+            ),
+          ),
+          const SizedBox(height: 12),
+          _buildDesktopOrMobileRow(
+            DropdownButtonFormField<String>(
+              initialValue: const ['EA', 'NOS', 'PCS', 'KG', 'BOX'].contains(
+                      _challanFields[i].uomController.text.trim())
+                  ? _challanFields[i].uomController.text.trim()
+                  : 'EA',
+              decoration: const InputDecoration(
+                labelText: 'UOM',
+                prefixIcon: Icon(Icons.straighten),
+              ),
+              items: const [
+                DropdownMenuItem(value: 'EA', child: Text('EA')),
+                DropdownMenuItem(value: 'NOS', child: Text('NOS')),
+                DropdownMenuItem(value: 'PCS', child: Text('PCS')),
+                DropdownMenuItem(value: 'KG', child: Text('KG')),
+                DropdownMenuItem(value: 'BOX', child: Text('BOX')),
+              ],
+              onChanged: (value) {
+                _challanFields[i].uomController.text = value ?? 'EA';
+              },
+              validator: (value) {
+                if (isEdit) return null;
+                final required = _isInvoiceRowTouched(_challanFields[i]);
+                if (!required) return null;
+                if ((value ?? '').trim().isEmpty) return 'UOM is required';
+                return null;
+              },
+            ),
+            const SizedBox.shrink(),
+          ),
+          if (_challanFields[i].duplicateGateEntryId != null &&
+              _challanFields[i].duplicateGateEntryId!.isNotEmpty)
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: () => _openDuplicateEntryDetail(
+                  _challanFields[i].duplicateGateEntryId!,
+                ),
+                icon: const Icon(Icons.open_in_new, size: 18),
+                label: Text(
+                  'View existing entry${_challanFields[i].duplicateGateEntryNo?.isNotEmpty == true ? ' (${_challanFields[i].duplicateGateEntryNo!})' : ''}',
+                ),
+              ),
+            ),
+          if (i != _challanFields.length - 1) const SizedBox(height: 12),
+        ],
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            OutlinedButton.icon(
+              onPressed: () {
+                setState(() {
+                  _addChallanField();
+                });
+              },
+              icon: const Icon(Icons.add),
+              label: const Text('Add Invoice/Challan'),
+            ),
+          ],
+        ),
+      ],
+    );
   }
 
   Widget _buildSectionHeader(String title, IconData icon) {
@@ -120,8 +891,10 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
   }
 
   Widget _buildDesktopOrMobileRow(Widget child1, Widget child2) {
-    if (isMobile(context)) {
+    final compactLayout = isMobile(context) || isTablet(context);
+    if (compactLayout) {
       return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           child1,
           if (child2 is! SizedBox) const SizedBox(height: 16),
@@ -143,10 +916,13 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
   Widget build(BuildContext context) {
     final state = ref.watch(gateEntryFormControllerProvider);
     final isLoading = state.isLoading;
+    final compactLayout = isMobile(context) || isTablet(context);
+    final horizontalPadding = compactLayout ? 12.0 : 24.0;
+    final cardPadding = compactLayout ? 18.0 : 32.0;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Create Gate Entry'),
+        title: Text(widget.initialEntry != null ? 'Edit Gate Entry' : 'Create Gate Entry'),
         actions: const [
           LogoutAction(),
           SizedBox(width: 8),
@@ -154,7 +930,7 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
       ),
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+          padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 12.0),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 800),
             child: Card(
@@ -168,7 +944,7 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
                         .withValues(alpha: 0.5)),
               ),
               child: Padding(
-                padding: const EdgeInsets.all(32.0),
+                padding: EdgeInsets.all(cardPadding),
                 child: Form(
                   key: _formKey,
                   child: Column(
@@ -176,7 +952,7 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'New Entry Details',
+                        widget.initialEntry != null ? 'Update Entry Details' : 'New Entry Details',
                         style:
                             Theme.of(context).textTheme.headlineSmall?.copyWith(
                                   fontWeight: FontWeight.bold,
@@ -191,58 +967,187 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
                             ),
                       ),
                       const SizedBox(height: 8),
+
+                      // ── Section 1: Gate Information ──────────────────────
                       _buildSectionHeader(
                           '1. Gate Information', Icons.info_outline),
-                      _buildDesktopOrMobileRow(
-                          DropdownButtonFormField<GateMovement>(
-                            isExpanded: true,
-                            initialValue: _gateDirection,
-                            decoration: const InputDecoration(
-                                labelText: 'Gate Status',
-                                prefixIcon: Icon(Icons.swap_horiz)),
-                            items: const [
-                              DropdownMenuItem(
-                                  value: GateMovement.inMovement,
-                                  child: Text('Gate In')),
-                              DropdownMenuItem(
-                                  value: GateMovement.outMovement,
-                                  child: Text('Gate Out')),
-                            ],
-                            onChanged: (val) =>
-                                setState(() => _gateDirection = val!),
-                          ),
-                          TextFormField(
-                            controller: _challanCtrl,
-                            decoration: const InputDecoration(
-                                labelText: 'Invoice/Challan Number',
-                                prefixIcon: Icon(Icons.receipt_long)),
-                            validator: (value) => value == null || value.isEmpty
-                                ? 'Challan is required for tracking'
-                                : null,
-                          )),
+                      DropdownButtonFormField<GateMovement>(
+                        isExpanded: true,
+                        initialValue: _gateDirection,
+                        decoration: const InputDecoration(
+                            labelText: 'Gate Status',
+                            prefixIcon: Icon(Icons.swap_horiz)),
+                        items: const [
+                          DropdownMenuItem(
+                              value: GateMovement.inMovement,
+                              child: Text('Gate In')),
+                          DropdownMenuItem(
+                              value: GateMovement.outMovement,
+                              child: Text('Gate Out')),
+                        ],
+                        onChanged: (val) =>
+                            setState(() => _gateDirection = val!),
+                      ),
+                      const SizedBox(height: 16),
+                      _buildChallanFields(),
+
+                      // ── Section 2: Vendor & Transport ────────────────────
                       _buildSectionHeader('2. Vendor & Transport',
                           Icons.local_shipping_outlined),
+
+                      // Row 1: Vendor Name + Vendor Code
                       _buildDesktopOrMobileRow(
-                          TextFormField(
-                            controller: _vendorCtrl,
-                            decoration: const InputDecoration(
-                                labelText: 'Vendor Name',
-                                prefixIcon: Icon(Icons.storefront)),
-                            validator: (value) => value == null || value.isEmpty
-                                ? 'Vendor name is required'
+                        TextFormField(
+                          controller: _vendorCtrl,
+                          focusNode: _vendorNameFocusNode,
+                          readOnly: _isVendorNameReadOnly,
+                          decoration: InputDecoration(
+                            labelText: 'Vendor Name',
+                            prefixIcon: const Icon(Icons.storefront),
+                            suffixIcon: _isVendorFound
+                                ? const Icon(Icons.check_circle, color: Colors.green)
+                                : (_isLoadingVendorSuggestions
+                                    ? const Padding(
+                                        padding: EdgeInsets.all(12.0),
+                                        child: SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(strokeWidth: 2),
+                                        ),
+                                      )
+                                    : null),
+                            filled: _isVendorNameReadOnly,
+                            fillColor: _isVendorNameReadOnly
+                                ? Theme.of(context)
+                                    .colorScheme
+                                    .surfaceContainerHighest
+                                    .withValues(alpha: 0.5)
                                 : null,
                           ),
+                          onChanged: _onVendorNameChanged,
+                          validator: (value) => value == null || value.isEmpty
+                              ? 'Vendor name is required'
+                              : null,
+                        ),
+                        TextFormField(
+                          controller: _vendorCodeCtrl,
+                          focusNode: _vendorCodeFocusNode,
+                          decoration: const InputDecoration(
+                            labelText: 'Vendor Code (Optional)',
+                            prefixIcon: Icon(Icons.badge_outlined),
+                          ),
+                          onChanged: (value) {
+                            // Only reset if the user is actually typing/changing the value, 
+                            // not if it's the same as the last selection/lookup.
+                            if (_isVendorFound && value == _lastLookedUpVendorCode) return;
+
+                            if (_isVendorFound || _isVendorNameReadOnly) {
+                              _resetVendorLookupState(clearVendorName: false); 
+                            }
+                          },
+                          // Removed mandatory validation and lookup
+                        ),
+                      ),
+                      if (!_isVendorNameReadOnly && _vendorSuggestions.isNotEmpty)
+                        Container(
+                          margin: const EdgeInsets.only(top: 8),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Theme.of(context).colorScheme.outlineVariant,
+                            ),
+                            color: Theme.of(context).colorScheme.surface,
+                          ),
+                          constraints: const BoxConstraints(maxHeight: 180),
+                          child: ListView.builder(
+                            shrinkWrap: true,
+                            itemCount: _vendorSuggestions.length,
+                            itemBuilder: (context, index) {
+                              final suggestion = _vendorSuggestions[index];
+                              return ListTile(
+                                dense: true,
+                                title: Text(
+                                  suggestion.vendorName,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                subtitle: Text(suggestion.vendorCode),
+                                trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                                onTap: () async {
+                                  // Mark as selecting to prevent focus loss from clearing suggestions
+                                  _isSelectingVendor = true;
+                                  
+                                  setState(() {
+                                    // 1. Update controllers
+                                    _vendorCtrl.text = suggestion.vendorName;
+                                    _vendorCodeCtrl.text = suggestion.vendorCode;
+                                    
+                                    // 2. Update lookup states
+                                    _lastLookedUpVendorCode = suggestion.vendorCode;
+                                    _isVendorFound = true;
+                                    _isVendorNameReadOnly = true;
+                                    
+                                    // 3. Clear suggestions
+                                    _vendorSuggestions.clear();
+                                    _isLoadingVendorSuggestions = false;
+                                  });
+
+                                  // Give a tiny frame gap for state to settle
+                                  await Future.delayed(Duration.zero);
+                                  
+                                  // 4. Clear focus
+                                  _vendorNameFocusNode.unfocus();
+                                  _vendorCodeFocusNode.unfocus();
+                                  
+                                  _isSelectingVendor = false;
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                      const SizedBox(height: 16),
+
+                      // Row 2: LR Number + Driver Contact No
+                      _buildDesktopOrMobileRow(
+                          TextFormField(
+                            controller: _lrNumberCtrl,
+                            decoration: const InputDecoration(
+                                labelText: 'LR Number',
+                                prefixIcon: Icon(Icons.confirmation_number)),
+                          ),
+                          TextFormField(
+                            controller: _driverContactCtrl,
+                            decoration: const InputDecoration(
+                                labelText: 'Driver Contact No',
+                                prefixIcon: Icon(Icons.phone_android)),
+                            keyboardType: TextInputType.phone,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly
+                            ],
+                            validator: (value) {
+                              final text = value?.trim() ?? '';
+                              if (text.isEmpty) {
+                                return 'Driver contact number is required';
+                              }
+                              if (text.length < 10 || text.length > 15) {
+                                return 'Enter a valid contact number';
+                              }
+                              return null;
+                            },
+                          )),
+                      const SizedBox(height: 16),
+
+                      // Row 3: Transporter Name + Vehicle Number
+                      _buildDesktopOrMobileRow(
                           TextFormField(
                             controller: _transporterCtrl,
                             decoration: const InputDecoration(
                                 labelText: 'Transporter Name',
-                                prefixIcon: Icon(Icons.directions_car)),
+                                prefixIcon: Icon(Icons.local_shipping)),
                             validator: (value) => value == null || value.isEmpty
                                 ? 'Transporter is required'
                                 : null,
-                          )),
-                      const SizedBox(height: 16),
-                      _buildDesktopOrMobileRow(
+                          ),
                           TextFormField(
                             controller: _vehicleCtrl,
                             decoration: const InputDecoration(
@@ -251,78 +1156,84 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
                             validator: (value) => value == null || value.isEmpty
                                 ? 'Vehicle number required'
                                 : null,
+                          )),
+
+                      // ── Section 3: Material Details ──────────────────────
+                      if (widget.initialEntry != null) ...[
+                        _buildSectionHeader(
+                            '3. Material Details', Icons.inventory_2_outlined),
+                        _buildDesktopOrMobileRow(
+                          DropdownButtonFormField<String>(
+                            isExpanded: true,
+                            initialValue: _materialCode,
+                            decoration: const InputDecoration(
+                              labelText: 'Material Name',
+                              prefixIcon: Icon(Icons.category),
+                            ),
+                            items: _materialOptions
+                                .map(
+                                  (material) => DropdownMenuItem(
+                                    value: material,
+                                    child: Text(
+                                      material,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (val) =>
+                                setState(() => _materialCode = val!),
                           ),
-                          const SizedBox.shrink()),
+                          TextFormField(
+                            controller: _poCtrl,
+                            decoration: const InputDecoration(
+                                labelText: 'PO Number',
+                                prefixIcon: Icon(Icons.request_quote)),
+                            validator: (value) => value == null || value.isEmpty
+                                ? 'Purchase Order number required'
+                                : null,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        _buildDesktopOrMobileRow(
+                          TextFormField(
+                            controller: _quantityCtrl,
+                            decoration: const InputDecoration(
+                                labelText: 'Quantity',
+                                prefixIcon:
+                                    Icon(Icons.production_quantity_limits),
+                                helperText: 'Enter exact numerical quantity.'),
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly
+                            ],
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Quantity required';
+                              }
+                              if (int.tryParse(value) == null) {
+                                return 'Must be a valid integer';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox.shrink(),
+                        ),
+                      ],
+
+                      // ── Attachments ──────────────────────────────────────
                       _buildSectionHeader(
-                          '3. Material Details', Icons.inventory_2_outlined),
-                      _buildDesktopOrMobileRow(
-                        DropdownButtonFormField<String>(
-                          isExpanded: true,
-                          initialValue: _materialCode,
-                          decoration: const InputDecoration(
-                              labelText: 'Material Code',
-                              prefixIcon: Icon(Icons.category)),
-                          items: const [
-                            DropdownMenuItem(
-                                value: 'MAT-A123',
-                                child: Text(
-                                  'MAT-A123 Base Resin',
-                                  overflow: TextOverflow.ellipsis,
-                                )),
-                            DropdownMenuItem(
-                                value: 'MAT-B456',
-                                child: Text(
-                                  'MAT-B456 Corrugated Box',
-                                  overflow: TextOverflow.ellipsis,
-                                )),
-                            DropdownMenuItem(
-                                value: 'MAT-C789',
-                                child: Text(
-                                  'MAT-C789 Shrink Wrap',
-                                  overflow: TextOverflow.ellipsis,
-                                )),
-                          ],
-                          onChanged: (val) =>
-                              setState(() => _materialCode = val!),
-                        ),
-                        TextFormField(
-                          controller: _poCtrl,
-                          decoration: const InputDecoration(
-                              labelText: 'PO Number',
-                              prefixIcon: Icon(Icons.request_quote)),
-                          validator: (value) => value == null || value.isEmpty
-                              ? 'Purchase Order number required'
-                              : null,
-                        ),
+                        widget.initialEntry != null
+                            ? '4. Attachments'
+                            : '3. Attachments',
+                        Icons.attachment,
                       ),
-                      const SizedBox(height: 16),
-                      _buildDesktopOrMobileRow(
-                        TextFormField(
-                          controller: _quantityCtrl,
-                          decoration: const InputDecoration(
-                              labelText: 'Quantity',
-                              prefixIcon:
-                                  Icon(Icons.production_quantity_limits),
-                              helperText: 'Enter exact numerical quantity.'),
-                          keyboardType: TextInputType.number,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Quantity required';
-                            }
-                            if (int.tryParse(value) == null) {
-                              return 'Must be a valid integer';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox.shrink(),
-                      ),
-                      _buildSectionHeader('4. Attachments', Icons.attachment),
                       Container(
-                        padding: const EdgeInsets.all(24),
+                        padding: EdgeInsets.all(compactLayout ? 16 : 24),
                         decoration: BoxDecoration(
                           border: Border.all(
-                            color: Theme.of(context).colorScheme.outlineVariant,
+                            color:
+                                Theme.of(context).colorScheme.outlineVariant,
                           ),
                           borderRadius: BorderRadius.circular(12),
                           color: Theme.of(context)
@@ -369,15 +1280,16 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
                             else
                               Text(
                                 'No file selected',
-                                style: TextStyle(color: Colors.grey.shade600),
+                                style:
+                                    TextStyle(color: Colors.grey.shade600),
                               ),
                           ],
                         ),
                       ),
-                      const SizedBox(height: 48),
+                      SizedBox(height: compactLayout ? 32 : 48),
                       SizedBox(
                         width: double.infinity,
-                        height: 56,
+                        height: compactLayout ? 52 : 56,
                         child: FilledButton.icon(
                           onPressed: isLoading ? null : _submit,
                           icon: isLoading
@@ -389,8 +1301,10 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
                                   width: 24,
                                   child: CircularProgressIndicator(
                                       color: Colors.white, strokeWidth: 2))
-                              : const Text('Confirm Gate Entry',
-                                  style: TextStyle(fontSize: 16)),
+                              : Text(widget.initialEntry != null 
+                                  ? 'Update Gate Entry' 
+                                  : 'Confirm Gate Entry',
+                                  style: const TextStyle(fontSize: 16)),
                         ),
                       ),
                     ],
@@ -403,4 +1317,14 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
       ),
     );
   }
+
+  void _openDuplicateEntryDetail(String duplicateId) {
+    if (duplicateId.isEmpty) return;
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => GateEntryDetailPage(entryId: duplicateId),
+      ),
+    );
+  }
 }
+

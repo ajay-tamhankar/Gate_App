@@ -24,12 +24,17 @@ mixin _$GateEntry {
   String? get gateEntryNo => throw _privateConstructorUsedError;
   GateMovement get gateMovement => throw _privateConstructorUsedError;
   String get challanNo => throw _privateConstructorUsedError;
+  String get lrNumber => throw _privateConstructorUsedError;
   String get transporterName => throw _privateConstructorUsedError;
   String get vehicleNo => throw _privateConstructorUsedError;
+  String get driverContactNo => throw _privateConstructorUsedError;
+  String get vendorCode => throw _privateConstructorUsedError;
   String get vendorName => throw _privateConstructorUsedError;
   List<GateEntryItem> get items => throw _privateConstructorUsedError;
   String get status => throw _privateConstructorUsedError;
   DateTime? get gateTimestamp => throw _privateConstructorUsedError;
+  DateTime? get gateOutTimestamp => throw _privateConstructorUsedError;
+  String? get gateOutBy => throw _privateConstructorUsedError;
   String? get createdBy => throw _privateConstructorUsedError;
 
   /// Serializes this GateEntry to a JSON map.
@@ -52,12 +57,17 @@ abstract class $GateEntryCopyWith<$Res> {
       String? gateEntryNo,
       GateMovement gateMovement,
       String challanNo,
+      String lrNumber,
       String transporterName,
       String vehicleNo,
+      String driverContactNo,
+      String vendorCode,
       String vendorName,
       List<GateEntryItem> items,
       String status,
       DateTime? gateTimestamp,
+      DateTime? gateOutTimestamp,
+      String? gateOutBy,
       String? createdBy});
 }
 
@@ -80,12 +90,17 @@ class _$GateEntryCopyWithImpl<$Res, $Val extends GateEntry>
     Object? gateEntryNo = freezed,
     Object? gateMovement = null,
     Object? challanNo = null,
+    Object? lrNumber = null,
     Object? transporterName = null,
     Object? vehicleNo = null,
+    Object? driverContactNo = null,
+    Object? vendorCode = null,
     Object? vendorName = null,
     Object? items = null,
     Object? status = null,
     Object? gateTimestamp = freezed,
+    Object? gateOutTimestamp = freezed,
+    Object? gateOutBy = freezed,
     Object? createdBy = freezed,
   }) {
     return _then(_value.copyWith(
@@ -105,6 +120,10 @@ class _$GateEntryCopyWithImpl<$Res, $Val extends GateEntry>
           ? _value.challanNo
           : challanNo // ignore: cast_nullable_to_non_nullable
               as String,
+      lrNumber: null == lrNumber
+          ? _value.lrNumber
+          : lrNumber // ignore: cast_nullable_to_non_nullable
+              as String,
       transporterName: null == transporterName
           ? _value.transporterName
           : transporterName // ignore: cast_nullable_to_non_nullable
@@ -112,6 +131,14 @@ class _$GateEntryCopyWithImpl<$Res, $Val extends GateEntry>
       vehicleNo: null == vehicleNo
           ? _value.vehicleNo
           : vehicleNo // ignore: cast_nullable_to_non_nullable
+              as String,
+      driverContactNo: null == driverContactNo
+          ? _value.driverContactNo
+          : driverContactNo // ignore: cast_nullable_to_non_nullable
+              as String,
+      vendorCode: null == vendorCode
+          ? _value.vendorCode
+          : vendorCode // ignore: cast_nullable_to_non_nullable
               as String,
       vendorName: null == vendorName
           ? _value.vendorName
@@ -129,6 +156,14 @@ class _$GateEntryCopyWithImpl<$Res, $Val extends GateEntry>
           ? _value.gateTimestamp
           : gateTimestamp // ignore: cast_nullable_to_non_nullable
               as DateTime?,
+      gateOutTimestamp: freezed == gateOutTimestamp
+          ? _value.gateOutTimestamp
+          : gateOutTimestamp // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
+      gateOutBy: freezed == gateOutBy
+          ? _value.gateOutBy
+          : gateOutBy // ignore: cast_nullable_to_non_nullable
+              as String?,
       createdBy: freezed == createdBy
           ? _value.createdBy
           : createdBy // ignore: cast_nullable_to_non_nullable
@@ -150,12 +185,17 @@ abstract class _$$GateEntryImplCopyWith<$Res>
       String? gateEntryNo,
       GateMovement gateMovement,
       String challanNo,
+      String lrNumber,
       String transporterName,
       String vehicleNo,
+      String driverContactNo,
+      String vendorCode,
       String vendorName,
       List<GateEntryItem> items,
       String status,
       DateTime? gateTimestamp,
+      DateTime? gateOutTimestamp,
+      String? gateOutBy,
       String? createdBy});
 }
 
@@ -176,12 +216,17 @@ class __$$GateEntryImplCopyWithImpl<$Res>
     Object? gateEntryNo = freezed,
     Object? gateMovement = null,
     Object? challanNo = null,
+    Object? lrNumber = null,
     Object? transporterName = null,
     Object? vehicleNo = null,
+    Object? driverContactNo = null,
+    Object? vendorCode = null,
     Object? vendorName = null,
     Object? items = null,
     Object? status = null,
     Object? gateTimestamp = freezed,
+    Object? gateOutTimestamp = freezed,
+    Object? gateOutBy = freezed,
     Object? createdBy = freezed,
   }) {
     return _then(_$GateEntryImpl(
@@ -201,6 +246,10 @@ class __$$GateEntryImplCopyWithImpl<$Res>
           ? _value.challanNo
           : challanNo // ignore: cast_nullable_to_non_nullable
               as String,
+      lrNumber: null == lrNumber
+          ? _value.lrNumber
+          : lrNumber // ignore: cast_nullable_to_non_nullable
+              as String,
       transporterName: null == transporterName
           ? _value.transporterName
           : transporterName // ignore: cast_nullable_to_non_nullable
@@ -208,6 +257,14 @@ class __$$GateEntryImplCopyWithImpl<$Res>
       vehicleNo: null == vehicleNo
           ? _value.vehicleNo
           : vehicleNo // ignore: cast_nullable_to_non_nullable
+              as String,
+      driverContactNo: null == driverContactNo
+          ? _value.driverContactNo
+          : driverContactNo // ignore: cast_nullable_to_non_nullable
+              as String,
+      vendorCode: null == vendorCode
+          ? _value.vendorCode
+          : vendorCode // ignore: cast_nullable_to_non_nullable
               as String,
       vendorName: null == vendorName
           ? _value.vendorName
@@ -225,6 +282,14 @@ class __$$GateEntryImplCopyWithImpl<$Res>
           ? _value.gateTimestamp
           : gateTimestamp // ignore: cast_nullable_to_non_nullable
               as DateTime?,
+      gateOutTimestamp: freezed == gateOutTimestamp
+          ? _value.gateOutTimestamp
+          : gateOutTimestamp // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
+      gateOutBy: freezed == gateOutBy
+          ? _value.gateOutBy
+          : gateOutBy // ignore: cast_nullable_to_non_nullable
+              as String?,
       createdBy: freezed == createdBy
           ? _value.createdBy
           : createdBy // ignore: cast_nullable_to_non_nullable
@@ -241,12 +306,17 @@ class _$GateEntryImpl implements _GateEntry {
       this.gateEntryNo,
       required this.gateMovement,
       required this.challanNo,
+      this.lrNumber = '',
       required this.transporterName,
       required this.vehicleNo,
+      this.driverContactNo = '',
+      this.vendorCode = '',
       required this.vendorName,
       required final List<GateEntryItem> items,
       this.status = 'Pending',
       this.gateTimestamp,
+      this.gateOutTimestamp,
+      this.gateOutBy,
       this.createdBy})
       : _items = items;
 
@@ -262,9 +332,18 @@ class _$GateEntryImpl implements _GateEntry {
   @override
   final String challanNo;
   @override
+  @JsonKey()
+  final String lrNumber;
+  @override
   final String transporterName;
   @override
   final String vehicleNo;
+  @override
+  @JsonKey()
+  final String driverContactNo;
+  @override
+  @JsonKey()
+  final String vendorCode;
   @override
   final String vendorName;
   final List<GateEntryItem> _items;
@@ -281,11 +360,15 @@ class _$GateEntryImpl implements _GateEntry {
   @override
   final DateTime? gateTimestamp;
   @override
+  final DateTime? gateOutTimestamp;
+  @override
+  final String? gateOutBy;
+  @override
   final String? createdBy;
 
   @override
   String toString() {
-    return 'GateEntry(id: $id, gateEntryNo: $gateEntryNo, gateMovement: $gateMovement, challanNo: $challanNo, transporterName: $transporterName, vehicleNo: $vehicleNo, vendorName: $vendorName, items: $items, status: $status, gateTimestamp: $gateTimestamp, createdBy: $createdBy)';
+    return 'GateEntry(id: $id, gateEntryNo: $gateEntryNo, gateMovement: $gateMovement, challanNo: $challanNo, lrNumber: $lrNumber, transporterName: $transporterName, vehicleNo: $vehicleNo, driverContactNo: $driverContactNo, vendorCode: $vendorCode, vendorName: $vendorName, items: $items, status: $status, gateTimestamp: $gateTimestamp, gateOutTimestamp: $gateOutTimestamp, gateOutBy: $gateOutBy, createdBy: $createdBy)';
   }
 
   @override
@@ -300,16 +383,26 @@ class _$GateEntryImpl implements _GateEntry {
                 other.gateMovement == gateMovement) &&
             (identical(other.challanNo, challanNo) ||
                 other.challanNo == challanNo) &&
+            (identical(other.lrNumber, lrNumber) ||
+                other.lrNumber == lrNumber) &&
             (identical(other.transporterName, transporterName) ||
                 other.transporterName == transporterName) &&
             (identical(other.vehicleNo, vehicleNo) ||
                 other.vehicleNo == vehicleNo) &&
+            (identical(other.driverContactNo, driverContactNo) ||
+                other.driverContactNo == driverContactNo) &&
+            (identical(other.vendorCode, vendorCode) ||
+                other.vendorCode == vendorCode) &&
             (identical(other.vendorName, vendorName) ||
                 other.vendorName == vendorName) &&
             const DeepCollectionEquality().equals(other._items, _items) &&
             (identical(other.status, status) || other.status == status) &&
             (identical(other.gateTimestamp, gateTimestamp) ||
                 other.gateTimestamp == gateTimestamp) &&
+            (identical(other.gateOutTimestamp, gateOutTimestamp) ||
+                other.gateOutTimestamp == gateOutTimestamp) &&
+            (identical(other.gateOutBy, gateOutBy) ||
+                other.gateOutBy == gateOutBy) &&
             (identical(other.createdBy, createdBy) ||
                 other.createdBy == createdBy));
   }
@@ -322,12 +415,17 @@ class _$GateEntryImpl implements _GateEntry {
       gateEntryNo,
       gateMovement,
       challanNo,
+      lrNumber,
       transporterName,
       vehicleNo,
+      driverContactNo,
+      vendorCode,
       vendorName,
       const DeepCollectionEquality().hash(_items),
       status,
       gateTimestamp,
+      gateOutTimestamp,
+      gateOutBy,
       createdBy);
 
   /// Create a copy of GateEntry
@@ -352,12 +450,17 @@ abstract class _GateEntry implements GateEntry {
       final String? gateEntryNo,
       required final GateMovement gateMovement,
       required final String challanNo,
+      final String lrNumber,
       required final String transporterName,
       required final String vehicleNo,
+      final String driverContactNo,
+      final String vendorCode,
       required final String vendorName,
       required final List<GateEntryItem> items,
       final String status,
       final DateTime? gateTimestamp,
+      final DateTime? gateOutTimestamp,
+      final String? gateOutBy,
       final String? createdBy}) = _$GateEntryImpl;
 
   factory _GateEntry.fromJson(Map<String, dynamic> json) =
@@ -372,9 +475,15 @@ abstract class _GateEntry implements GateEntry {
   @override
   String get challanNo;
   @override
+  String get lrNumber;
+  @override
   String get transporterName;
   @override
   String get vehicleNo;
+  @override
+  String get driverContactNo;
+  @override
+  String get vendorCode;
   @override
   String get vendorName;
   @override
@@ -383,6 +492,10 @@ abstract class _GateEntry implements GateEntry {
   String get status;
   @override
   DateTime? get gateTimestamp;
+  @override
+  DateTime? get gateOutTimestamp;
+  @override
+  String? get gateOutBy;
   @override
   String? get createdBy;
 

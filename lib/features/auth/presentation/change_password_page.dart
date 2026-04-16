@@ -70,7 +70,7 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
   Widget build(BuildContext context) {
     final session = ref.watch(sessionControllerProvider);
     final role = session is Authenticated ? session.role : null;
-    final isAdmin = role == UserRole.admin;
+    final canChangePassword = role.isAdminOrWarehouseManager;
 
     return Scaffold(
       appBar: AppBar(
@@ -85,7 +85,7 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
           constraints: const BoxConstraints(maxWidth: 520),
           child: Padding(
             padding: const EdgeInsets.all(24.0),
-            child: isAdmin
+            child: canChangePassword
                 ? Form(
                     key: _formKey,
                     child: Column(
@@ -149,7 +149,7 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
                     ),
                   )
                 : const Center(
-                    child: Text('Access denied. Admin only.'),
+                    child: Text('Access denied. Admin or Manager only.'),
                   ),
           ),
         ),
@@ -157,3 +157,4 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
     );
   }
 }
+

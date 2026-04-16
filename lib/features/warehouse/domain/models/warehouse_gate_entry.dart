@@ -28,21 +28,31 @@ class WarehouseGateEntrySummary {
   final String id;
   final String gateEntryNo;
   final String vendorName;
+  final String vendorCode;
   final String vehicleNo;
+  final String lrNumber;
+  final String driverContactNo;
   final DateTime? entryTime;
   final String statusLabel;
   final String poNumber;
   final String grnStatus;
+  final DateTime? gateOutTimestamp;
+  final String? gateOutBy;
 
   const WarehouseGateEntrySummary({
     required this.id,
     required this.gateEntryNo,
     required this.vendorName,
+    required this.vendorCode,
     required this.vehicleNo,
+    required this.lrNumber,
+    required this.driverContactNo,
     required this.entryTime,
     required this.statusLabel,
     required this.poNumber,
     required this.grnStatus,
+    this.gateOutTimestamp,
+    this.gateOutBy,
   });
 
   factory WarehouseGateEntrySummary.fromJson(Map<String, dynamic> json) {
@@ -57,13 +67,22 @@ class WarehouseGateEntrySummary {
       gateEntryNo: (json['gateEntryNo'] ?? json['gate_entry_no'] ?? '')
           .toString(),
       vendorName: (json['vendorName'] ?? json['vendor_name'] ?? '').toString(),
+      vendorCode: (json['vendorCode'] ?? json['vendor_code'] ?? '').toString(),
       vehicleNo: (json['vehicleNo'] ?? json['vehicleNumber'] ?? '').toString(),
+      lrNumber: (json['lrNumber'] ?? json['lr_number'] ?? '').toString(),
+      driverContactNo:
+          (json['driverContactNo'] ?? json['driver_contact_no'] ?? '')
+              .toString(),
       entryTime: parsed,
       statusLabel:
           (json['statusLabel'] ?? json['status'] ?? 'Pending').toString(),
       poNumber: (json['poNumber'] ?? '').toString(),
       grnStatus:
           (json['grnStatus'] ?? json['grn_status'] ?? 'PENDING').toString(),
+      gateOutTimestamp: json['gateOutTimestamp'] != null || json['gateOutTime'] != null
+          ? DateTime.tryParse((json['gateOutTimestamp'] ?? json['gateOutTime']).toString())
+          : null,
+      gateOutBy: (json['gateOutBy'] ?? json['gate_out_by'])?.toString(),
     );
   }
 
@@ -77,11 +96,14 @@ class WarehouseGateEntryDetail {
   final String id;
   final String gateEntryNo;
   final String vendorName;
+  final String vendorCode;
   final String vehicleNo;
   final DateTime? entryTime;
   final String gateMovement;
   final String challanNo;
+  final String lrNumber;
   final String transporterName;
+  final String driverContactNo;
   final String statusLabel;
   final String grnStatus;
   final String poNumber;
@@ -89,16 +111,21 @@ class WarehouseGateEntryDetail {
   final bool isVerified;
   final List<WarehouseGateEntryItem> items;
   final List<WarehouseAttachment> attachments;
+  final DateTime? gateOutTimestamp;
+  final String? gateOutBy;
 
   const WarehouseGateEntryDetail({
     required this.id,
     required this.gateEntryNo,
     required this.vendorName,
+    required this.vendorCode,
     required this.vehicleNo,
     required this.entryTime,
     required this.gateMovement,
     required this.challanNo,
+    required this.lrNumber,
     required this.transporterName,
+    required this.driverContactNo,
     required this.statusLabel,
     required this.grnStatus,
     required this.poNumber,
@@ -106,6 +133,8 @@ class WarehouseGateEntryDetail {
     required this.isVerified,
     required this.items,
     required this.attachments,
+    this.gateOutTimestamp,
+    this.gateOutBy,
   });
 
   factory WarehouseGateEntryDetail.fromJson(Map<String, dynamic> json) {
@@ -121,12 +150,17 @@ class WarehouseGateEntryDetail {
       id: (json['id'] ?? '').toString(),
       gateEntryNo: (json['gateEntryNo'] ?? '').toString(),
       vendorName: (json['vendorName'] ?? '').toString(),
+      vendorCode: (json['vendorCode'] ?? json['vendor_code'] ?? '').toString(),
       vehicleNo: (json['vehicleNo'] ?? json['vehicleNumber'] ?? '').toString(),
       entryTime: parsed,
       gateMovement:
           (json['gateMovement'] ?? json['gateDirection'] ?? '').toString(),
       challanNo: (json['challanNo'] ?? json['challanNumber'] ?? '').toString(),
+      lrNumber: (json['lrNumber'] ?? json['lr_number'] ?? '').toString(),
       transporterName: (json['transporterName'] ?? '').toString(),
+      driverContactNo:
+          (json['driverContactNo'] ?? json['driver_contact_no'] ?? '')
+              .toString(),
       statusLabel:
           (json['statusLabel'] ?? json['status'] ?? 'Pending').toString(),
       grnStatus:
@@ -142,6 +176,10 @@ class WarehouseGateEntryDetail {
           .whereType<Map<String, dynamic>>()
           .map(WarehouseAttachment.fromJson)
           .toList(),
+      gateOutTimestamp: json['gateOutTimestamp'] != null || json['gateOutTime'] != null
+          ? DateTime.tryParse((json['gateOutTimestamp'] ?? json['gateOutTime']).toString())
+          : null,
+      gateOutBy: (json['gateOutBy'] ?? json['gate_out_by'])?.toString(),
     );
   }
 

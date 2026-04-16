@@ -1,8 +1,10 @@
+import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_response.dart';
+import '../domain/models/grn_import_models.dart';
 import '../../../core/network/dio_provider.dart';
 
 final sapGrnRepositoryProvider = Provider<SapGrnRepository>((ref) {
@@ -14,10 +16,12 @@ class SapGrnRepository {
 
   SapGrnRepository({required ApiClient apiClient}) : _apiClient = apiClient;
 
-  Future<ApiResponse<void>> importGrns({
+  Future<ApiResponse<GrnImportResult?>> importGrns({
     required String fileName,
     String? filePath,
     List<int>? bytes,
+    bool runReconciliation = false,
+    Map<String, dynamic>? reconciliationOptions,
   }) async {
     try {
       MultipartFile filePart;
@@ -33,7 +37,16 @@ class SapGrnRepository {
         );
       }
 
-      final formData = FormData.fromMap({'file': filePart});
+      final Map<String, dynamic> fields = {
+        'file': filePart,
+        'runReconciliation': runReconciliation.toString(),
+      };
+
+      if (reconciliationOptions != null) {
+        fields['reconciliation'] = jsonEncode(reconciliationOptions);
+      }
+
+      final formData = FormData.fromMap(fields);
       final response = await _apiClient.postRaw(
         '/sap/grns/import',
         data: formData,
@@ -41,18 +54,29 @@ class SapGrnRepository {
 
       final success = response['success'] as bool? ?? false;
       final message = response['message'] as String? ?? '';
+      final data = response['data'];
+
       if (!success) {
         final error = response['error'] is Map<String, dynamic>
             ? ApiError.fromJson(response['error'] as Map<String, dynamic>)
             : null;
-        return ApiResponse<void>(
+        return ApiResponse<GrnImportResult?>(
           success: false,
           message: message,
           error: error,
         );
       }
 
-      return ApiResponse<void>(success: true, message: message);
+      GrnImportResult? result;
+      if (data != null && data is Map<String, dynamic>) {
+        result = GrnImportResult.fromJson(data);
+      }
+
+      return ApiResponse<GrnImportResult?>(
+        success: true,
+        message: message,
+        data: result,
+      );
     } catch (e) {
       return ApiResponse(
         success: false,

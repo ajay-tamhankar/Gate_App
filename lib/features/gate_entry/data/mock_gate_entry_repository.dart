@@ -7,6 +7,9 @@ class MockGateEntryRepository {
   Future<GateEntry> createGateEntry({
     required String challanNumber,
     required String vendorName,
+    String vendorCode = '',
+    String lrNumber = '',
+    String driverContactNo = '',
     required String vehicleNumber,
     required String poNumber,
     required String gateDirection,
@@ -24,8 +27,11 @@ class MockGateEntryRepository {
       gateMovement:
           isGateIn ? GateMovement.inMovement : GateMovement.outMovement,
       challanNo: challanNumber,
+      lrNumber: lrNumber,
       transporterName: transporterName,
       vehicleNo: vehicleNumber,
+      driverContactNo: driverContactNo,
+      vendorCode: vendorCode,
       vendorName: vendorName,
       status: 'inward_created',
       items: [

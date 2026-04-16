@@ -1,4 +1,5 @@
 import 'package:excel/excel.dart' as xl;
+import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
@@ -9,6 +10,35 @@ import 'export_file_helper.dart';
 
 class ReportExportService {
   final ExportFileHelper _fileHelper = getExportFileHelper();
+
+  static final DateFormat _dateFormat = DateFormat('dd-MM-yyyy');
+  static final DateFormat _timeFormat = DateFormat('hh:mm a');
+
+  String _formatDate(DateTime? value) {
+    if (value == null) return '';
+    return _dateFormat.format(value.toLocal());
+  }
+
+  String _formatTime(DateTime? value) {
+    if (value == null) return '';
+    return _timeFormat.format(value.toLocal());
+  }
+
+  String _formatTurnaroundTime(DateTime gateIn, DateTime? gateOut) {
+    if (gateOut == null || gateOut.isBefore(gateIn)) return '';
+
+    final duration = gateOut.difference(gateIn);
+    final days = duration.inDays;
+    final hours = duration.inHours.remainder(24);
+    final minutes = duration.inMinutes.remainder(60);
+
+    final parts = <String>[];
+    if (days > 0) parts.add('${days}d');
+    if (hours > 0) parts.add('${hours}h');
+    if (minutes > 0 || parts.isEmpty) parts.add('${minutes}m');
+    return parts.join(' ');
+  }
+
   Future<void> exportGateEntryRegisterToExcel(
       List<GateEntryReportItem> data) async {
     final excel = xl.Excel.createExcel();
@@ -16,23 +46,33 @@ class ReportExportService {
 
     sheet.appendRow([
       xl.TextCellValue('Gate Entry No'),
-      xl.TextCellValue('Date'),
+      xl.TextCellValue('Invoice/Challan Number'),
+      xl.TextCellValue('Gate In Date'),
+      xl.TextCellValue('Gate In Time'),
+      xl.TextCellValue('Gate Out Time'),
+      xl.TextCellValue('Turnaround Time'),
       xl.TextCellValue('Vendor'),
       xl.TextCellValue('PO Number'),
       xl.TextCellValue('Vehicle No'),
+      xl.TextCellValue('LR Number'),
+      xl.TextCellValue('Number Boxes (qty)'),
       xl.TextCellValue('Material'),
-      xl.TextCellValue('Status'),
     ]);
 
     for (final item in data) {
       sheet.appendRow([
         xl.TextCellValue(item.gateEntryNo),
-        xl.TextCellValue(item.date.toIso8601String()),
+        xl.TextCellValue(item.challanNo),
+        xl.TextCellValue(_formatDate(item.date)),
+        xl.TextCellValue(_formatTime(item.date)),
+        xl.TextCellValue(_formatTime(item.gateOutDate)),
+        xl.TextCellValue(_formatTurnaroundTime(item.date, item.gateOutDate)),
         xl.TextCellValue(item.vendor),
         xl.TextCellValue(item.poNumber),
         xl.TextCellValue(item.vehicleNo),
+        xl.TextCellValue(item.lrNo),
+        xl.IntCellValue(item.qty),
         xl.TextCellValue(item.material),
-        xl.TextCellValue(item.status),
       ]);
     }
 
@@ -51,7 +91,7 @@ class ReportExportService {
 
     pdf.addPage(
       pw.Page(
-        pageFormat: PdfPageFormat.a4,
+        pageFormat: PdfPageFormat.a4.landscape,
         build: (pw.Context context) {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -61,24 +101,39 @@ class ReportExportService {
               pw.SizedBox(height: 20),
               // ignore: deprecated_member_use
               pw.Table.fromTextArray(
+                headerStyle: pw.TextStyle(
+                  fontWeight: pw.FontWeight.bold,
+                  fontSize: 8,
+                ),
+                cellStyle: const pw.TextStyle(fontSize: 7),
                 headers: [
-                  'Entry No',
-                  'Date',
+                  'Gate Entry No',
+                  'Invoice/Challan Number',
+                  'Gate In Date',
+                  'Gate In Time',
+                  'Gate Out Time',
+                  'Turnaround Time',
                   'Vendor',
-                  'PO',
-                  'Vehicle',
+                  'PO Number',
+                  'Vehicle No',
+                  'LR Number',
+                  'Number Boxes (qty)',
                   'Material',
-                  'Status'
                 ],
                 data: data
                     .map((item) => [
                           item.gateEntryNo,
-                          item.date.toString().substring(0, 10),
+                          item.challanNo,
+                          _formatDate(item.date),
+                          _formatTime(item.date),
+                          _formatTime(item.gateOutDate),
+                          _formatTurnaroundTime(item.date, item.gateOutDate),
                           item.vendor,
                           item.poNumber,
                           item.vehicleNo,
+                          item.lrNo,
+                          item.qty.toString(),
                           item.material,
-                          item.status
                         ])
                     .toList(),
               ),
@@ -105,20 +160,98 @@ class ReportExportService {
     sheet.appendRow([
       xl.TextCellValue('Gate Entry No'),
       xl.TextCellValue('GRN No'),
-      xl.TextCellValue('PO Number'),
+      xl.TextCellValue('PO No'),
       xl.TextCellValue('Challan No'),
       xl.TextCellValue('Matched Status'),
-      xl.TextCellValue('Qty Difference'),
+      xl.TextCellValue('Qty Diff'),
+      xl.TextCellValue('Vendor Name'),
+      xl.TextCellValue('Reconciled At'),
+      xl.TextCellValue('Sr No'),
+      xl.TextCellValue('Remarks'),
+      xl.TextCellValue('Duplicate Reference'),
+      xl.TextCellValue('Dublicate'),
+      xl.TextCellValue('Reference No'),
+      xl.TextCellValue('Reference'),
+      xl.TextCellValue('Document Date'),
+      xl.TextCellValue('Quantity'),
+      xl.TextCellValue('Material'),
+      xl.TextCellValue('Material Document'),
+      xl.TextCellValue('Posting Date'),
+      xl.TextCellValue('Plant'),
+      xl.TextCellValue('Material Description'),
+      xl.TextCellValue('Movement Type'),
+      xl.TextCellValue('Movement Type Text'),
+      xl.TextCellValue('Supplier'),
+      xl.TextCellValue('Purchase Order'),
+      xl.TextCellValue('Document Header Text'),
+      xl.TextCellValue('User Name'),
+      xl.TextCellValue('Entry Date'),
+      xl.TextCellValue('Time Of Entry'),
+      xl.TextCellValue('Amount In Local Currency'),
+      xl.TextCellValue('Qty In Opun'),
+      xl.TextCellValue('Qty In Order Unit'),
+      xl.TextCellValue('Local Time'),
+      xl.TextCellValue('Local Date'),
+      xl.TextCellValue('Shift'),
+      xl.TextCellValue('Store Remarks'),
+      xl.TextCellValue('Status'),
+      xl.TextCellValue('Aging'),
+      xl.TextCellValue('MDR'),
+      xl.TextCellValue('Scanning Invoice Status'),
+      xl.TextCellValue('Scanning Date'),
+      xl.TextCellValue('Vendor'),
+      xl.TextCellValue('Source Vendor Name'),
+      xl.TextCellValue('Buyer Name'),
+      xl.TextCellValue('Maker Checker'),
     ]);
 
     for (final item in data) {
       sheet.appendRow([
-        xl.TextCellValue(item.gateEntryNo),
-        xl.TextCellValue(item.grnNo),
-        xl.TextCellValue(item.poNumber),
-        xl.TextCellValue(item.challanNo),
-        xl.TextCellValue(item.matchedStatus),
-        xl.TextCellValue(item.quantityDiff.toString()),
+        xl.TextCellValue(item.gateEntryNo ?? ''),
+        xl.TextCellValue(item.grnNo ?? ''),
+        xl.TextCellValue(item.poNumber ?? ''),
+        xl.TextCellValue(item.challanNo ?? ''),
+        xl.TextCellValue(item.matchedStatus ?? ''),
+        xl.TextCellValue(item.quantityDiff?.toString() ?? ''),
+        xl.TextCellValue(item.vendorName ?? ''),
+        xl.TextCellValue(item.reconciledAt ?? ''),
+        xl.TextCellValue(item.srNo ?? ''),
+        xl.TextCellValue(item.remarks ?? ''),
+        xl.TextCellValue(item.duplicateReference ?? ''),
+        xl.TextCellValue(item.dublicate ?? ''),
+        xl.TextCellValue(item.referenceNo ?? ''),
+        xl.TextCellValue(item.reference ?? ''),
+        xl.TextCellValue(item.documentDate ?? ''),
+        xl.TextCellValue(item.quantity ?? ''),
+        xl.TextCellValue(item.material ?? ''),
+        xl.TextCellValue(item.materialDocument ?? ''),
+        xl.TextCellValue(item.postingDate ?? ''),
+        xl.TextCellValue(item.plant ?? ''),
+        xl.TextCellValue(item.materialDescription ?? ''),
+        xl.TextCellValue(item.movementType ?? ''),
+        xl.TextCellValue(item.movementTypeText ?? ''),
+        xl.TextCellValue(item.supplier ?? ''),
+        xl.TextCellValue(item.purchaseOrder ?? ''),
+        xl.TextCellValue(item.documentHeaderText ?? ''),
+        xl.TextCellValue(item.userName ?? ''),
+        xl.TextCellValue(item.entryDate ?? ''),
+        xl.TextCellValue(item.timeOfEntry ?? ''),
+        xl.TextCellValue(item.amountInLocalCurrency ?? ''),
+        xl.TextCellValue(item.qtyInOpun ?? ''),
+        xl.TextCellValue(item.qtyInOrderUnit ?? ''),
+        xl.TextCellValue(item.localTime ?? ''),
+        xl.TextCellValue(item.localDate ?? ''),
+        xl.TextCellValue(item.shift ?? ''),
+        xl.TextCellValue(item.storeRemarks ?? ''),
+        xl.TextCellValue(item.status ?? ''),
+        xl.TextCellValue(item.aging ?? ''),
+        xl.TextCellValue(item.mdr ?? ''),
+        xl.TextCellValue(item.scanningInvoiceStatus ?? ''),
+        xl.TextCellValue(item.scanningDate ?? ''),
+        xl.TextCellValue(item.vendor ?? ''),
+        xl.TextCellValue(item.sourceVendorName ?? ''),
+        xl.TextCellValue(item.buyerName ?? ''),
+        xl.TextCellValue(item.makerChecker ?? ''),
       ]);
     }
 
@@ -155,12 +288,12 @@ class ReportExportService {
                 ],
                 data: data
                     .map((item) => [
-                          item.gateEntryNo,
-                          item.grnNo,
-                          item.poNumber,
-                          item.challanNo,
-                          item.matchedStatus,
-                          item.quantityDiff
+                          item.gateEntryNo ?? '',
+                          item.grnNo ?? '',
+                          item.poNumber ?? '',
+                          item.challanNo ?? '',
+                          item.matchedStatus ?? '',
+                          item.quantityDiff?.toString() ?? ''
                         ])
                     .toList(),
               ),

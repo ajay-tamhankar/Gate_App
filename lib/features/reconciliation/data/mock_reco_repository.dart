@@ -21,11 +21,15 @@ class MockRecoRepository {
 
   // Add Gate Entry
   void addGateEntryForTest(dynamic entry) {
+    final items = (entry.items as List?) ?? const [];
+    final firstItem = items.isNotEmpty ? items.first : null;
+
     _gateEntries.add({
       'id': entry.id,
-      'poNumber': entry.poNumber,
-      'materialCode': entry.materialCode,
-      'quantity': entry.quantity,
+      // Reconciliation compares SAP GRNs to the gate entry's first item.
+      'poNumber': firstItem?.poNumber ?? '',
+      'materialCode': firstItem?.materialCode ?? '',
+      'quantity': firstItem?.challanQty ?? 0,
       'vendor': entry.vendorName,
     });
   }

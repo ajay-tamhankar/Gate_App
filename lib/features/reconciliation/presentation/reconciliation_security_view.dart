@@ -1,3 +1,5 @@
+// ignore_for_file: uri_does_not_exist, undefined_method
+
 import 'package:data_table_2/data_table_2.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -40,7 +42,7 @@ class _ReconciliationSecurityViewState
       return const SizedBox.shrink();
     }
 
-    final asyncItems = ref.watch(reconciliationSecurityControllerProvider);
+    final state = ref.watch(reconciliationSecurityControllerProvider);
     final filter = ref.watch(reconciliationFilterProvider);
     final isMob = isMobile(context);
 
@@ -58,33 +60,35 @@ class _ReconciliationSecurityViewState
           const SizedBox(width: 8),
         ],
       ),
-      body: asyncItems.when(
-        loading: () => _buildLoading(context, isMob),
-        error: (e, _) => Center(child: Text('Error: $e')),
-        data: (items) {
-          return RefreshIndicator(
-            onRefresh: () async => ref
-                .read(reconciliationSecurityControllerProvider.notifier)
-                .refresh(),
-            child: ListView(
-              padding: const EdgeInsets.all(24),
-              children: [
-                _buildFilterRow(context, ref, filter),
-                const SizedBox(height: 16),
-                _buildSummary(context, items, isMob),
-                const SizedBox(height: 16),
-                _buildExceptionBanner(context, items),
-                const SizedBox(height: 16),
-                items.isEmpty
-                    ? _buildEmptyState(context)
-                    : isMob
-                        ? _buildMobileList(context, items)
-                        : _buildDesktopTable(context, items),
-              ],
+      body: state.isLoading && state.items.isEmpty
+          ? _buildLoading(context, isMob)
+          : RefreshIndicator(
+              onRefresh: () async => ref
+                  .read(reconciliationSecurityControllerProvider.notifier)
+                  .refresh(),
+              child: ListView(
+                padding: const EdgeInsets.all(24),
+                children: [
+                  _buildFilterRow(context, ref, filter),
+                  const SizedBox(height: 16),
+                  _buildSummary(context, state.items, isMob),
+                  const SizedBox(height: 16),
+                  _buildExceptionBanner(context, state.items),
+                  const SizedBox(height: 16),
+                  if (state.error != null) ...[
+                    _buildErrorBanner(context, state.error!),
+                    const SizedBox(height: 12),
+                  ],
+                  state.items.isEmpty
+                      ? _buildEmptyState(context)
+                      : isMob
+                          ? _buildMobileList(context, state.items)
+                          : _buildDesktopTable(context, state.items),
+                  const SizedBox(height: 12),
+                  _buildPaginationSection(context, ref, state),
+                ],
+              ),
             ),
-          );
-        },
-      ),
     );
   }
 
@@ -148,16 +152,16 @@ class _ReconciliationSecurityViewState
   Widget _buildSummary(
       BuildContext context, List<ReconciliationItem> items, bool isMob) {
     final matched = _countByStatus(items, 'matched');
-    final pending = _countByStatus(items, 'pending');
-    final exception = _countByStatus(items, 'exception');
+    final unresolved = items.where((i) => !i.isResolved && i.isException).length;
+    final resolved = items.where((i) => i.isResolved && i.isException).length;
 
     final cards = [
       _summaryCard(
           context, 'Matched', matched, Icons.check_circle, Colors.green),
-      _summaryCard(
-          context, 'Pending', pending, Icons.pending_actions, Colors.orange),
-      _summaryCard(context, 'Exception', exception, Icons.warning_amber_rounded,
+      _summaryCard(context, 'Unresolved', unresolved, Icons.warning_amber_rounded,
           Colors.red),
+      _summaryCard(
+          context, 'Resolved', resolved, Icons.verified, Colors.blue),
     ];
 
     final cardHeight = isMob ? 60.0 : null;
@@ -191,7 +195,6 @@ class _ReconciliationSecurityViewState
       child: Padding(
         padding: const EdgeInsets.all(8.0),
         child: FittedBox(
-          // 🔥 ONLY CHANGE (forces horizontal fit)
           fit: BoxFit.scaleDown,
           alignment: Alignment.centerLeft,
           child: Row(
@@ -233,7 +236,7 @@ class _ReconciliationSecurityViewState
 
   Widget _buildExceptionBanner(
       BuildContext context, List<ReconciliationItem> items) {
-    final exceptionCount = _countByStatus(items, 'exception');
+    final exceptionCount = items.where((i) => i.isException && !i.isResolved).length;
     if (exceptionCount == 0) return const SizedBox.shrink();
 
     return Card(
@@ -251,7 +254,7 @@ class _ReconciliationSecurityViewState
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                '? $exceptionCount entries have reconciliation issues',
+                '$exceptionCount entries have reconciliation issues',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
@@ -279,10 +282,8 @@ class _ReconciliationSecurityViewState
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
               side: BorderSide(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .outlineVariant
-                      .withValues(alpha: 0.5)),
+                color: _statusVisual(item).color.withValues(alpha: 0.45),
+              ),
             ),
             child: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -290,9 +291,7 @@ class _ReconciliationSecurityViewState
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    item.gateEntryNo.isNotEmpty
-                        ? item.gateEntryNo
-                        : item.gateEntryId,
+                    'Gate Entry No: ${item.gateEntryNo}',
                     style: Theme.of(context)
                         .textTheme
                         .titleMedium
@@ -301,10 +300,26 @@ class _ReconciliationSecurityViewState
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      _statusChip(item.status),
+                      _statusChip(item),
                       const SizedBox(width: 8),
-                      Text(_formatDate(item.date)),
+                      Text(item.isResolved ? 'Resolved' : 'Open'),
                     ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    item.displayReason.isEmpty ? '-' : item.displayReason,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Qty variance: ${item.qtyVariance}',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Matched GRN: ${item.matchedGrnNumber.isEmpty ? '-' : item.matchedGrnNumber}',
+                    style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
               ),
@@ -320,53 +335,75 @@ class _ReconciliationSecurityViewState
     return DataTable2(
       columnSpacing: 12,
       horizontalMargin: 12,
+      minWidth: 1100,
       columns: const [
-        DataColumn(label: Text('Gate Entry No')),
+        DataColumn(label: Text('Gate Entry')),
         DataColumn(label: Text('Status')),
-        DataColumn(label: Text('Date')),
+        DataColumn(label: Text('Reason')),
+        DataColumn(label: Text('Variance')),
+        DataColumn(label: Text('Matched GRN')),
+        DataColumn(label: Text('Reconciled At')),
+        DataColumn(label: Text('Resolution')),
       ],
       rows: items.map((item) {
         return DataRow(
           onSelectChanged: (_) => _openDetail(context, item),
           cells: [
-            DataCell(Text(item.gateEntryNo.isNotEmpty
-                ? item.gateEntryNo
-                : item.gateEntryId)),
-            DataCell(_statusChip(item.status)),
-            DataCell(Text(_formatDate(item.date))),
+            DataCell(Text(item.gateEntryNo)),
+            DataCell(_statusChip(item)),
+            DataCell(SizedBox(
+              width: 260,
+              child: Text(
+                item.displayReason.isEmpty ? '-' : item.displayReason,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            )),
+            DataCell(Text(item.qtyVariance.toString())),
+            DataCell(Text(item.matchedGrnNumber.isEmpty ? '-' : item.matchedGrnNumber)),
+            DataCell(Text(_formatDate(item.reconciledAt))),
+            DataCell(Text(item.isResolved ? 'Resolved' : 'Open')),
           ],
         );
       }).toList(),
     );
   }
 
-  Widget _statusChip(String status) {
-    final key = status.toLowerCase();
-    if (key.contains('match')) {
-      return const StatusChip(label: 'Matched', color: Colors.green);
-    }
-    if (key.contains('pending')) {
-      return const StatusChip(label: 'Pending', color: Colors.orange);
-    }
-    if (key.contains('exception') || key.contains('mismatch')) {
-      return const StatusChip(label: 'Exception', color: Colors.red);
-    }
-    return StatusChip(
-        label: status.isNotEmpty ? status : 'Unknown', color: Colors.grey);
+  Widget _statusChip(ReconciliationItem item) {
+    final visual = _statusVisual(item);
+    return StatusChip(label: visual.label, color: visual.color);
   }
 
   int _countByStatus(List<ReconciliationItem> items, String type) {
     return items.where((i) {
-      final key = i.status.toLowerCase();
-      if (type == 'matched') return key.contains('match');
-      if (type == 'pending') return key.contains('pending');
-      return key.contains('exception') || key.contains('mismatch');
+      if (type == 'matched') return i.isMatched;
+      if (type == 'pending') {
+        return i.normalizedStatus == 'pending_grn' ||
+            i.normalizedStatus == 'grn_not_posted';
+      }
+      return i.isException;
     }).length;
   }
 
-  String _formatDate(DateTime? date) {
-    if (date == null) return 'N/A';
-    return DateFormat('MMM dd, yyyy • hh:mm a').format(date);
+  ({String label, Color color}) _statusVisual(ReconciliationItem item) {
+    final key = item.normalizedStatus;
+    final label = item.displayStatus;
+    if (key == 'matched') {
+      return (label: label, color: Colors.green);
+    }
+    if (key.contains('grn_not_posted') || key.contains('missing')) {
+      return (label: label, color: Colors.red);
+    }
+    if (key.contains('duplicate_grn') || key.contains('duplicate')) {
+      return (label: label, color: Colors.orange);
+    }
+    if (key.contains('pending') || key.contains('not_posted')) {
+      return (label: label, color: Colors.orange);
+    }
+    if (key.contains('exception') || key.contains('mismatch')) {
+      return (label: label, color: Colors.red);
+    }
+    return (label: label, color: Colors.grey);
   }
 
   Widget _buildEmptyState(BuildContext context) {
@@ -394,6 +431,69 @@ class _ReconciliationSecurityViewState
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  String _formatDate(DateTime? value) {
+    if (value == null) return '-';
+    return DateFormat('MMM dd, yyyy - hh:mm a').format(value.toLocal());
+  }
+
+  Widget _buildPaginationSection(
+    BuildContext context,
+    WidgetRef ref,
+    ReconciliationSecurityState state,
+  ) {
+    final pagination = state.pagination;
+    if (pagination == null) return const SizedBox.shrink();
+
+    return Column(
+      children: [
+        Text(
+          'Loaded ${state.items.length} of ${pagination.total} records',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+        ),
+        const SizedBox(height: 8),
+        if (pagination.hasNext)
+          OutlinedButton.icon(
+            onPressed: state.isLoadingMore
+                ? null
+                : () => ref
+                    .read(reconciliationSecurityControllerProvider.notifier)
+                    .loadMore(),
+            icon: state.isLoadingMore
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.expand_more),
+            label: Text(state.isLoadingMore ? 'Loading...' : 'Load More'),
+          )
+        else
+          Text(
+            'All records loaded',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildErrorBanner(BuildContext context, String error) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.errorContainer,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        error,
+        style: TextStyle(color: Theme.of(context).colorScheme.onErrorContainer),
       ),
     );
   }

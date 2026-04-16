@@ -20,11 +20,17 @@ class ReportFilter with _$ReportFilter {
 class GateEntryReportItem with _$GateEntryReportItem {
   const factory GateEntryReportItem({
     required String gateEntryNo,
+    required String direction,
+    required String challanNo,
+    required String lrNo,
     required DateTime date,
-    required String vendor,
-    required String poNumber,
-    required String vehicleNo,
+    DateTime? gateOutDate,
     required String material,
+    required int qty,
+    required String vendor,
+    required String transporter,
+    required String vehicleNo,
+    required String poNumber,
     required String status,
   }) = _GateEntryReportItem;
 
@@ -34,17 +40,89 @@ class GateEntryReportItem with _$GateEntryReportItem {
 
 @freezed
 class GrnReconReportItem with _$GrnReconReportItem {
+  @JsonSerializable(createToJson: false)
   const factory GrnReconReportItem({
-    required String gateEntryNo,
-    required String grnNo,
-    required String poNumber,
-    required String challanNo,
-    required String matchedStatus,
-    required double quantityDiff,
+    @JsonKey(name: 'gate_entry_no') String? gateEntryNo,
+    @JsonKey(name: 'grn_no') String? grnNo,
+    @JsonKey(name: 'po_number') String? poNumber,
+    @JsonKey(name: 'challan_no') String? challanNo,
+    @JsonKey(name: 'matched_status') String? matchedStatus,
+    @JsonKey(name: 'quantity_diff') double? quantityDiff,
+    @JsonKey(name: 'vendor_name') String? vendorName,
+    @JsonKey(name: 'reconciled_at') String? reconciledAt,
+    @JsonKey(name: 'sr_no') String? srNo,
+    @JsonKey(name: 'remarks') String? remarks,
+    @JsonKey(name: 'duplicate_reference') String? duplicateReference,
+    @JsonKey(name: 'dublicate') String? dublicate,
+    @JsonKey(name: 'reference_no') String? referenceNo,
+    @JsonKey(name: 'reference') String? reference,
+    @JsonKey(name: 'document_date') String? documentDate,
+    @JsonKey(name: 'quantity') String? quantity,
+    @JsonKey(name: 'material') String? material,
+    @JsonKey(name: 'material_document') String? materialDocument,
+    @JsonKey(name: 'posting_date') String? postingDate,
+    @JsonKey(name: 'plant') String? plant,
+    @JsonKey(name: 'material_description') String? materialDescription,
+    @JsonKey(name: 'movement_type') String? movementType,
+    @JsonKey(name: 'movement_type_text') String? movementTypeText,
+    @JsonKey(name: 'supplier') String? supplier,
+    @JsonKey(name: 'purchase_order') String? purchaseOrder,
+    @JsonKey(name: 'document_header_text') String? documentHeaderText,
+    @JsonKey(name: 'user_name') String? userName,
+    @JsonKey(name: 'entry_date') String? entryDate,
+    @JsonKey(name: 'time_of_entry') String? timeOfEntry,
+    @JsonKey(name: 'amount_in_local_currency') String? amountInLocalCurrency,
+    @JsonKey(name: 'qty_in_opun') String? qtyInOpun,
+    @JsonKey(name: 'qty_in_order_unit') String? qtyInOrderUnit,
+    @JsonKey(name: 'local_time') String? localTime,
+    @JsonKey(name: 'local_date') String? localDate,
+    @JsonKey(name: 'shift') String? shift,
+    @JsonKey(name: 'store_remarks') String? storeRemarks,
+    @JsonKey(name: 'status') String? status,
+    @JsonKey(name: 'aging') String? aging,
+    @JsonKey(name: 'mdr') String? mdr,
+    @JsonKey(name: 'scanning_invoice_status') String? scanningInvoiceStatus,
+    @JsonKey(name: 'scanning_date') String? scanningDate,
+    @JsonKey(name: 'vendor') String? vendor,
+    @JsonKey(name: 'source_vendor_name') String? sourceVendorName,
+    @JsonKey(name: 'buyer_name') String? buyerName,
+    @JsonKey(name: 'maker_checker') String? makerChecker,
   }) = _GrnReconReportItem;
 
-  factory GrnReconReportItem.fromJson(Map<String, dynamic> json) =>
-      _$GrnReconReportItemFromJson(json);
+  factory GrnReconReportItem.fromJson(Map<String, dynamic> json) {
+    num readNum(dynamic value) {
+      if (value is num) return value;
+      if (value == null) return 0;
+      return num.tryParse(value.toString()) ?? 0;
+    }
+
+    String readText(List<String> keys) {
+      for (final key in keys) {
+        final raw = json[key];
+        if (raw == null) continue;
+        final text = raw.toString().trim();
+        if (text.isNotEmpty) return text;
+      }
+      return '';
+    }
+
+    // A protective fallback to support both snake_case and camelCase or missing values
+    return _$$GrnReconReportItemImplFromJson({
+      ...json,
+      'gate_entry_no': readText(['gate_entry_no', 'gateEntryNo', 'gateEntryId']),
+      'grn_no': readText(['grn_no', 'grnNo', 'matchedGrnNumber', 'materialDocument']),
+      'po_number': readText(['po_number', 'poNumber', 'purchaseOrder']),
+      'challan_no': readText(['challan_no', 'challanNo', 'referenceNo', 'documentHeaderText']),
+      'matched_status': readText(['matched_status', 'matchedStatus', 'statusLabel', 'status']),
+      'quantity_diff': readNum(json['quantity_diff'] ?? json['quantityDiff'] ?? json['qtyVariance']).toDouble(),
+      'vendor_name': readText(['vendor_name', 'vendorName', 'vendor', 'sourceVendorName', 'supplier']),
+      'reconciled_at': readText(['reconciled_at', 'reconciledAt', 'createdAt', 'date']),
+      'remarks': readText(['remarks', 'displayReason', 'resolutionNotes']),
+      'status': readText(['status', 'statusLabel']),
+      'mdr': readText(['mdr', 'reasonCode']),
+      'user_name': readText(['user_name', 'userName', 'reconciledBy']),
+    });
+  }
 }
 
 @freezed

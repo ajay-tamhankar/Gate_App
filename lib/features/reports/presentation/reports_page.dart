@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -15,15 +14,13 @@ class _ReportQuery {
   final String reportType;
   final DateTime? startDate;
   final DateTime? endDate;
-  final String? vendor;
-  final String? po;
+  final String? search;
 
   const _ReportQuery({
     required this.reportType,
     required this.startDate,
     required this.endDate,
-    required this.vendor,
-    required this.po,
+    required this.search,
   });
 
   @override
@@ -32,8 +29,7 @@ class _ReportQuery {
         reportType == other.reportType &&
         _dtKey(startDate) == _dtKey(other.startDate) &&
         _dtKey(endDate) == _dtKey(other.endDate) &&
-        vendor == other.vendor &&
-        po == other.po;
+        search == other.search;
   }
 
   @override
@@ -41,8 +37,7 @@ class _ReportQuery {
         reportType,
         _dtKey(startDate),
         _dtKey(endDate),
-        vendor,
-        po,
+        search,
       );
 
   String? _dtKey(DateTime? value) => value?.toIso8601String();
@@ -60,6 +55,16 @@ class _ReportPreviewData {
   });
 }
 
+bool _matchesSearchText(String? search, List<String?> values) {
+  final query = search?.trim().toLowerCase() ?? '';
+  if (query.isEmpty) return true;
+  for (final value in values) {
+    final text = value?.toLowerCase() ?? '';
+    if (text.contains(query)) return true;
+  }
+  return false;
+}
+
 final reportsPreviewProvider =
     FutureProvider.autoDispose.family<_ReportPreviewData, _ReportQuery>(
   (ref, query) async {
@@ -67,20 +72,56 @@ final reportsPreviewProvider =
     final filter = ReportFilter(
       startDate: query.startDate,
       endDate: query.endDate?.add(const Duration(days: 1)),
-      vendorFilter: query.vendor,
-      poFilter: query.po,
+      vendorFilter: null,
+      poFilter: null,
     );
+    final search = query.search;
 
     if (query.reportType == 'Gate Entry Register') {
       final data = await repo.getGateEntryRegister(filter);
-      return _ReportPreviewData(gateEntries: data);
+      final filtered = data.where((item) {
+        return _matchesSearchText(search, [
+          item.gateEntryNo,
+          item.challanNo,
+          item.vendor,
+          item.poNumber,
+          item.lrNo,
+          item.vehicleNo,
+          item.material,
+        ]);
+      }).toList();
+      return _ReportPreviewData(gateEntries: filtered);
     }
     if (query.reportType == 'GRN Reconciliation Report') {
       final data = await repo.getGrnReconReport(filter);
-      return _ReportPreviewData(grnRecons: data);
+      final filtered = data.where((item) {
+        return _matchesSearchText(search, [
+          item.gateEntryNo,
+          item.challanNo,
+          item.vendorName,
+          item.vendor,
+          item.poNumber,
+          item.purchaseOrder,
+          item.grnNo,
+          item.materialDocument,
+          item.referenceNo,
+          item.status,
+          item.matchedStatus,
+        ]);
+      }).toList();
+      return _ReportPreviewData(grnRecons: filtered);
     }
     final data = await repo.getExceptionReport(filter);
-    return _ReportPreviewData(exceptions: data);
+    final filtered = data.where((item) {
+      return _matchesSearchText(search, [
+        item.gateEntryId,
+        item.poNumber,
+        item.status,
+        item.description,
+        item.id,
+      ]);
+    }).toList();
+    return _ReportPreviewData(exceptions: filtered);
   },
 );
 
@@ -98,8 +139,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
   // Filters
   DateTime? _startDate;
   DateTime? _endDate;
-  final _vendorController = TextEditingController();
-  final _poController = TextEditingController();
+  final _searchController = TextEditingController();
 
   final List<String> _reportTypes = [
     'Gate Entry Register',
@@ -116,48 +156,73 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
 
   @override
   void dispose() {
-    _vendorController.dispose();
-    _poController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
   void _exportExcel() async {
-    if (kIsWeb) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Export not supported on web yet.'),
-              backgroundColor: Colors.orange),
-        );
-      }
-      return;
-    }
     final repo = ref.read(reportsRepositoryProvider);
     final filter = ReportFilter(
       startDate: _startDate,
       endDate: _endDate,
-      vendorFilter:
-          _vendorController.text.isNotEmpty ? _vendorController.text : null,
-      poFilter: _poController.text.isNotEmpty ? _poController.text : null,
+      vendorFilter: null,
+      poFilter: null,
     );
+    final search = _searchController.text.trim();
 
     try {
       if (_selectedReport == 'Gate Entry Register') {
-        final data = await repo.getGateEntryRegister(filter);
+        var data = await repo.getGateEntryRegister(filter);
+        data = data
+            .where((item) => _matchesSearchText(search, [
+                  item.gateEntryNo,
+                  item.challanNo,
+                  item.vendor,
+                  item.poNumber,
+                  item.lrNo,
+                  item.vehicleNo,
+                  item.material,
+                ]))
+            .toList();
         await _exportService.exportGateEntryRegisterToExcel(data);
       } else if (_selectedReport == 'GRN Reconciliation Report') {
-        final data = await repo.getGrnReconReport(filter);
+        var data = await repo.getGrnReconReport(filter);
+        data = data
+            .where((item) => _matchesSearchText(search, [
+                  item.gateEntryNo,
+                  item.challanNo,
+                  item.vendorName,
+                  item.vendor,
+                  item.poNumber,
+                  item.purchaseOrder,
+                  item.grnNo,
+                  item.materialDocument,
+                  item.referenceNo,
+                  item.status,
+                  item.matchedStatus,
+                ]))
+            .toList();
         await _exportService.exportGrnReconReportToExcel(data);
       } else if (_selectedReport == 'Exception Report') {
-        final data = await repo.getExceptionReport(filter);
+        var data = await repo.getExceptionReport(filter);
+        data = data
+            .where((item) => _matchesSearchText(search, [
+                  item.gateEntryId,
+                  item.poNumber,
+                  item.status,
+                  item.description,
+                  item.id,
+                ]))
+            .toList();
         await _exportService.exportExceptionReportToExcel(data);
       }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content: Text('Excel Export Completed'),
-              backgroundColor: Color(0xFF16A34A)),
+              content: Text('Excel saved to Downloads folder. Check your File Manager.'),
+              backgroundColor: Color(0xFF16A34A),
+              duration: Duration(seconds: 4)),
         );
       }
     } catch (e) {
@@ -171,42 +236,68 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
   }
 
   void _exportPdf() async {
-    if (kIsWeb) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Export not supported on web yet.'),
-              backgroundColor: Colors.orange),
-        );
-      }
-      return;
-    }
     final repo = ref.read(reportsRepositoryProvider);
     final filter = ReportFilter(
       startDate: _startDate,
       endDate: _endDate,
-      vendorFilter:
-          _vendorController.text.isNotEmpty ? _vendorController.text : null,
-      poFilter: _poController.text.isNotEmpty ? _poController.text : null,
+      vendorFilter: null,
+      poFilter: null,
     );
+    final search = _searchController.text.trim();
 
     try {
       if (_selectedReport == 'Gate Entry Register') {
-        final data = await repo.getGateEntryRegister(filter);
+        var data = await repo.getGateEntryRegister(filter);
+        data = data
+            .where((item) => _matchesSearchText(search, [
+                  item.gateEntryNo,
+                  item.challanNo,
+                  item.vendor,
+                  item.poNumber,
+                  item.lrNo,
+                  item.vehicleNo,
+                  item.material,
+                ]))
+            .toList();
         await _exportService.exportGateEntryRegisterToPdf(data);
       } else if (_selectedReport == 'GRN Reconciliation Report') {
-        final data = await repo.getGrnReconReport(filter);
+        var data = await repo.getGrnReconReport(filter);
+        data = data
+            .where((item) => _matchesSearchText(search, [
+                  item.gateEntryNo,
+                  item.challanNo,
+                  item.vendorName,
+                  item.vendor,
+                  item.poNumber,
+                  item.purchaseOrder,
+                  item.grnNo,
+                  item.materialDocument,
+                  item.referenceNo,
+                  item.status,
+                  item.matchedStatus,
+                ]))
+            .toList();
         await _exportService.exportGrnReconReportToPdf(data);
       } else if (_selectedReport == 'Exception Report') {
-        final data = await repo.getExceptionReport(filter);
+        var data = await repo.getExceptionReport(filter);
+        data = data
+            .where((item) => _matchesSearchText(search, [
+                  item.gateEntryId,
+                  item.poNumber,
+                  item.status,
+                  item.description,
+                  item.id,
+                ]))
+            .toList();
         await _exportService.exportExceptionReportToPdf(data);
       }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content: Text('PDF Export Completed'),
-              backgroundColor: Color(0xFFDC2626)),
+              content: Text('PDF saved to Downloads folder. Check your File Manager.'),
+              backgroundColor: Color(0xFFDC2626),
+              duration: Duration(seconds: 4)),
         );
       }
     } catch (e) {
@@ -217,6 +308,14 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
         );
       }
     }
+  }
+
+  void _clearAllFilters() {
+    setState(() {
+      _startDate = DateTime.now().subtract(const Duration(days: 7));
+      _endDate = DateTime.now();
+      _searchController.clear();
+    });
   }
 
   Future<void> _selectDateRange() async {
@@ -239,21 +338,19 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
   @override
   Widget build(BuildContext context) {
     final isMob = isMobile(context);
-    final df = DateFormat('MMM dd, yyyy • hh:mm a');
+    final df = DateFormat('MMM dd, yyyy - hh:mm a');
     final dfShort = DateFormat('MMM dd');
     final dateText = _startDate != null && _endDate != null
         ? (isMob
             ? '${dfShort.format(_startDate!)} - ${dfShort.format(_endDate!)}'
             : '${df.format(_startDate!)} - ${df.format(_endDate!)}')
         : 'Select Date Range';
-    final vendor = _vendorController.text.trim();
-    final po = _poController.text.trim();
+    final search = _searchController.text.trim();
     final query = _ReportQuery(
       reportType: _selectedReport,
       startDate: _startDate,
       endDate: _endDate,
-      vendor: vendor.isEmpty ? null : vendor,
-      po: po.isEmpty ? null : po,
+      search: search.isEmpty ? null : search,
     );
     final previewAsync = ref.watch(reportsPreviewProvider(query));
 
@@ -274,294 +371,443 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Text(
-            //   'Reports & Exports',
-            //   style: Theme.of(context)
-            //       .textTheme
-            //       .headlineSmall
-            //       ?.copyWith(fontWeight: FontWeight.bold),
-            // ),
             const SizedBox(height: 16),
-            Card(
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-                side: BorderSide(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .outlineVariant
-                      .withValues(alpha: 0.5),
-                ),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final isSmall = constraints.maxWidth < 600;
-
-                    Widget item(Widget child) {
-                      return Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.all(6),
-                          child: child,
-                        ),
-                      );
-                    }
-
-                    // 🔽 COMMON INPUT STYLE (compact)
-                    InputDecoration inputStyle(String hint, IconData icon) {
-                      return InputDecoration(
-                        hintText: hint,
-                        prefixIcon: Icon(icon, size: 18),
-                        isDense: true,
-                        contentPadding: const EdgeInsets.symmetric(
-                            vertical: 10, horizontal: 10),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      );
-                    }
-
-                    if (isSmall) {
-                      // ✅ MOBILE → 2x2 layout
-                      return Column(
-                        children: [
-                          Row(
-                            children: [
-                              item(
-                                DropdownButtonFormField<String>(
-                                  initialValue: _selectedReport,
-                                  isExpanded: true,
-                                  decoration: inputStyle(
-                                      'Report Type', Icons.analytics),
-                                  items: _reportTypes.map((t) {
-                                    return DropdownMenuItem(
-                                      value: t,
-                                      child: Text(t,
-                                          style: const TextStyle(fontSize: 13)),
-                                    );
-                                  }).toList(),
-                                  onChanged: (val) {
-                                    if (val != null) {
-                                      setState(() => _selectedReport = val);
-                                    }
-                                  },
-                                ),
-                              ),
-                              item(
-                                OutlinedButton.icon(
-                                  onPressed: _selectDateRange,
-                                  icon: const Icon(Icons.date_range, size: 18),
-                                  label: Text(
-                                    dateText,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(fontSize: 13),
-                                  ),
-                                  style: OutlinedButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 10, vertical: 10),
-                                    alignment: Alignment.centerLeft,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          Row(
-                            children: [
-                              item(
-                                TextField(
-                                  controller: _vendorController,
-                                  style: const TextStyle(fontSize: 13),
-                                  decoration: inputStyle(
-                                      'Vendor Filter', Icons.storefront),
-                                  onChanged: (_) => setState(() {}),
-                                ),
-                              ),
-                              item(
-                                TextField(
-                                  controller: _poController,
-                                  style: const TextStyle(fontSize: 13),
-                                  decoration:
-                                      inputStyle('PO Filter', Icons.receipt),
-                                  onChanged: (_) => setState(() {}),
-                                ),
-                              ),
-                            ],
-                          ),
-                          Row(
-                            children: [
-                              item(
-                                FilledButton.icon(
-                                  onPressed: _exportExcel,
-                                  icon: const Icon(Icons.table_chart, size: 18),
-                                  label: const Text('Excel',
-                                      style: TextStyle(fontSize: 13)),
-                                  style: FilledButton.styleFrom(
-                                    backgroundColor: const Color(0xFF16A34A),
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 10),
-                                  ),
-                                ),
-                              ),
-                              item(
-                                FilledButton.icon(
-                                  onPressed: _exportPdf,
-                                  icon: const Icon(Icons.picture_as_pdf,
-                                      size: 18),
-                                  label: const Text('PDF',
-                                      style: TextStyle(fontSize: 13)),
-                                  style: FilledButton.styleFrom(
-                                    backgroundColor: const Color(0xFFDC2626),
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 10),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      );
-                    } else {
-                      // ✅ DESKTOP (UNCHANGED LOGIC)
-                      return Wrap(
-                        spacing: 12,
-                        runSpacing: 12,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          SizedBox(
-                            width: 220,
-                            child: DropdownButtonFormField<String>(
-                              initialValue: _selectedReport,
-                              isExpanded: true,
-                              decoration:
-                                  inputStyle('Report Type', Icons.analytics),
-                              items: _reportTypes.map((t) {
-                                return DropdownMenuItem(
-                                    value: t,
-                                    child: Text(t,
-                                        style: const TextStyle(fontSize: 13)));
-                              }).toList(),
-                              onChanged: (val) {
-                                if (val != null) {
-                                  setState(() => _selectedReport = val);
-                                }
-                              },
-                            ),
-                          ),
-                          SizedBox(
-                            width: 220,
-                            child: OutlinedButton.icon(
-                              onPressed: _selectDateRange,
-                              icon: const Icon(Icons.date_range, size: 18),
-                              label: Text(
-                                dateText,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontSize: 13),
-                              ),
-                              style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 10),
-                              ),
-                            ),
-                          ),
-                          SizedBox(
-                            width: 180,
-                            child: TextField(
-                              controller: _vendorController,
-                              style: const TextStyle(fontSize: 13),
-                              decoration:
-                                  inputStyle('Vendor Filter', Icons.storefront),
-                              onChanged: (_) => setState(() {}),
-                            ),
-                          ),
-                          SizedBox(
-                            width: 160,
-                            child: TextField(
-                              controller: _poController,
-                              style: const TextStyle(fontSize: 13),
-                              decoration:
-                                  inputStyle('PO Filter', Icons.receipt),
-                              onChanged: (_) => setState(() {}),
-                            ),
-                          ),
-                          SizedBox(
-                            width: 150,
-                            child: FilledButton.icon(
-                              onPressed: _exportExcel,
-                              icon: const Icon(Icons.table_chart, size: 18),
-                              label: const Text('Export Excel',
-                                  style: TextStyle(fontSize: 13)),
-                              style: FilledButton.styleFrom(
-                                backgroundColor: const Color(0xFF16A34A),
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 10),
-                              ),
-                            ),
-                          ),
-                          SizedBox(
-                            width: 140,
-                            child: FilledButton.icon(
-                              onPressed: _exportPdf,
-                              icon: const Icon(Icons.picture_as_pdf, size: 18),
-                              label: const Text('Export PDF',
-                                  style: TextStyle(fontSize: 13)),
-                              style: FilledButton.styleFrom(
-                                backgroundColor: const Color(0xFFDC2626),
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 10),
-                              ),
-                            ),
-                          ),
-                        ],
-                      );
-                    }
-                  },
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Showing results for $_selectedReport',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-            ),
+            _buildFilterToolbar(context, isMob, dateText),
             const SizedBox(height: 12),
-            SizedBox(
-              height: isMob ? 420 : 520,
-              child: Card(
-                elevation: 0,
-                margin: const EdgeInsets.only(bottom: 24),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: BorderSide(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .outlineVariant
-                          .withValues(alpha: 0.5)),
+            _buildFilterInfo(context),
+            const SizedBox(height: 12),
+            previewAsync.when(
+              loading: () => SizedBox(
+                height: isMob ? 420 : 540,
+                child: const Center(child: CircularProgressIndicator()),
+              ),
+              error: (e, _) => SizedBox(
+                height: isMob ? 280 : 340,
+                child: Center(
+                  child: Text(
+                    'Failed to load data',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: previewAsync.when(
-                    loading: () =>
-                        const Center(child: CircularProgressIndicator()),
-                    error: (e, _) => Center(
-                      child: Text(
-                        'Failed to load data',
-                        style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              data: (data) => Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildSummaryCards(context, isMob, data),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    height: isMob ? 430 : 560,
+                    child: Card(
+                      elevation: 0,
+                      margin: const EdgeInsets.only(bottom: 24),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: BorderSide(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .outlineVariant
+                              .withValues(alpha: 0.5),
+                        ),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(14.0),
+                        child: _buildPreview(context, isMob, data),
                       ),
                     ),
-                    data: (data) => _buildPreview(
-                      context,
-                      isMob,
-                      data,
-                    ),
                   ),
-                ),
+                ],
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildFilterToolbar(BuildContext context, bool isMob, String dateText) {
+    InputDecoration inputStyle(String hint, IconData icon) {
+      return InputDecoration(
+        hintText: hint,
+        prefixIcon: Icon(icon, size: 18),
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+      );
+    }
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color:
+              Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14.0),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final width = constraints.maxWidth;
+            final compact = width < 860;
+            final ultraCompact = width < 620;
+            final tiny = width < 500;
+
+            final shortDate = _startDate != null && _endDate != null
+                ? '${DateFormat('MMM dd').format(_startDate!)} - ${DateFormat('MMM dd').format(_endDate!)}'
+                : 'Date';
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _searchController,
+                        decoration: inputStyle(
+                          'Search vendor / PO / challan / gate no',
+                          Icons.search,
+                        ),
+                        onChanged: (_) => setState(() {}),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    SizedBox(
+                      width: tiny ? 46 : 86,
+                      child: OutlinedButton(
+                        onPressed: () => setState(() => _searchController.clear()),
+                        style: OutlinedButton.styleFrom(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: tiny ? 8 : 10,
+                            vertical: 10,
+                          ),
+                        ),
+                        child: tiny
+                            ? const Icon(Icons.clear, size: 16)
+                            : const Text(
+                                'Clear',
+                                style: TextStyle(fontSize: 12),
+                              ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        initialValue: _selectedReport,
+                        isExpanded: true,
+                        decoration: inputStyle('Type', Icons.analytics),
+                        selectedItemBuilder: (context) => _reportTypes
+                            .map((t) => Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    _reportTypeShort(t),
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(fontSize: compact ? 12 : 13),
+                                  ),
+                                ))
+                            .toList(),
+                        items: _reportTypes
+                            .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                            .toList(),
+                        onChanged: (val) {
+                          if (val == null) return;
+                          setState(() => _selectedReport = val);
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _selectDateRange,
+                        icon: const Icon(Icons.date_range, size: 16),
+                        label: Text(
+                          ultraCompact ? shortDate : dateText,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: compact ? 12 : 13),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                          alignment: Alignment.centerLeft,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: _exportExcel,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFF16A34A),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.table_chart, size: 16),
+                              if (!tiny) ...[
+                                const SizedBox(width: 4),
+                                Text(
+                                  ultraCompact ? 'XLS' : 'Excel',
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: _exportPdf,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFFDC2626),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.picture_as_pdf, size: 16),
+                              if (!tiny) ...[
+                                const SizedBox(width: 4),
+                                const Text('PDF', style: TextStyle(fontSize: 12)),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterInfo(BuildContext context) {
+    final chips = <Widget>[];
+    if (_startDate != null && _endDate != null) {
+      chips.add(
+        InputChip(
+          label: Text(
+            'Date: ${DateFormat('MMM dd').format(_startDate!)} - ${DateFormat('MMM dd').format(_endDate!)}',
+          ),
+          onDeleted: () => setState(() {
+            _startDate = null;
+            _endDate = null;
+          }),
+        ),
+      );
+    }
+    if (_searchController.text.trim().isNotEmpty) {
+      chips.add(
+        InputChip(
+          label: Text('Search: ${_searchController.text.trim()}'),
+          onDeleted: () => setState(_searchController.clear),
+        ),
+      );
+    }
+
+    String scopeText;
+    if (_selectedReport == 'Gate Entry Register') {
+      scopeText =
+          'Showing Gate Entry data. Search checks vendor, PO, challan, and gate entry number.';
+    } else if (_selectedReport == 'GRN Reconciliation Report') {
+      scopeText =
+          'Showing Reconciliation data. Search checks vendor, PO, challan, gate entry number, and GRN fields.';
+    } else {
+      scopeText =
+          'Showing Exception data. Search checks gate entry number, PO, status, and description.';
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: Theme.of(context)
+            .colorScheme
+            .surfaceContainerHighest
+            .withValues(alpha: 0.35),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            scopeText,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+          ),
+          if (chips.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Wrap(spacing: 8, runSpacing: 8, children: chips),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryCards(
+    BuildContext context,
+    bool isMob,
+    _ReportPreviewData data,
+  ) {
+    final tiles = <Widget>[];
+
+    if (_selectedReport == 'Gate Entry Register') {
+      final total = data.gateEntries.length;
+      final gateIn =
+          data.gateEntries.where((e) => e.direction.toLowerCase().contains('in')).length;
+      final gateOut = total - gateIn;
+      final totalQty = data.gateEntries.fold<int>(0, (sum, e) => sum + e.qty);
+      tiles.addAll([
+        _summaryCard(
+            context, 'Total Entries', total.toString(), Icons.list_alt, Colors.blue),
+        _summaryCard(context, 'Gate In', gateIn.toString(), Icons.login, Colors.indigo),
+        _summaryCard(
+            context, 'Gate Out', gateOut.toString(), Icons.logout, Colors.deepOrange),
+        _summaryCard(
+            context, 'Total Qty', totalQty.toString(), Icons.inventory_2, Colors.teal),
+      ]);
+    } else if (_selectedReport == 'GRN Reconciliation Report') {
+      int matched = 0;
+      int exception = 0;
+      int pending = 0;
+      double qtyDiffTotal = 0;
+      for (final item in data.grnRecons) {
+        final key =
+            '${item.matchedStatus ?? ''} ${item.status ?? ''}'.toLowerCase();
+        if (key.contains('match')) {
+          matched++;
+        } else if (key.contains('exception') || key.contains('mismatch')) {
+          exception++;
+        } else {
+          pending++;
+        }
+        qtyDiffTotal += (item.quantityDiff ?? 0).abs();
+      }
+      tiles.addAll([
+        _summaryCard(context, 'Total Records', data.grnRecons.length.toString(),
+            Icons.receipt_long, Colors.blue),
+        _summaryCard(
+            context, 'Matched', matched.toString(), Icons.check_circle, Colors.green),
+        _summaryCard(context, 'Exceptions', exception.toString(),
+            Icons.warning_amber, Colors.redAccent),
+        _summaryCard(
+            context, 'Pending', pending.toString(), Icons.pending_actions, Colors.orange),
+        _summaryCard(
+          context,
+          'Qty Diff Total',
+          qtyDiffTotal.toStringAsFixed(
+              qtyDiffTotal == qtyDiffTotal.roundToDouble() ? 0 : 2),
+          Icons.balance,
+          Colors.purple,
+        ),
+      ]);
+    } else {
+      int resolved = 0;
+      int open = 0;
+      for (final item in data.exceptions) {
+        final key = item.status.toLowerCase();
+        if (key.contains('resolve') ||
+            key.contains('closed') ||
+            key.contains('done')) {
+          resolved++;
+        } else {
+          open++;
+        }
+      }
+      tiles.addAll([
+        _summaryCard(context, 'Total Exceptions', data.exceptions.length.toString(),
+            Icons.error_outline, Colors.red),
+        _summaryCard(
+            context, 'Open', open.toString(), Icons.report_problem, Colors.orange),
+        _summaryCard(
+            context, 'Resolved', resolved.toString(), Icons.verified, Colors.green),
+      ]);
+    }
+
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final mobileWidth = (screenWidth - 44) / 2;
+    final cardWidth = isMob ? (mobileWidth < 160 ? double.infinity : mobileWidth) : 200.0;
+
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: tiles
+          .map(
+            (tile) => SizedBox(
+              width: cardWidth,
+              child: tile,
+            ),
+          )
+          .toList(),
+    );
+  }
+
+  Widget _summaryCard(
+    BuildContext context,
+    String title,
+    String value,
+    IconData icon,
+    Color accent,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: accent.withValues(alpha: 0.25)),
+        color: accent.withValues(alpha: 0.08),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, size: 18, color: accent),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -616,21 +862,33 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
         child: DataTable(
           columns: const [
             DataColumn(label: Text('Gate Entry No')),
-            DataColumn(label: Text('Date')),
-            DataColumn(label: Text('Vendor')),
-            DataColumn(label: Text('Vehicle No')),
+            DataColumn(label: Text('Direction')),
+            DataColumn(label: Text('Invoice / Challan No')),
             DataColumn(label: Text('PO No')),
+            DataColumn(label: Text('LR No')),
+            DataColumn(label: Text('Date And Time')),
+            DataColumn(label: Text('Material')),
+            DataColumn(label: Text('Qty')),
+            DataColumn(label: Text('Vendor')),
+            DataColumn(label: Text('Transporter')),
+            DataColumn(label: Text('Vehicle No')),
             DataColumn(label: Text('Status')),
           ],
           rows: items
               .map(
                 (e) => DataRow(cells: [
                   DataCell(Text(e.gateEntryNo)),
-                  DataCell(Text(
-                      DateFormat('MMM dd, yyyy • hh:mm a').format(e.date))),
-                  DataCell(Text(e.vendor)),
-                  DataCell(Text(e.vehicleNo)),
+                  DataCell(Text(e.direction)),
+                  DataCell(Text(e.challanNo)),
                   DataCell(Text(e.poNumber)),
+                  DataCell(Text(e.lrNo.isEmpty ? '-' : e.lrNo)),
+                  DataCell(Text(
+                      DateFormat('MMM dd, yyyy - hh:mm a').format(e.date))),
+                  DataCell(Text(e.material)),
+                  DataCell(Text(e.qty.toString())),
+                  DataCell(Text(e.vendor)),
+                  DataCell(Text(e.transporter)),
+                  DataCell(Text(e.vehicleNo)),
                   DataCell(StatusChip(
                     label: e.status,
                     color: _statusColor(e.status),
@@ -650,15 +908,253 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final e = items[index];
-        return _previewCard(
-          context,
-          title: e.gateEntryNo,
-          subtitle: '${e.vendor} • ${e.vehicleNo}',
-          trailing: DateFormat('MMM dd').format(e.date),
-          footer: StatusChip(label: e.status, color: _statusColor(e.status)),
+        final isGateIn = e.direction.toLowerCase().contains('in');
+        final accent = isGateIn ? Colors.indigo : Colors.deepOrange;
+        return Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: accent.withValues(alpha: 0.25)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: accent.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      isGateIn ? Icons.login : Icons.logout,
+                      size: 18,
+                      color: accent,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          e.gateEntryNo,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 15,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          '${e.direction} - ${e.challanNo}',
+                          style: TextStyle(
+                            color: accent,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  _statusPill(context, e.status),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: _reportInfoCell(
+                      context,
+                      icon: Icons.store_outlined,
+                      label: 'Vendor',
+                      value: e.vendor,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _reportInfoCell(
+                      context,
+                      icon: Icons.receipt_long_outlined,
+                      label: 'PO / LR',
+                      value: '${e.poNumber} / ${e.lrNo.isEmpty ? '-' : e.lrNo}',
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: _reportInfoCell(
+                      context,
+                      icon: Icons.inventory_2_outlined,
+                      label: 'Qty / Material',
+                      value: '${e.qty} - ${e.material}',
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _reportInfoCell(
+                      context,
+                      icon: Icons.local_shipping_outlined,
+                      label: 'Vehicle',
+                      value: e.vehicleNo.isEmpty ? 'N/A' : e.vehicleNo,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(
+                    Icons.access_time,
+                    size: 13,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      DateFormat('MMM dd, yyyy - hh:mm a').format(e.date),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         );
       },
     );
+  }
+
+  Widget _reportInfoCell(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required String value,
+    int maxLines = 1,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: Theme.of(context)
+            .colorScheme
+            .surfaceContainerHighest
+            .withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            icon,
+            size: 14,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 1),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: maxLines,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _statusPill(BuildContext context, String status) {
+    final color = _statusColor(status);
+    final label = _statusLabel(status);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+
+  String _statusLabel(String status) {
+    final normalized = status.trim();
+    if (normalized.isEmpty) return '-';
+    return normalized
+        .replaceAll('_', ' ')
+        .split(' ')
+        .where((part) => part.isNotEmpty)
+        .map((part) => '${part[0].toUpperCase()}${part.substring(1).toLowerCase()}')
+        .join(' ');
+  }
+
+  String _firstNonEmpty(List<String?> values, {String fallback = '-'}) {
+    for (final value in values) {
+      final text = value?.trim() ?? '';
+      if (text.isNotEmpty) {
+        return text;
+      }
+    }
+    return fallback;
+  }
+
+  String _formatApiDate(String raw) {
+    if (raw.trim().isEmpty || raw == '-') return '-';
+    final parsed = DateTime.tryParse(raw);
+    if (parsed == null) return raw;
+    return DateFormat('MMM dd, yyyy - hh:mm a').format(parsed.toLocal());
+  }
+
+  String _reportTypeShort(String reportType) {
+    switch (reportType) {
+      case 'Gate Entry Register':
+        return 'Gate Entry';
+      case 'GRN Reconciliation Report':
+        return 'GRN Reco';
+      case 'Exception Report':
+        return 'Exception';
+      default:
+        return reportType;
+    }
   }
 
   Widget _buildGrnTable(BuildContext context, List<GrnReconReportItem> items) {
@@ -668,18 +1164,102 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
         child: DataTable(
           columns: const [
             DataColumn(label: Text('Gate Entry No')),
+            DataColumn(label: Text('GRN No')),
+            DataColumn(label: Text('PO No')),
+            DataColumn(label: Text('Challan No')),
+            DataColumn(label: Text('Matched Status')),
+            DataColumn(label: Text('Qty Diff')),
+            DataColumn(label: Text('Vendor Name')),
+            DataColumn(label: Text('Reconciled At')),
+            DataColumn(label: Text('Sr No')),
+            DataColumn(label: Text('Remarks')),
+            DataColumn(label: Text('Duplicate Reference')),
+            DataColumn(label: Text('Dublicate')),
+            DataColumn(label: Text('Reference No')),
+            DataColumn(label: Text('Reference')),
+            DataColumn(label: Text('Document Date')),
+            DataColumn(label: Text('Quantity')),
+            DataColumn(label: Text('Material')),
+            DataColumn(label: Text('Material Document')),
+            DataColumn(label: Text('Posting Date')),
+            DataColumn(label: Text('Plant')),
+            DataColumn(label: Text('Material Description')),
+            DataColumn(label: Text('Movement Type')),
+            DataColumn(label: Text('Movement Type Text')),
+            DataColumn(label: Text('Supplier')),
+            DataColumn(label: Text('Purchase Order')),
+            DataColumn(label: Text('Document Header Text')),
+            DataColumn(label: Text('User Name')),
+            DataColumn(label: Text('Entry Date')),
+            DataColumn(label: Text('Time Of Entry')),
+            DataColumn(label: Text('Amount In Local Currency')),
+            DataColumn(label: Text('Qty In Opun')),
+            DataColumn(label: Text('Qty In Order Unit')),
+            DataColumn(label: Text('Local Time')),
+            DataColumn(label: Text('Local Date')),
+            DataColumn(label: Text('Shift')),
+            DataColumn(label: Text('Store Remarks')),
             DataColumn(label: Text('Status')),
-            DataColumn(label: Text('Date')),
+            DataColumn(label: Text('Aging')),
+            DataColumn(label: Text('MDR')),
+            DataColumn(label: Text('Scanning Invoice Status')),
+            DataColumn(label: Text('Scanning Date')),
+            DataColumn(label: Text('Vendor')),
+            DataColumn(label: Text('Source Vendor Name')),
+            DataColumn(label: Text('Buyer Name')),
+            DataColumn(label: Text('Maker Checker')),
           ],
           rows: items
               .map(
                 (e) => DataRow(cells: [
-                  DataCell(Text(e.gateEntryNo)),
+                  DataCell(Text(e.gateEntryNo ?? '')),
+                  DataCell(Text(e.grnNo ?? '')),
+                  DataCell(Text(e.poNumber ?? '')),
+                  DataCell(Text(e.challanNo ?? '')),
                   DataCell(StatusChip(
-                    label: e.matchedStatus,
-                    color: _statusColor(e.matchedStatus),
+                    label: e.matchedStatus ?? '-',
+                    color: _statusColor(e.matchedStatus ?? ''),
                   )),
-                  const DataCell(Text('N/A')),
+                  DataCell(Text(e.quantityDiff?.toString() ?? '')),
+                  DataCell(Text(e.vendorName ?? '')),
+                  DataCell(Text(e.reconciledAt ?? '')),
+                  DataCell(Text(e.srNo ?? '')),
+                  DataCell(Text(e.remarks ?? '')),
+                  DataCell(Text(e.duplicateReference ?? '')),
+                  DataCell(Text(e.dublicate ?? '')),
+                  DataCell(Text(e.referenceNo ?? '')),
+                  DataCell(Text(e.reference ?? '')),
+                  DataCell(Text(e.documentDate ?? '')),
+                  DataCell(Text(e.quantity ?? '')),
+                  DataCell(Text(e.material ?? '')),
+                  DataCell(Text(e.materialDocument ?? '')),
+                  DataCell(Text(e.postingDate ?? '')),
+                  DataCell(Text(e.plant ?? '')),
+                  DataCell(Text(e.materialDescription ?? '')),
+                  DataCell(Text(e.movementType ?? '')),
+                  DataCell(Text(e.movementTypeText ?? '')),
+                  DataCell(Text(e.supplier ?? '')),
+                  DataCell(Text(e.purchaseOrder ?? '')),
+                  DataCell(Text(e.documentHeaderText ?? '')),
+                  DataCell(Text(e.userName ?? '')),
+                  DataCell(Text(e.entryDate ?? '')),
+                  DataCell(Text(e.timeOfEntry ?? '')),
+                  DataCell(Text(e.amountInLocalCurrency ?? '')),
+                  DataCell(Text(e.qtyInOpun ?? '')),
+                  DataCell(Text(e.qtyInOrderUnit ?? '')),
+                  DataCell(Text(e.localTime ?? '')),
+                  DataCell(Text(e.localDate ?? '')),
+                  DataCell(Text(e.shift ?? '')),
+                  DataCell(Text(e.storeRemarks ?? '')),
+                  DataCell(Text(e.status ?? '')),
+                  DataCell(Text(e.aging ?? '')),
+                  DataCell(Text(e.mdr ?? '')),
+                  DataCell(Text(e.scanningInvoiceStatus ?? '')),
+                  DataCell(Text(e.scanningDate ?? '')),
+                  DataCell(Text(e.vendor ?? '')),
+                  DataCell(Text(e.sourceVendorName ?? '')),
+                  DataCell(Text(e.buyerName ?? '')),
+                  DataCell(Text(e.makerChecker ?? '')),
                 ]),
               )
               .toList(),
@@ -694,14 +1274,196 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final e = items[index];
-        return _previewCard(
-          context,
-          title: e.gateEntryNo,
-          subtitle: e.matchedStatus,
-          trailing: 'N/A',
-          footer: StatusChip(
-            label: e.matchedStatus,
-            color: _statusColor(e.matchedStatus),
+        final gateEntryNo = _firstNonEmpty([
+          e.gateEntryNo,
+          e.referenceNo,
+          e.reference,
+        ], fallback: '-');
+        final poNo = _firstNonEmpty([
+          e.poNumber,
+          e.purchaseOrder,
+        ], fallback: '-');
+        final grnNo = _firstNonEmpty([
+          e.grnNo,
+          e.materialDocument,
+        ], fallback: '-');
+        final challanNo = _firstNonEmpty([
+          e.challanNo,
+          e.referenceNo,
+          e.documentHeaderText,
+        ], fallback: '-');
+        final vendor = _firstNonEmpty([
+          e.vendorName,
+          e.vendor,
+          e.sourceVendorName,
+          e.supplier,
+        ], fallback: '-');
+        final reconciledAt = _firstNonEmpty([
+          e.reconciledAt,
+          e.entryDate,
+          e.postingDate,
+          e.localDate,
+        ], fallback: '-');
+        final reconciledAtText = _formatApiDate(reconciledAt);
+        final material = _firstNonEmpty([
+          e.material,
+          e.materialDescription,
+        ], fallback: '-');
+        final reasonCode = _firstNonEmpty([
+          e.mdr,
+        ], fallback: '-');
+        final reconciledBy = _firstNonEmpty([
+          e.userName,
+          e.makerChecker,
+        ], fallback: '-');
+        final status = _firstNonEmpty([
+          e.matchedStatus,
+          e.status,
+          e.scanningInvoiceStatus,
+        ], fallback: 'Pending');
+        final accent = _statusColor(status);
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: accent.withValues(alpha: 0.25)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: accent.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(Icons.rule_folder_outlined, size: 18, color: accent),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          gateEntryNo,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 15,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          'PO: $poNo',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  _statusPill(context, status),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: _reportInfoCell(
+                      context,
+                      icon: Icons.receipt_long_outlined,
+                      label: 'GRN / Challan',
+                      value: '$grnNo / $challanNo',
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _reportInfoCell(
+                      context,
+                      icon: Icons.balance,
+                      label: 'Qty Diff',
+                      value: e.quantityDiff != null ? e.quantityDiff.toString() : '-',
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: _reportInfoCell(
+                      context,
+                      icon: Icons.store_outlined,
+                      label: 'Vendor',
+                      value: vendor,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _reportInfoCell(
+                      context,
+                      icon: Icons.access_time,
+                      label: 'Reconciled',
+                      value: reconciledAtText,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: _reportInfoCell(
+                      context,
+                      icon: Icons.code_outlined,
+                      label: 'Reason Code',
+                      value: reasonCode,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _reportInfoCell(
+                      context,
+                      icon: Icons.person_outline,
+                      label: 'Reconciled By',
+                      value: reconciledBy,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              _reportInfoCell(
+                context,
+                icon: Icons.inventory_2_outlined,
+                label: 'Material',
+                value: material,
+                maxLines: 2,
+              ),
+              if (e.remarks?.isNotEmpty == true) ...[
+                const SizedBox(height: 8),
+                _reportInfoCell(
+                  context,
+                  icon: Icons.notes_outlined,
+                  label: 'Remarks',
+                  value: e.remarks!,
+                  maxLines: 2,
+                ),
+              ],
+            ],
           ),
         );
       },
@@ -729,7 +1491,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                     label: e.status,
                     color: _statusColor(e.status),
                   )),
-                  DataCell(Text(DateFormat('MMM dd, yyyy • hh:mm a')
+                  DataCell(Text(DateFormat('MMM dd, yyyy - hh:mm a')
                       .format(e.createdAt))),
                 ]),
               )
@@ -746,76 +1508,91 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final e = items[index];
-        return _previewCard(
-          context,
-          title: e.gateEntryId,
-          subtitle: e.description,
-          trailing: DateFormat('MMM dd').format(e.createdAt),
-          footer: StatusChip(label: e.status, color: _statusColor(e.status)),
+        final accent = _statusColor(e.status);
+        return Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: accent.withValues(alpha: 0.25)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: accent.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(Icons.error_outline, size: 18, color: accent),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      e.gateEntryId,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  _statusPill(context, e.status),
+                ],
+              ),
+              const SizedBox(height: 10),
+              _reportInfoCell(
+                context,
+                icon: Icons.warning_amber_outlined,
+                label: 'Exception Type',
+                value: e.description,
+                maxLines: 2,
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: _reportInfoCell(
+                      context,
+                      icon: Icons.receipt_long_outlined,
+                      label: 'PO Number',
+                      value: e.poNumber.isEmpty ? '-' : e.poNumber,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _reportInfoCell(
+                      context,
+                      icon: Icons.calendar_today_outlined,
+                      label: 'Created',
+                      value: DateFormat('MMM dd, yyyy').format(e.createdAt),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         );
       },
-    );
-  }
-
-  Widget _previewCard(
-    BuildContext context, {
-    required String title,
-    required String subtitle,
-    required String trailing,
-    required Widget footer,
-  }) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-            color: Theme.of(context)
-                .colorScheme
-                .outlineVariant
-                .withValues(alpha: 0.5)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    title,
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleMedium
-                        ?.copyWith(fontWeight: FontWeight.bold),
-                  ),
-                ),
-                Text(
-                  trailing,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              subtitle,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-            ),
-            const SizedBox(height: 8),
-            footer,
-          ],
-        ),
-      ),
     );
   }
 
   Color _statusColor(String status) {
     final key = status.toLowerCase();
     if (key.contains('match')) return Colors.green;
+    if (key.contains('approved') || key.contains('resolved')) return Colors.green;
+    if (key.contains('closed') || key.contains('done')) return Colors.grey;
     if (key.contains('pending')) return Colors.orange;
     if (key.contains('exception') || key.contains('mismatch')) {
       return Colors.red;
@@ -823,3 +1600,5 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
     return Colors.blueGrey;
   }
 }
+
+

@@ -40,33 +40,81 @@ class DashboardController extends AsyncNotifier<DashboardMetrics> {
 
   Future<DashboardMetrics> _buildGateSecurityMetrics() async {
     final repo = ref.read(gateEntryRepositoryProvider);
-    final response = await repo.getGateEntries(page: 1, limit: 100);
-    final entries = response.data?.items ?? const <GateEntry>[];
+
+    final entries = <GateEntry>[];
+    var page = 1;
+    const limit = 200;
+
+    while (true) {
+      final response = await repo.getGateEntries(page: page, limit: limit);
+      final pageItems = response.data?.items ?? const <GateEntry>[];
+      entries.addAll(pageItems);
+
+      final pagination = response.data?.pagination;
+      if (pagination == null ||
+          !pagination.hasNext ||
+          page >= pagination.totalPages) {
+        break;
+      }
+
+      page++;
+      if (page > 25) break; // safety cap for very large datasets
+    }
 
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
+    final nowUtc = now.toUtc();
+    final todayUtc = DateTime.utc(nowUtc.year, nowUtc.month, nowUtc.day);
     final monthStart = DateTime(now.year, now.month, 1);
 
     int todayCount = 0;
     int monthCount = 0;
+    int gateInCount = 0;
+    int gateOutCount = 0;
     int aging0To1 = 0;
     int aging2To3 = 0;
     int agingMoreThan3 = 0;
 
     for (final e in entries) {
-      final ts = e.gateTimestamp;
-      if (ts == null) continue;
-      final tsDate = DateTime(ts.year, ts.month, ts.day);
+      final isExited = e.gateOutTimestamp != null;
+      if (e.gateMovement == GateMovement.inMovement && !isExited) {
+        gateInCount++;
+      } else if (e.gateMovement == GateMovement.outMovement || isExited) {
+        gateOutCount++;
+      }
 
-      if (!tsDate.isBefore(monthStart)) {
+      final rawTs = e.gateTimestamp;
+      if (rawTs == null) continue;
+
+      final tsLocal = rawTs.toLocal();
+      final tsDateString = DateFormat('yyyy-MM-dd').format(tsLocal);
+      final todayString = DateFormat('yyyy-MM-dd').format(now);
+      final monthStartString = DateFormat('yyyy-MM').format(now);
+
+      if (tsDateString.startsWith(monthStartString)) {
         monthCount++;
-      }
-      if (tsDate == today) {
-        todayCount++;
+      } else if (e.gateOutTimestamp != null) {
+        final outDateString = DateFormat('yyyy-MM').format(e.gateOutTimestamp!.toLocal());
+        if (outDateString == monthStartString) {
+          monthCount++;
+        }
       }
 
-      final ageDays = now.difference(ts).inDays;
-      if (_isPendingForAging(e.status)) {
+      if (tsDateString == todayString) {
+        todayCount++;
+      } else if (e.gateOutTimestamp != null) {
+        final outDateString = DateFormat('yyyy-MM-dd').format(e.gateOutTimestamp!.toLocal());
+        if (outDateString == todayString) {
+          todayCount++;
+        }
+      }
+
+      // Special case: if it gated out TODAY, it should also be counted in today's entry activity?
+      // Actually "Entries" usually means arrivals. But if the user says it shows 2/7 while 
+      // they see 5 In and 4 Out, let's ensure we are not missing anything.
+      
+      final ageDays = now.difference(tsLocal).inDays;
+      if (_isPendingForAging(e.status) && e.gateOutTimestamp == null) {
         if (ageDays <= 1) {
           aging0To1++;
         } else if (ageDays <= 3) {
@@ -82,6 +130,8 @@ class DashboardController extends AsyncNotifier<DashboardMetrics> {
     return DashboardMetrics(
       totalGateEntriesToday: todayCount,
       totalGateEntriesMonth: monthCount,
+      gateInCount: gateInCount,
+      gateOutCount: gateOutCount,
       totalGrnPosted: 0,
       pendingGrnCount: 0,
       quantityMismatchCases: 0,
@@ -117,9 +167,9 @@ class DashboardController extends AsyncNotifier<DashboardMetrics> {
     }
 
     for (final e in entries) {
-      final ts = e.gateTimestamp;
-      if (ts == null) continue;
-      final d = DateTime(ts.year, ts.month, ts.day);
+      final tsLocal = e.gateTimestamp?.toLocal();
+      if (tsLocal == null) continue;
+      final d = DateTime(tsLocal.year, tsLocal.month, tsLocal.day);
       final key = formatter.format(d);
       if (counts.containsKey(key)) {
         counts[key] = (counts[key] ?? 0) + 1;

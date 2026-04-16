@@ -11,25 +11,26 @@ class LoginPage extends ConsumerStatefulWidget {
 }
 
 class _LoginPageState extends ConsumerState<LoginPage> {
-  final _emailCtrl = TextEditingController();
+  final _usernameCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   bool _isLoading = false;
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
-    _emailCtrl.dispose();
+    _usernameCtrl.dispose();
     _passwordCtrl.dispose();
     super.dispose();
   }
 
   void _login() async {
-    final email = _emailCtrl.text.trim();
+    final username = _usernameCtrl.text.trim();
     final password = _passwordCtrl.text;
 
-    if (email.isEmpty || password.isEmpty) {
+    if (username.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Enter both email and password.'),
+          content: Text('Enter both username and password.'),
         ),
       );
       return;
@@ -40,7 +41,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     try {
       errorMessage = await ref
           .read(sessionControllerProvider.notifier)
-          .login(email: email, password: password);
+          .login(username: username, password: password);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -103,18 +104,32 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     ),
                     const SizedBox(height: 18),
                     TextField(
-                      controller: _emailCtrl,
+                      controller: _usernameCtrl,
                       decoration: const InputDecoration(
-                        labelText: 'Email',
-                        hintText: 'e.g. test@warehouse.local',
+                        labelText: 'Username',
+                        hintText: 'e.g. admin',
                       ),
                     ),
                     const SizedBox(height: 12),
                     TextField(
                       controller: _passwordCtrl,
-                      obscureText: true,
-                      decoration: const InputDecoration(
+                      obscureText: _obscurePassword,
+                      decoration: InputDecoration(
                         labelText: 'Password',
+                        suffixIcon: IconButton(
+                          onPressed: () {
+                            setState(() {
+                              _obscurePassword = !_obscurePassword;
+                            });
+                          },
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
+                          ),
+                          tooltip:
+                              _obscurePassword ? 'Show password' : 'Hide password',
+                        ),
                       ),
                     ),
                     const SizedBox(height: 18),

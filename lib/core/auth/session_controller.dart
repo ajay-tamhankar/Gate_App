@@ -47,12 +47,12 @@ class SessionController extends Notifier<SessionState> {
     }
   }
 
-  Future<String?> login({required String email, required String password}) async {
+  Future<String?> login({required String username, required String password}) async {
     state = const SessionLoading();
     final loginUseCase = ref.read(loginUseCaseProvider);
 
     final response = await loginUseCase
-        .execute(LoginRequest(email: email, password: password));
+        .execute(LoginRequest(username: username, password: password));
 
     if (response.success && response.data != null) {
       final parsedRole = UserRole.fromApi(response.data!.role) ??

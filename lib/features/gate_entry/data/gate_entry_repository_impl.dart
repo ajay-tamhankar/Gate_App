@@ -8,8 +8,10 @@ import '../domain/gate_entry_repository.dart';
 import '../domain/models/attachment.dart';
 import '../domain/models/gate_entry.dart';
 import '../domain/models/gate_entry_item.dart';
+import '../domain/models/vendor.dart';
 import 'dto/create_gate_entry_request.dart';
 import 'dto/gate_entry_response.dart';
+import 'dto/check_challan_uniqueness_response.dart';
 
 final gateEntryRepositoryProvider = Provider<GateEntryRepository>((ref) {
   return GateEntryRepositoryImpl(apiClient: ref.read(apiClientProvider));
@@ -32,8 +34,11 @@ class GateEntryRepositoryImpl implements GateEntryRepository {
           ? GateMovement.inMovement
           : GateMovement.outMovement,
       challanNo: dto.challanNo,
+      lrNumber: dto.lrNumber,
       transporterName: dto.transporterName,
       vehicleNo: dto.vehicleNo,
+      driverContactNo: dto.driverContactNo,
+      vendorCode: dto.vendorCode,
       vendorName: dto.vendorName,
       status: dto.status ?? 'unknown',
       items: dto.items
@@ -45,6 +50,10 @@ class GateEntryRepositoryImpl implements GateEntryRepository {
                 uom: item.uom,
               ))
           .toList(),
+      gateOutTimestamp: dto.gateOutTimestamp != null
+          ? DateTime.tryParse(dto.gateOutTimestamp!)
+          : null,
+      gateOutBy: dto.gateOutBy,
     );
   }
 
@@ -120,25 +129,96 @@ class GateEntryRepositoryImpl implements GateEntryRepository {
   @override
   Future<ApiResponse<GateEntry>> createGateEntry(
       CreateGateEntryRequest request) async {
-    final response = await _apiClient.post<GateEntryResponse>(
-      '/gate-entries',
-      data: request.toJson(),
-      fromJsonT: (json) => GateEntryResponse.fromJson(json),
-    );
+    try {
+      final response = await _apiClient.postRaw(
+        '/gate-entries',
+        data: request.toJson(),
+      );
 
-    if (response.success && response.data != null) {
+      final success = response['success'] as bool? ?? false;
+      final message = response['message'] as String? ?? '';
+      if (!success) {
+        final error = response['error'] is Map<String, dynamic>
+            ? ApiError.fromJson(response['error'] as Map<String, dynamic>)
+            : null;
+        return ApiResponse<GateEntry>(
+          success: false,
+          message: message,
+          error: error,
+        );
+      }
+
+      final data = response['data'];
+      GateEntry? parsed;
+
+      if (data is Map<String, dynamic>) {
+        try {
+          parsed = _mapDtoToDomain(GateEntryResponse.fromJson(data));
+        } catch (_) {}
+      } else if (data is List && data.isNotEmpty && data.first is Map<String, dynamic>) {
+        try {
+          parsed = _mapDtoToDomain(
+            GateEntryResponse.fromJson(data.first as Map<String, dynamic>),
+          );
+        } catch (_) {}
+      }
+
+      parsed ??= GateEntry(
+        id: '',
+        gateEntryNo: null,
+        gateMovement: request.gateMovement.toLowerCase().contains('in')
+            ? GateMovement.inMovement
+            : GateMovement.outMovement,
+        challanNo: request.invoiceEntries.isNotEmpty
+            ? request.invoiceEntries.first.challanNo
+            : ((request.challanNos != null && request.challanNos!.isNotEmpty)
+                ? request.challanNos!.first
+                : request.challanNo),
+        lrNumber: request.lrNumber,
+        transporterName: request.transporterName,
+        vehicleNo: request.vehicleNo,
+        driverContactNo: request.driverContactNo,
+        vendorCode: request.vendorCode,
+        vendorName: request.vendorName,
+        items: request.invoiceEntries.isNotEmpty
+            ? request.invoiceEntries
+                .map(
+                  (entry) => GateEntryItem(
+                    id: null,
+                    poNumber: entry.poNumber,
+                    materialCode: entry.partNumber,
+                    challanQty: entry.quantity,
+                    uom: entry.uom,
+                  ),
+                )
+                .toList()
+            : request.items
+                .map(
+                  (item) => GateEntryItem(
+                    id: item.id,
+                    poNumber: item.poNumber,
+                    materialCode: item.materialCode,
+                    challanQty: item.challanQty,
+                    uom: item.uom,
+                  ),
+                )
+                .toList(),
+        status: 'Pending',
+        gateTimestamp: DateTime.now(),
+      );
+
       return ApiResponse<GateEntry>(
         success: true,
-        message: response.message,
-        data: _mapDtoToDomain(response.data!),
+        message: message,
+        data: parsed,
+      );
+    } catch (e) {
+      return ApiResponse(
+        success: false,
+        message: 'Failed to create gate entry',
+        error: ApiError(message: e.toString()),
       );
     }
-
-    return ApiResponse<GateEntry>(
-      success: false,
-      message: response.message,
-      error: response.error,
-    );
   }
 
   @override
@@ -180,7 +260,6 @@ class GateEntryRepositoryImpl implements GateEntryRepository {
     return _apiClient.post<void>('/gate-entries/$id/close');
   }
 
-  @override
   @override
   Future<ApiResponse<List<AttachmentInfo>>> getAttachments(String id) async {
     try {
@@ -358,6 +437,119 @@ class GateEntryRepositoryImpl implements GateEntryRepository {
       return ApiResponse(
         success: false,
         message: 'Failed to fetch attachment URL',
+        error: ApiError(message: e.toString()),
+      );
+    }
+  }
+
+  @override
+  Future<ApiResponse<List<Vendor>>> searchVendors(String query) async {
+    try {
+      final response = await _apiClient.getRaw(
+        '/gate-entries/vendors',
+        queryParameters: {'q': query},
+      );
+
+      final success = response['success'] as bool? ?? false;
+      final message = response['message'] as String? ?? '';
+      if (!success) {
+        final error = response['error'] is Map<String, dynamic>
+            ? ApiError.fromJson(response['error'] as Map<String, dynamic>)
+            : null;
+        return ApiResponse<List<Vendor>>(
+          success: false,
+          message: message,
+          error: error,
+        );
+      }
+
+      final List<dynamic> rawData = response['data'] as List<dynamic>? ?? [];
+      final vendors = rawData
+          .map((json) => Vendor.fromJson(json as Map<String, dynamic>))
+          .toList();
+
+      return ApiResponse<List<Vendor>>(
+        success: true,
+        message: message,
+        data: vendors,
+      );
+    } catch (e) {
+      return ApiResponse(
+        success: false,
+        message: 'Vendor search failed',
+        error: ApiError(message: e.toString()),
+      );
+    }
+  }
+
+  @override
+  Future<ApiResponse<CheckChallanUniquenessResponse>> checkChallanUniqueness(String challanNo) async {
+    try {
+      final response = await _apiClient.getRaw(
+        '/gate-entries/challan-unique',
+        queryParameters: {'challanNo': challanNo},
+      );
+
+      final success = response['success'] as bool? ?? false;
+      final message = response['message'] as String? ?? '';
+
+      if (!success) {
+        return ApiResponse<CheckChallanUniquenessResponse>(
+          success: false,
+          message: message,
+          error: response['error'] is Map<String, dynamic>
+              ? ApiError.fromJson(response['error'] as Map<String, dynamic>)
+              : ApiError(message: message),
+          data: CheckChallanUniquenessResponse.fromJson(response), 
+        );
+      }
+
+      return ApiResponse<CheckChallanUniquenessResponse>(
+        success: true,
+        message: message,
+        data: CheckChallanUniquenessResponse.fromJson(response),
+      );
+    } catch (e) {
+      return ApiResponse(
+        success: false,
+        message: 'Challan uniqueness check failed',
+        error: ApiError(message: e.toString()),
+      );
+    }
+  }
+
+  @override
+  Future<ApiResponse<GateEntry>> gateOut(String id, {String? remarks}) async {
+    try {
+      final response = await _apiClient.postRaw(
+        '/gate-entries/$id/gate-out',
+        data: remarks != null ? {'remarks': remarks} : null,
+      );
+
+      final success = response['success'] as bool? ?? false;
+      final message = response['message'] as String? ?? '';
+
+      if (success) {
+        final data = response['data'] as Map<String, dynamic>;
+        return ApiResponse<GateEntry>(
+          success: true,
+          message: message,
+          data: _mapDtoToDomain(GateEntryResponse.fromJson(data)),
+        );
+      }
+
+      final error = response['error'] is Map<String, dynamic>
+          ? ApiError.fromJson(response['error'] as Map<String, dynamic>)
+          : null;
+      return ApiResponse<GateEntry>(
+        success: false,
+        message: message,
+        error: error,
+      );
+    } catch (e) {
+      return ApiResponse(
+        success: false,
+        message: 'Failed to record gate out',
         error: ApiError(message: e.toString()),
       );
     }
