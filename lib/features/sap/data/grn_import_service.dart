@@ -14,15 +14,36 @@ class GrnImportService {
 
   final SapGrnRepository _repository;
   static const int _maxWebXlsxSizeBytes = 2 * 1024 * 1024;
-  
-  // Relaxed headers based on new API documentation support for "Details Report" style
+
   static const List<String> _requiredHeaders = [
     'poNumber',
     'materialCode',
     'grnNumber',
     'postingDate',
-    'grnQty', // Added as per new API doc Section 9
+    'grnQty',
   ];
+  static const Map<String, String> _headerAliases = {
+    'ponumber': 'poNumber',
+    'purchaseorder': 'poNumber',
+    'purchaseorderno': 'poNumber',
+    'materialcode': 'materialCode',
+    'material': 'materialCode',
+    'grnnumber': 'grnNumber',
+    'grnno': 'grnNumber',
+    'materialdocument': 'grnNumber',
+    'materialdocumentnumber': 'grnNumber',
+    'postingdate': 'postingDate',
+    'grndate': 'postingDate',
+    'grnqty': 'grnQty',
+    'quantity': 'grnQty',
+    'qty': 'grnQty',
+    'challanno': 'challanNo',
+    'reference': 'challanNo',
+    'vendorcode': 'vendorCode',
+    'supplier': 'vendorCode',
+    'vendorname': 'vendorName',
+    'localdate': 'localDate',
+  };
 
   /// Uploads [file] to POST /sap/grns/import.
   /// Throws a [GrnImportException] on failure.
@@ -116,18 +137,53 @@ class GrnImportService {
         throw GrnImportException('The XLSX file is empty.');
       }
 
-      final rows = sheet.rows
-          .where((row) => row.any((cell) => cell?.value != null))
+      final rawRows = sheet.rows
           .map(
-            (row) => row.map((cell) => _escapeCsv(_cellToString(cell?.value))).join(','),
+            (row) => _trimTrailingEmptyColumns(
+              row.map((cell) => _cellToString(cell?.value)).toList(),
+            ),
           )
+          .where((row) => row.any((cell) => cell.isNotEmpty))
           .toList();
 
-      if (rows.isEmpty) {
+      if (rawRows.isEmpty) {
         throw GrnImportException('The XLSX file is empty.');
       }
 
-      return rows.join('\n');
+      final headerMatch = _findHeaderRow(rawRows);
+      final normalizedRows = <List<String>>[_requiredHeaders];
+
+      for (var rowIndex = headerMatch.rowIndex + 1;
+          rowIndex < rawRows.length;
+          rowIndex++) {
+        final row = rawRows[rowIndex];
+        if (_isDescriptiveRow(row)) {
+          continue;
+        }
+
+        final normalizedRow = _requiredHeaders
+            .map(
+              (header) => _normalizeValue(
+                header,
+                _readCell(row, headerMatch.columns[header]),
+              ),
+            )
+            .toList();
+
+        if (normalizedRow.any((value) => value.isNotEmpty)) {
+          normalizedRows.add(normalizedRow);
+        }
+      }
+
+      if (normalizedRows.length == 1) {
+        throw GrnImportException(
+          'The XLSX file does not contain any GRN rows after the header.',
+        );
+      }
+
+      return normalizedRows
+          .map((row) => row.map(_escapeCsv).join(','))
+          .join('\n');
     } catch (e) {
       if (e is GrnImportException) rethrow;
       throw GrnImportException('Failed to read XLSX file.');
@@ -136,7 +192,7 @@ class GrnImportService {
 
   String _cellToString(dynamic value) {
     if (value == null) return '';
-    return value.toString();
+    return value.toString().trim();
   }
 
   String _escapeCsv(String value) {
@@ -150,8 +206,6 @@ class GrnImportService {
     final normalized = fileName.toLowerCase();
     return normalized.endsWith('.csv') || normalized.endsWith('.xlsx');
   }
-
-
 
   void _validateCsvHeaders(String csvContent) {
     final lines = const LineSplitter().convert(csvContent);
@@ -184,6 +238,139 @@ class GrnImportService {
       );
     }
   }
+
+  _HeaderRowMatch _findHeaderRow(List<List<String>> rows) {
+    _HeaderRowMatch? bestMatch;
+    var bestScore = -1;
+
+    for (var index = 0; index < rows.length; index++) {
+      final row = rows[index];
+      final mappedColumns = <String, int>{};
+      var exactMatchCount = 0;
+
+      for (var column = 0; column < row.length; column++) {
+        final rawHeader = row[column];
+        final normalizedHeader = _normalizeHeader(rawHeader);
+        final mappedHeader = _headerAliases[normalizedHeader];
+        if (mappedHeader == null || mappedColumns.containsKey(mappedHeader)) {
+          continue;
+        }
+        mappedColumns[mappedHeader] = column;
+        if (_normalizeHeader(mappedHeader) == normalizedHeader) {
+          exactMatchCount++;
+        }
+      }
+
+      final hasRequiredHeaders = _requiredHeaders.every(
+        mappedColumns.containsKey,
+      );
+      if (!hasRequiredHeaders) {
+        continue;
+      }
+
+      final score = (exactMatchCount * 100) + mappedColumns.length;
+      if (score > bestScore) {
+        bestScore = score;
+        bestMatch = _HeaderRowMatch(
+          rowIndex: index,
+          columns: mappedColumns,
+        );
+      }
+    }
+
+    if (bestMatch == null) {
+      throw GrnImportException(
+        'Missing required columns: ${_requiredHeaders.join(', ')}.',
+      );
+    }
+
+    return bestMatch;
+  }
+
+  bool _isDescriptiveRow(List<String> row) {
+    final firstValue = row.firstWhere(
+      (cell) => cell.isNotEmpty,
+      orElse: () => '',
+    );
+    final firstToken = _normalizeHeader(firstValue);
+    if (firstToken == 'reqfromsap' || firstToken == 'filedbyapp') {
+      return true;
+    }
+
+    var mappedCount = 0;
+    for (final cell in row) {
+      if (_headerAliases.containsKey(_normalizeHeader(cell))) {
+        mappedCount++;
+      }
+    }
+
+    return mappedCount >= _requiredHeaders.length - 1;
+  }
+
+  String _readCell(List<String> row, int? index) {
+    if (index == null || index < 0 || index >= row.length) {
+      return '';
+    }
+    return row[index];
+  }
+
+  List<String> _trimTrailingEmptyColumns(List<String> row) {
+    final trimmed = List<String>.from(row);
+    while (trimmed.isNotEmpty && trimmed.last.isEmpty) {
+      trimmed.removeLast();
+    }
+    return trimmed;
+  }
+
+  String _normalizeHeader(String value) {
+    return value.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+  }
+
+  String _normalizeValue(String header, String value) {
+    var normalized = value.trim();
+    if (normalized.isEmpty) {
+      return normalized;
+    }
+
+    final numericWithTrailingZero = RegExp(r'^\d+\.0+$');
+    if (numericWithTrailingZero.hasMatch(normalized)) {
+      normalized = normalized.split('.').first;
+    }
+
+    if (header == 'postingDate') {
+      final excelSerial = int.tryParse(normalized);
+      if (excelSerial != null && excelSerial > 20000 && excelSerial < 80000) {
+        final parsed = DateTime.utc(1899, 12, 30).add(
+          Duration(days: excelSerial),
+        );
+        return _formatDate(parsed);
+      }
+
+      final parsedDate = DateTime.tryParse(normalized);
+      if (parsedDate != null) {
+        return _formatDate(parsedDate);
+      }
+    }
+
+    return normalized;
+  }
+
+  String _formatDate(DateTime value) {
+    final year = value.year.toString().padLeft(4, '0');
+    final month = value.month.toString().padLeft(2, '0');
+    final day = value.day.toString().padLeft(2, '0');
+    return '$year-$month-$day';
+  }
+}
+
+class _HeaderRowMatch {
+  const _HeaderRowMatch({
+    required this.rowIndex,
+    required this.columns,
+  });
+
+  final int rowIndex;
+  final Map<String, int> columns;
 }
 
 class GrnImportException implements Exception {

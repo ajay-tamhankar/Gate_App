@@ -122,7 +122,7 @@ class _GrnImportCardState extends ConsumerState<GrnImportCard> {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Required columns: poNumber, materialCode, grnNumber, postingDate',
+                        'Required columns: poNumber, materialCode, grnNumber, postingDate, grnQty',
                         style: textTheme.bodySmall?.copyWith(
                           color: colorScheme.onSurfaceVariant,
                           fontWeight: FontWeight.w600,
