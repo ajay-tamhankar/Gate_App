@@ -70,10 +70,12 @@ class GrnImportService {
       String? filePath;
 
       if (normalizedName.endsWith('.csv')) {
-        bytes = await _readFileBytes(file);
-        final csvContent = utf8.decode(bytes, allowMalformed: true);
-        _validateCsvHeaders(csvContent);
-        filePath = kIsWeb ? null : file.path;
+        final csvBytes = await _readFileBytes(file);
+        final csvContent = utf8.decode(csvBytes, allowMalformed: true);
+        final normalizedCsv = _normalizeCsvContent(csvContent);
+        _validateCsvHeaders(normalizedCsv);
+        bytes = utf8.encode(normalizedCsv);
+        filePath = null;
       } else {
         // XLSX handling
         final excelBytes = await _readFileBytes(file);
@@ -207,6 +209,56 @@ class GrnImportService {
     return normalized.endsWith('.csv') || normalized.endsWith('.xlsx');
   }
 
+  String _normalizeCsvContent(String csvContent) {
+    final lines = const LineSplitter().convert(csvContent);
+    final rawRows = lines
+        .map(_parseCsvLine)
+        .map(_trimTrailingEmptyColumns)
+        .where((row) => row.any((cell) => cell.trim().isNotEmpty))
+        .toList();
+
+    if (rawRows.isEmpty) {
+      throw GrnImportException(
+        'The import file is empty. Required columns: ${_requiredHeaders.join(', ')}.',
+      );
+    }
+
+    final headerMatch = _findHeaderRow(rawRows);
+    final normalizedRows = <List<String>>[_requiredHeaders];
+
+    for (var rowIndex = headerMatch.rowIndex + 1;
+        rowIndex < rawRows.length;
+        rowIndex++) {
+      final row = rawRows[rowIndex];
+      if (_isDescriptiveRow(row)) {
+        continue;
+      }
+
+      final normalizedRow = _requiredHeaders
+          .map(
+            (header) => _normalizeValue(
+              header,
+              _readCell(row, headerMatch.columns[header]),
+            ),
+          )
+          .toList();
+
+      if (normalizedRow.any((value) => value.isNotEmpty)) {
+        normalizedRows.add(normalizedRow);
+      }
+    }
+
+    if (normalizedRows.length == 1) {
+      throw GrnImportException(
+        'The import file does not contain any GRN rows after the header.',
+      );
+    }
+
+    return normalizedRows
+        .map((row) => row.map(_escapeCsv).join(','))
+        .join('\n');
+  }
+
   void _validateCsvHeaders(String csvContent) {
     final lines = const LineSplitter().convert(csvContent);
     if (lines.isEmpty) {
@@ -320,6 +372,38 @@ class GrnImportService {
       trimmed.removeLast();
     }
     return trimmed;
+  }
+
+  List<String> _parseCsvLine(String line) {
+    final values = <String>[];
+    final buffer = StringBuffer();
+    var insideQuotes = false;
+
+    for (var index = 0; index < line.length; index++) {
+      final char = line[index];
+      if (char == '"') {
+        final nextIsQuote =
+            index + 1 < line.length && line[index + 1] == '"';
+        if (insideQuotes && nextIsQuote) {
+          buffer.write('"');
+          index++;
+        } else {
+          insideQuotes = !insideQuotes;
+        }
+        continue;
+      }
+
+      if (char == ',' && !insideQuotes) {
+        values.add(buffer.toString().trim());
+        buffer.clear();
+        continue;
+      }
+
+      buffer.write(char);
+    }
+
+    values.add(buffer.toString().trim());
+    return values;
   }
 
   String _normalizeHeader(String value) {
