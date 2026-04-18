@@ -41,7 +41,7 @@ class RecoExceptionDetailPage extends ConsumerWidget {
 class _RecoExceptionDetailSecurityView extends ConsumerWidget {
   final String exceptionId;
 
-  const _RecoExceptionDetailSecurityView({super.key, required this.exceptionId});
+  const _RecoExceptionDetailSecurityView({required this.exceptionId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -208,7 +208,7 @@ class _RecoExceptionDetailSecurityView extends ConsumerWidget {
 class _WarehouseReconciliationDetailView extends ConsumerWidget {
   final WarehouseReconciliationRecord record;
 
-  const _WarehouseReconciliationDetailView({super.key, required this.record});
+  const _WarehouseReconciliationDetailView({required this.record});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

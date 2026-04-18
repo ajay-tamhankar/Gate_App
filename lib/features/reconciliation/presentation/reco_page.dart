@@ -45,7 +45,7 @@ class RecoPage extends ConsumerWidget {
 }
 
 class _RecoOperationsView extends ConsumerWidget {
-  const _RecoOperationsView({super.key});
+  const _RecoOperationsView();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -521,7 +521,7 @@ class _RecoOperationsView extends ConsumerWidget {
 // ---------------------------------------------------------------------------
 
 class _WarehouseReconciliationView extends ConsumerStatefulWidget {
-  const _WarehouseReconciliationView({super.key});
+  const _WarehouseReconciliationView();
 
   @override
   ConsumerState<_WarehouseReconciliationView> createState() =>

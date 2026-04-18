@@ -38,7 +38,7 @@ class GateEntryDetailPage extends ConsumerWidget {
 }
 
 class _GateEntryDetailSecurityView extends ConsumerStatefulWidget {
-  const _GateEntryDetailSecurityView({super.key, required this.entryId});
+  const _GateEntryDetailSecurityView({required this.entryId});
 
   final String entryId;
 
@@ -709,7 +709,7 @@ class _GateEntryDetailSecurityViewState extends ConsumerState<_GateEntryDetailSe
 class _WarehouseGateEntryDetailView extends ConsumerStatefulWidget {
   final String entryId;
 
-  const _WarehouseGateEntryDetailView({super.key, required this.entryId});
+  const _WarehouseGateEntryDetailView({required this.entryId});
 
   @override
   ConsumerState<_WarehouseGateEntryDetailView> createState() =>

@@ -37,7 +37,7 @@ class GateEntryPage extends ConsumerWidget {
 }
 
 class _GateEntrySecurityView extends ConsumerStatefulWidget {
-  const _GateEntrySecurityView({super.key});
+  const _GateEntrySecurityView();
 
   @override
   ConsumerState<_GateEntrySecurityView> createState() => _GateEntrySecurityViewState();
@@ -1334,7 +1334,7 @@ class _MobileEntryCard extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _WarehouseGateEntryView extends ConsumerWidget {
-  const _WarehouseGateEntryView({super.key});
+  const _WarehouseGateEntryView();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
