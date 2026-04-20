@@ -40,32 +40,10 @@ class DashboardController extends AsyncNotifier<DashboardMetrics> {
 
   Future<DashboardMetrics> _buildGateSecurityMetrics() async {
     final repo = ref.read(gateEntryRepositoryProvider);
-
-    final entries = <GateEntry>[];
-    var page = 1;
-    const limit = 200;
-
-    while (true) {
-      final response = await repo.getGateEntries(page: page, limit: limit);
-      final pageItems = response.data?.items ?? const <GateEntry>[];
-      entries.addAll(pageItems);
-
-      final pagination = response.data?.pagination;
-      if (pagination == null ||
-          !pagination.hasNext ||
-          page >= pagination.totalPages) {
-        break;
-      }
-
-      page++;
-      if (page > 25) break; // safety cap for very large datasets
-    }
+    final response = await repo.getGateEntries();
+    final entries = response.data?.items ?? const <GateEntry>[];
 
     final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final nowUtc = now.toUtc();
-    final todayUtc = DateTime.utc(nowUtc.year, nowUtc.month, nowUtc.day);
-    final monthStart = DateTime(now.year, now.month, 1);
 
     int todayCount = 0;
     int monthCount = 0;

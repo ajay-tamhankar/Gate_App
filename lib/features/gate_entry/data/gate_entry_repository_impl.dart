@@ -8,6 +8,8 @@ import '../domain/gate_entry_repository.dart';
 import '../domain/models/attachment.dart';
 import '../domain/models/gate_entry.dart';
 import '../domain/models/gate_entry_item.dart';
+import '../domain/models/gate_entry_list_response.dart';
+import '../domain/models/gate_entry_query.dart';
 import '../domain/models/vendor.dart';
 import 'dto/create_gate_entry_request.dart';
 import 'dto/gate_entry_response.dart';
@@ -58,12 +60,13 @@ class GateEntryRepositoryImpl implements GateEntryRepository {
   }
 
   @override
-  Future<ApiResponse<PaginatedResponse<GateEntry>>> getGateEntries(
-      {int page = 1, int limit = 20}) async {
+  Future<ApiResponse<GateEntryListResponse>> getGateEntries({
+    GateEntryQuery? query,
+  }) async {
     try {
       final response = await _apiClient.getRaw(
         '/gate-entries',
-        queryParameters: {'page': page, 'limit': limit},
+        queryParameters: query?.toQueryParameters(),
       );
 
       final success = response['success'] as bool? ?? false;
@@ -76,21 +79,22 @@ class GateEntryRepositoryImpl implements GateEntryRepository {
             .map((json) => _mapDtoToDomain(GateEntryResponse.fromJson(json)))
             .toList();
 
-        final paginationJson =
-            response['pagination'] as Map<String, dynamic>? ?? {};
-        final pagination = PaginationModel.fromJson(paginationJson);
+        final paginationJson = response['pagination'] as Map<String, dynamic>?;
+        final pagination = paginationJson == null
+            ? null
+            : PaginationModel.fromJson(paginationJson);
 
-        return ApiResponse<PaginatedResponse<GateEntry>>(
+        return ApiResponse<GateEntryListResponse>(
           success: true,
           message: message,
-          data: PaginatedResponse(items: items, pagination: pagination),
+          data: GateEntryListResponse(items: items, pagination: pagination),
         );
       }
 
       final error = response['error'] is Map<String, dynamic>
           ? ApiError.fromJson(response['error'] as Map<String, dynamic>)
           : null;
-      return ApiResponse<PaginatedResponse<GateEntry>>(
+      return ApiResponse<GateEntryListResponse>(
         success: false,
         message: message,
         error: error,

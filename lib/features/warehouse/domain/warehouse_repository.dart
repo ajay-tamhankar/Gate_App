@@ -1,6 +1,7 @@
 import 'models/warehouse_gate_entry.dart';
 import 'models/warehouse_grn.dart';
 import 'models/warehouse_reconciliation.dart';
+import '../../reconciliation/domain/reconciliation_period_filter.dart';
 
 abstract class WarehouseRepository {
   Future<List<WarehouseGateEntrySummary>> getGateEntries();
@@ -16,6 +17,7 @@ abstract class WarehouseRepository {
   Future<List<WarehouseReconciliationRecord>> getReconciliations({
     DateTime? dateFrom,
     DateTime? dateTo,
+    ReconciliationPeriodFilter? filter,
   });
   Future<void> approveReconciliation(
     String id,

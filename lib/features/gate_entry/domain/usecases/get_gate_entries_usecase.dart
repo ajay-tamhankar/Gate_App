@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/network/api_response.dart';
-import '../../../../core/network/pagination_model.dart';
 import '../gate_entry_repository.dart';
-import '../models/gate_entry.dart';
+import '../models/gate_entry_list_response.dart';
+import '../models/gate_entry_query.dart';
 import '../../data/gate_entry_repository_impl.dart';
 
 final getGateEntriesUseCaseProvider = Provider<GetGateEntriesUseCase>((ref) {
@@ -14,8 +14,9 @@ class GetGateEntriesUseCase {
 
   GetGateEntriesUseCase(this._repository);
 
-  Future<ApiResponse<PaginatedResponse<GateEntry>>> execute(
-      {int page = 1, int limit = 20}) {
-    return _repository.getGateEntries(page: page, limit: limit);
+  Future<ApiResponse<GateEntryListResponse>> execute({
+    GateEntryQuery? query,
+  }) {
+    return _repository.getGateEntries(query: query);
   }
 }

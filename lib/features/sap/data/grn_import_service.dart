@@ -50,6 +50,9 @@ class GrnImportService {
   Future<GrnImportResult?> importGrn(
     PlatformFile file, {
     bool runReconciliation = false,
+    DateTime? reconciliationDate,
+    DateTime? reconciliationRangeStart,
+    DateTime? reconciliationRangeEnd,
   }) async {
     if (!_isSupportedFile(file.name)) {
       throw GrnImportException('Only CSV and XLSX files are supported.');
@@ -94,6 +97,9 @@ class GrnImportService {
         bytes: bytes,
         filePath: filePath,
         runReconciliation: runReconciliation,
+        reconciliationDate: reconciliationDate,
+        reconciliationRangeStart: reconciliationRangeStart,
+        reconciliationRangeEnd: reconciliationRangeEnd,
       );
 
       if (!response.success) {

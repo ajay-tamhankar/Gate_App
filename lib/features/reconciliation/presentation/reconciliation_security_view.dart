@@ -14,6 +14,7 @@ import '../../../core/ui/widgets/status_chip.dart';
 import '../../../core/ui/widgets/logout_action.dart';
 import '../../gate_entry/presentation/gate_entry_detail_page.dart';
 import '../domain/entities/reconciliation_item.dart';
+import '../domain/reconciliation_period_filter.dart';
 import 'controllers/reconciliation_security_controller.dart';
 
 class ReconciliationSecurityView extends ConsumerStatefulWidget {
@@ -84,8 +85,6 @@ class _ReconciliationSecurityViewState
                       : isMob
                           ? _buildMobileList(context, state.items)
                           : _buildDesktopTable(context, state.items),
-                  const SizedBox(height: 12),
-                  _buildPaginationSection(context, ref, state),
                 ],
               ),
             ),
@@ -94,57 +93,26 @@ class _ReconciliationSecurityViewState
 
   Widget _buildFilterRow(
       BuildContext context, WidgetRef ref, ReconciliationFilterState filter) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final last7 = today.subtract(const Duration(days: 6));
-
-    final isToday = filter.dateFrom == today &&
-        filter.dateTo == today.add(const Duration(days: 1));
-    final isLast7 = filter.dateFrom == last7 &&
-        filter.dateTo == today.add(const Duration(days: 1));
-
     return Wrap(
       spacing: 12,
       runSpacing: 12,
       children: [
-        FilterChip(
-          label: const Text('Today'),
-          selected: isToday,
-          onSelected: (_) {
-            ref.read(reconciliationFilterProvider.notifier).state =
-                ReconciliationFilterState(
-              dateFrom: today,
-              dateTo: today.add(const Duration(days: 1)),
-            );
-            ref
-                .read(reconciliationSecurityControllerProvider.notifier)
-                .refresh();
-          },
-        ),
-        FilterChip(
-          label: const Text('Last 7 days'),
-          selected: isLast7,
-          onSelected: (_) {
-            ref.read(reconciliationFilterProvider.notifier).state =
-                ReconciliationFilterState(
-              dateFrom: last7,
-              dateTo: today.add(const Duration(days: 1)),
-            );
-            ref
-                .read(reconciliationSecurityControllerProvider.notifier)
-                .refresh();
-          },
-        ),
-        TextButton(
-          onPressed: () {
-            ref.read(reconciliationFilterProvider.notifier).state =
-                const ReconciliationFilterState();
-            ref
-                .read(reconciliationSecurityControllerProvider.notifier)
-                .refresh();
-          },
-          child: const Text('Clear'),
-        ),
+        for (final period in ReconciliationPeriodFilter.values)
+          FilterChip(
+            label: Text(period.label),
+            selected:
+                filter.hasExplicitSelection && filter.period == period,
+            onSelected: (_) {
+              ref.read(reconciliationFilterProvider.notifier).state =
+                  ReconciliationFilterState(
+                    period: period,
+                    hasExplicitSelection: true,
+                  );
+              ref
+                  .read(reconciliationSecurityControllerProvider.notifier)
+                  .refresh();
+            },
+          ),
       ],
     );
   }
@@ -438,50 +406,6 @@ class _ReconciliationSecurityViewState
   String _formatDate(DateTime? value) {
     if (value == null) return '-';
     return DateFormat('MMM dd, yyyy - hh:mm a').format(value.toLocal());
-  }
-
-  Widget _buildPaginationSection(
-    BuildContext context,
-    WidgetRef ref,
-    ReconciliationSecurityState state,
-  ) {
-    final pagination = state.pagination;
-    if (pagination == null) return const SizedBox.shrink();
-
-    return Column(
-      children: [
-        Text(
-          'Loaded ${state.items.length} of ${pagination.total} records',
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-        ),
-        const SizedBox(height: 8),
-        if (pagination.hasNext)
-          OutlinedButton.icon(
-            onPressed: state.isLoadingMore
-                ? null
-                : () => ref
-                    .read(reconciliationSecurityControllerProvider.notifier)
-                    .loadMore(),
-            icon: state.isLoadingMore
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.expand_more),
-            label: Text(state.isLoadingMore ? 'Loading...' : 'Load More'),
-          )
-        else
-          Text(
-            'All records loaded',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-          ),
-      ],
-    );
   }
 
   Widget _buildErrorBanner(BuildContext context, String error) {

@@ -6,6 +6,12 @@ sealed class GrnUploadState {
   const GrnUploadState();
 }
 
+enum GrnUploadMode { importOnly, singleDate, dateRange }
+
+extension GrnUploadModeX on GrnUploadMode {
+  bool get runReconciliation => this != GrnUploadMode.importOnly;
+}
+
 /// No file selected yet.
 class GrnUploadIdle extends GrnUploadState {
   const GrnUploadIdle();
@@ -13,16 +19,34 @@ class GrnUploadIdle extends GrnUploadState {
 
 /// A valid CSV/XLSX file has been selected, ready to upload.
 class GrnUploadFileSelected extends GrnUploadState {
-  const GrnUploadFileSelected(this.file, {this.runReconciliation = false});
+  const GrnUploadFileSelected(
+    this.file, {
+    this.mode = GrnUploadMode.importOnly,
+    this.selectedDate,
+    this.rangeStart,
+    this.rangeEnd,
+  });
   final PlatformFile file;
-  final bool runReconciliation;
+  final GrnUploadMode mode;
+  final DateTime? selectedDate;
+  final DateTime? rangeStart;
+  final DateTime? rangeEnd;
 }
 
 /// Upload in progress.
 class GrnUploadLoading extends GrnUploadState {
-  const GrnUploadLoading(this.file, {this.runReconciliation = false});
+  const GrnUploadLoading(
+    this.file, {
+    this.mode = GrnUploadMode.importOnly,
+    this.selectedDate,
+    this.rangeStart,
+    this.rangeEnd,
+  });
   final PlatformFile file;
-  final bool runReconciliation;
+  final GrnUploadMode mode;
+  final DateTime? selectedDate;
+  final DateTime? rangeStart;
+  final DateTime? rangeEnd;
 }
 
 /// Upload succeeded.

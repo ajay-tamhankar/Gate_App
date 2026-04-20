@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../domain/grn_upload_state.dart';
 import '../controllers/grn_upload_provider.dart';
@@ -14,6 +15,7 @@ class GrnImportCard extends ConsumerStatefulWidget {
 }
 
 class _GrnImportCardState extends ConsumerState<GrnImportCard> {
+  static final DateFormat _displayDateFormat = DateFormat('dd MMM yyyy');
   ProviderSubscription<GrnUploadState>? _uploadSubscription;
 
   @override
@@ -56,8 +58,8 @@ class _GrnImportCardState extends ConsumerState<GrnImportCard> {
   Widget build(BuildContext context) {
     const allowedFileLabel = 'CSV/XLSX';
     const uploadDescription = kIsWeb
-        ? 'Upload a CSV or XLSX file exported from SAP. XLSX conversion may take a few seconds on web.'
-        : 'Upload a CSV or XLSX file exported from SAP to sync GRN records.';
+        ? 'Upload a CSV or XLSX file exported from SAP. If you want instant reconciliation, choose the GRN date window before upload.'
+        : 'Upload a CSV or XLSX file exported from SAP, then optionally reconcile it against gate entries for a specific date window.';
 
     final uploadState = ref.watch(grnUploadProvider);
     final notifier = ref.read(grnUploadProvider.notifier);
@@ -70,7 +72,29 @@ class _GrnImportCardState extends ConsumerState<GrnImportCard> {
       GrnUploadLoading(:final file) => file,
       _ => null,
     };
+    final uploadMode = switch (uploadState) {
+      GrnUploadFileSelected(:final mode) => mode,
+      GrnUploadLoading(:final mode) => mode,
+      _ => GrnUploadMode.importOnly,
+    };
+    final selectedDate = switch (uploadState) {
+      GrnUploadFileSelected(:final selectedDate) => selectedDate,
+      GrnUploadLoading(:final selectedDate) => selectedDate,
+      _ => null,
+    };
+    final rangeStart = switch (uploadState) {
+      GrnUploadFileSelected(:final rangeStart) => rangeStart,
+      GrnUploadLoading(:final rangeStart) => rangeStart,
+      _ => null,
+    };
+    final rangeEnd = switch (uploadState) {
+      GrnUploadFileSelected(:final rangeEnd) => rangeEnd,
+      GrnUploadLoading(:final rangeEnd) => rangeEnd,
+      _ => null,
+    };
     final hasFile = selectedFile != null;
+    final canUpload =
+        hasFile && !isLoading && _isUploadReady(uploadMode, selectedDate, rangeStart, rangeEnd);
 
     return Card(
       elevation: 0,
@@ -118,14 +142,6 @@ class _GrnImportCardState extends ConsumerState<GrnImportCard> {
                         uploadDescription,
                         style: textTheme.bodySmall?.copyWith(
                           color: colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Required columns: poNumber, materialCode, grnNumber, postingDate, grnQty',
-                        style: textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],
@@ -189,29 +205,22 @@ class _GrnImportCardState extends ConsumerState<GrnImportCard> {
                       ],
                     ),
                   ),
-                if (hasFile && !isLoading)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: SwitchListTile(
-                        dense: true,
-                        title: const Text('Auto-run Reconciliation'),
-                        subtitle: const Text('Compare with Gate Entries immediately'),
-                        value: (uploadState as GrnUploadFileSelected).runReconciliation,
-                        onChanged: (val) => notifier.toggleReconciliation(val),
-                        contentPadding: EdgeInsets.zero,
-                        secondary: Icon(
-                          Icons.auto_fix_high_rounded,
-                          size: 20,
-                          color: colorScheme.secondary,
-                        ),
-                      ),
+                if (hasFile)
+                  SizedBox(
+                    width: double.infinity,
+                    child: _buildReconciliationPanel(
+                      context,
+                      notifier,
+                      uploadMode: uploadMode,
+                      selectedDate: selectedDate,
+                      rangeStart: rangeStart,
+                      rangeEnd: rangeEnd,
+                      isLoading: isLoading,
                     ),
                   ),
                 const SizedBox(height: 12),
                 FilledButton.icon(
-                  onPressed: (hasFile && !isLoading) ? notifier.upload : null,
+                  onPressed: canUpload ? notifier.upload : null,
                   icon: isLoading
                       ? SizedBox(
                           width: 16,
@@ -285,5 +294,170 @@ class _GrnImportCardState extends ConsumerState<GrnImportCard> {
           duration: const Duration(seconds: 4),
         ),
       );
+  }
+
+  Widget _buildReconciliationPanel(
+    BuildContext context,
+    GrnUploadNotifier notifier, {
+    required GrnUploadMode uploadMode,
+    required DateTime? selectedDate,
+    required DateTime? rangeStart,
+    required DateTime? rangeEnd,
+    required bool isLoading,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: colorScheme.surface.withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.8),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Reconciliation window',
+            style: textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Choose whether to import only or reconcile gate entries for one day or a date range.',
+            style: textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              ChoiceChip(
+                label: const Text('Import Only'),
+                selected: uploadMode == GrnUploadMode.importOnly,
+                onSelected: isLoading
+                    ? null
+                    : (_) => notifier.setUploadMode(GrnUploadMode.importOnly),
+              ),
+              ChoiceChip(
+                label: const Text('Single Date'),
+                selected: uploadMode == GrnUploadMode.singleDate,
+                onSelected: isLoading
+                    ? null
+                    : (_) => notifier.setUploadMode(GrnUploadMode.singleDate),
+              ),
+              ChoiceChip(
+                label: const Text('Date Range'),
+                selected: uploadMode == GrnUploadMode.dateRange,
+                onSelected: isLoading
+                    ? null
+                    : (_) => notifier.setUploadMode(GrnUploadMode.dateRange),
+              ),
+            ],
+          ),
+          if (uploadMode == GrnUploadMode.singleDate) ...[
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: isLoading
+                  ? null
+                  : () => _selectSingleDate(context, notifier, selectedDate),
+              icon: const Icon(Icons.event_rounded, size: 18),
+              label: Text(
+                selectedDate == null
+                    ? 'Select GRN date'
+                    : _displayDateFormat.format(selectedDate),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Only gate entries from the selected day will be compared after import.',
+              style: textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+          if (uploadMode == GrnUploadMode.dateRange) ...[
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: isLoading
+                  ? null
+                  : () => _selectDateRange(context, notifier, rangeStart, rangeEnd),
+              icon: const Icon(Icons.date_range_rounded, size: 18),
+              label: Text(
+                rangeStart != null && rangeEnd != null
+                    ? '${_displayDateFormat.format(rangeStart)} - ${_displayDateFormat.format(rangeEnd)}'
+                    : 'Select GRN date range',
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Gate entries inside the selected range will be included in reconciliation.',
+              style: textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Future<void> _selectSingleDate(
+    BuildContext context,
+    GrnUploadNotifier notifier,
+    DateTime? initialDate,
+  ) async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate ?? now,
+      firstDate: DateTime(now.year - 5),
+      lastDate: DateTime(now.year + 2),
+    );
+    if (picked != null) {
+      notifier.setSingleDate(picked);
+    }
+  }
+
+  Future<void> _selectDateRange(
+    BuildContext context,
+    GrnUploadNotifier notifier,
+    DateTime? rangeStart,
+    DateTime? rangeEnd,
+  ) async {
+    final now = DateTime.now();
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(now.year - 5),
+      lastDate: DateTime(now.year + 2),
+      initialDateRange: rangeStart != null && rangeEnd != null
+          ? DateTimeRange(start: rangeStart, end: rangeEnd)
+          : null,
+    );
+    if (picked != null) {
+      notifier.setDateRange(picked.start, picked.end);
+    }
+  }
+
+  bool _isUploadReady(
+    GrnUploadMode mode,
+    DateTime? selectedDate,
+    DateTime? rangeStart,
+    DateTime? rangeEnd,
+  ) {
+    switch (mode) {
+      case GrnUploadMode.importOnly:
+        return true;
+      case GrnUploadMode.singleDate:
+        return selectedDate != null;
+      case GrnUploadMode.dateRange:
+        return rangeStart != null && rangeEnd != null;
+    }
   }
 }

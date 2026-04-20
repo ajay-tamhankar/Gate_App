@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_response.dart';
@@ -13,6 +14,7 @@ final sapGrnRepositoryProvider = Provider<SapGrnRepository>((ref) {
 
 class SapGrnRepository {
   final ApiClient _apiClient;
+  static final DateFormat _apiDateFormat = DateFormat('dd-MM-yy');
 
   SapGrnRepository({required ApiClient apiClient}) : _apiClient = apiClient;
 
@@ -21,6 +23,9 @@ class SapGrnRepository {
     String? filePath,
     List<int>? bytes,
     bool runReconciliation = false,
+    DateTime? reconciliationDate,
+    DateTime? reconciliationRangeStart,
+    DateTime? reconciliationRangeEnd,
     Map<String, dynamic>? reconciliationOptions,
   }) async {
     try {
@@ -41,6 +46,16 @@ class SapGrnRepository {
         'file': filePart,
         'runReconciliation': runReconciliation.toString(),
       };
+
+      if (runReconciliation) {
+        if (reconciliationDate != null) {
+          fields['date'] = _formatApiDate(reconciliationDate);
+        } else if (reconciliationRangeStart != null &&
+            reconciliationRangeEnd != null) {
+          fields['dateRange'] =
+              '${_formatApiDate(reconciliationRangeStart)} to ${_formatApiDate(reconciliationRangeEnd)}';
+        }
+      }
 
       if (reconciliationOptions != null) {
         fields['reconciliation'] = jsonEncode(reconciliationOptions);
@@ -84,5 +99,9 @@ class SapGrnRepository {
         error: ApiError(message: e.toString()),
       );
     }
+  }
+
+  String _formatApiDate(DateTime value) {
+    return _apiDateFormat.format(value);
   }
 }

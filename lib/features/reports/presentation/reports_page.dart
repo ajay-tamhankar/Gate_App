@@ -15,12 +15,14 @@ class _ReportQuery {
   final DateTime? startDate;
   final DateTime? endDate;
   final String? search;
+  final String? gateEntryPeriod;
 
   const _ReportQuery({
     required this.reportType,
     required this.startDate,
     required this.endDate,
     required this.search,
+    required this.gateEntryPeriod,
   });
 
   @override
@@ -29,7 +31,8 @@ class _ReportQuery {
         reportType == other.reportType &&
         _dtKey(startDate) == _dtKey(other.startDate) &&
         _dtKey(endDate) == _dtKey(other.endDate) &&
-        search == other.search;
+        search == other.search &&
+        gateEntryPeriod == other.gateEntryPeriod;
   }
 
   @override
@@ -38,6 +41,7 @@ class _ReportQuery {
         _dtKey(startDate),
         _dtKey(endDate),
         search,
+        gateEntryPeriod,
       );
 
   String? _dtKey(DateTime? value) => value?.toIso8601String();
@@ -78,19 +82,12 @@ final reportsPreviewProvider =
     final search = query.search;
 
     if (query.reportType == 'Gate Entry Register') {
-      final data = await repo.getGateEntryRegister(filter);
-      final filtered = data.where((item) {
-        return _matchesSearchText(search, [
-          item.gateEntryNo,
-          item.challanNo,
-          item.vendor,
-          item.poNumber,
-          item.lrNo,
-          item.vehicleNo,
-          item.material,
-        ]);
-      }).toList();
-      return _ReportPreviewData(gateEntries: filtered);
+      final data = await repo.getGateEntryRegister(
+        filter,
+        q: search,
+        period: query.gateEntryPeriod,
+      );
+      return _ReportPreviewData(gateEntries: data);
     }
     if (query.reportType == 'GRN Reconciliation Report') {
       final data = await repo.getGrnReconReport(filter);
@@ -133,8 +130,17 @@ class ReportsPage extends ConsumerStatefulWidget {
 }
 
 class _ReportsPageState extends ConsumerState<ReportsPage> {
+  static const String _reportAllFilter = 'All';
+  static const String _gateInFilter = 'Gate In';
+  static const String _gateOutFilter = 'Gate Out';
+  static const String _todayFilter = 'Today';
+  static const String _yesterdayFilter = 'Yesterday';
+  static const String _thisWeekFilter = 'This Week';
+  static const String _thisMonthFilter = 'This Month';
+
   final _exportService = ReportExportService();
   String _selectedReport = 'Gate Entry Register';
+  String _gateEntryCardFilter = _reportAllFilter;
 
   // Filters
   DateTime? _startDate;
@@ -160,30 +166,136 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
     super.dispose();
   }
 
-  void _exportExcel() async {
-    final repo = ref.read(reportsRepositoryProvider);
-    final filter = ReportFilter(
+  DateTime _dateOnly(DateTime value) =>
+      DateTime(value.year, value.month, value.day);
+
+  bool _isGateEntryOnDate(
+    GateEntryReportItem item,
+    DateTime date, {
+    bool includeExit = false,
+  }) {
+    final target = _dateOnly(date);
+    if (_dateOnly(item.date.toLocal()) == target) {
+      return true;
+    }
+    if (includeExit && item.gateOutDate != null) {
+      return _dateOnly(item.gateOutDate!.toLocal()) == target;
+    }
+    return false;
+  }
+
+  bool _isGateEntryGateOut(GateEntryReportItem item) {
+    return item.gateOutDate != null ||
+        item.direction.toLowerCase().contains('out');
+  }
+
+  bool _isGateEntryGateIn(GateEntryReportItem item) {
+    return !_isGateEntryGateOut(item);
+  }
+
+  List<GateEntryReportItem> _applyGateEntryCardFilter(
+    List<GateEntryReportItem> items,
+  ) {
+    final now = DateTime.now();
+    final today = _dateOnly(now);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final weekStart = today.subtract(Duration(days: today.weekday - 1));
+    final monthStart = DateTime(today.year, today.month, 1);
+    final tomorrow = today.add(const Duration(days: 1));
+    final nextMonth = today.month == 12
+        ? DateTime(today.year + 1, 1, 1)
+        : DateTime(today.year, today.month + 1, 1);
+
+    return items.where((item) {
+      switch (_gateEntryCardFilter) {
+        case _gateInFilter:
+          return _isGateEntryGateIn(item);
+        case _gateOutFilter:
+          return _isGateEntryGateOut(item);
+        case _todayFilter:
+          return _isGateEntryOnDate(item, today, includeExit: true);
+        case _yesterdayFilter:
+          return _isGateEntryOnDate(item, yesterday, includeExit: true);
+        case _thisWeekFilter:
+          final ts = item.date.toLocal();
+          return !ts.isBefore(weekStart) && ts.isBefore(tomorrow);
+        case _thisMonthFilter:
+          final ts = item.date.toLocal();
+          return !ts.isBefore(monthStart) && ts.isBefore(nextMonth);
+        default:
+          return true;
+      }
+    }).toList();
+  }
+
+  _ReportPreviewData _previewWithCardFilter(_ReportPreviewData data) {
+    if (_selectedReport != 'Gate Entry Register') {
+      return data;
+    }
+    return _ReportPreviewData(
+      gateEntries: _applyGateEntryLocalFilter(data.gateEntries),
+    );
+  }
+
+  bool _usesServerPeriod() {
+    return _selectedReport == 'Gate Entry Register' &&
+        _startDate == null &&
+        _endDate == null &&
+        (_gateEntryCardFilter == _todayFilter ||
+            _gateEntryCardFilter == _yesterdayFilter ||
+            _gateEntryCardFilter == _thisWeekFilter ||
+            _gateEntryCardFilter == _thisMonthFilter);
+  }
+
+  String? _periodForGateEntryFilter() {
+    switch (_gateEntryCardFilter) {
+      case _todayFilter:
+        return 'today';
+      case _yesterdayFilter:
+        return 'yesterday';
+      case _thisWeekFilter:
+        return 'this_week';
+      case _thisMonthFilter:
+        return 'this_month';
+      default:
+        return null;
+    }
+  }
+
+  List<GateEntryReportItem> _applyGateEntryLocalFilter(
+    List<GateEntryReportItem> items,
+  ) {
+    if (_usesServerPeriod()) {
+      return items;
+    }
+    return _applyGateEntryCardFilter(items);
+  }
+
+  ReportFilter _buildExportFilter() {
+    return ReportFilter(
       startDate: _startDate,
-      endDate: _endDate,
+      endDate: _endDate?.add(const Duration(days: 1)),
       vendorFilter: null,
       poFilter: null,
     );
+  }
+
+  void _exportExcel() async {
+    final repo = ref.read(reportsRepositoryProvider);
+    final filter = _buildExportFilter();
     final search = _searchController.text.trim();
 
     try {
       if (_selectedReport == 'Gate Entry Register') {
-        var data = await repo.getGateEntryRegister(filter);
-        data = data
-            .where((item) => _matchesSearchText(search, [
-                  item.gateEntryNo,
-                  item.challanNo,
-                  item.vendor,
-                  item.poNumber,
-                  item.lrNo,
-                  item.vehicleNo,
-                  item.material,
-                ]))
-            .toList();
+        var data = await repo.getGateEntryRegister(
+          filter,
+          q: search.isEmpty ? null : search,
+          period: _usesServerPeriod() ? _periodForGateEntryFilter() : null,
+        );
+        data = _applyGateEntryLocalFilter(data);
+        if (data.isEmpty) {
+          throw Exception('No data available for the selected filters.');
+        }
         await _exportService.exportGateEntryRegisterToExcel(data);
       } else if (_selectedReport == 'GRN Reconciliation Report') {
         var data = await repo.getGrnReconReport(filter);
@@ -202,6 +314,9 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                   item.matchedStatus,
                 ]))
             .toList();
+        if (data.isEmpty) {
+          throw Exception('No data available for the selected filters.');
+        }
         await _exportService.exportGrnReconReportToExcel(data);
       } else if (_selectedReport == 'Exception Report') {
         var data = await repo.getExceptionReport(filter);
@@ -214,6 +329,9 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                   item.id,
                 ]))
             .toList();
+        if (data.isEmpty) {
+          throw Exception('No data available for the selected filters.');
+        }
         await _exportService.exportExceptionReportToExcel(data);
       }
 
@@ -237,28 +355,20 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
 
   void _exportPdf() async {
     final repo = ref.read(reportsRepositoryProvider);
-    final filter = ReportFilter(
-      startDate: _startDate,
-      endDate: _endDate,
-      vendorFilter: null,
-      poFilter: null,
-    );
+    final filter = _buildExportFilter();
     final search = _searchController.text.trim();
 
     try {
       if (_selectedReport == 'Gate Entry Register') {
-        var data = await repo.getGateEntryRegister(filter);
-        data = data
-            .where((item) => _matchesSearchText(search, [
-                  item.gateEntryNo,
-                  item.challanNo,
-                  item.vendor,
-                  item.poNumber,
-                  item.lrNo,
-                  item.vehicleNo,
-                  item.material,
-                ]))
-            .toList();
+        var data = await repo.getGateEntryRegister(
+          filter,
+          q: search.isEmpty ? null : search,
+          period: _usesServerPeriod() ? _periodForGateEntryFilter() : null,
+        );
+        data = _applyGateEntryLocalFilter(data);
+        if (data.isEmpty) {
+          throw Exception('No data available for the selected filters.');
+        }
         await _exportService.exportGateEntryRegisterToPdf(data);
       } else if (_selectedReport == 'GRN Reconciliation Report') {
         var data = await repo.getGrnReconReport(filter);
@@ -277,6 +387,9 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                   item.matchedStatus,
                 ]))
             .toList();
+        if (data.isEmpty) {
+          throw Exception('No data available for the selected filters.');
+        }
         await _exportService.exportGrnReconReportToPdf(data);
       } else if (_selectedReport == 'Exception Report') {
         var data = await repo.getExceptionReport(filter);
@@ -289,6 +402,9 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                   item.id,
                 ]))
             .toList();
+        if (data.isEmpty) {
+          throw Exception('No data available for the selected filters.');
+        }
         await _exportService.exportExceptionReportToPdf(data);
       }
 
@@ -308,14 +424,6 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
         );
       }
     }
-  }
-
-  void _clearAllFilters() {
-    setState(() {
-      _startDate = DateTime.now().subtract(const Duration(days: 7));
-      _endDate = DateTime.now();
-      _searchController.clear();
-    });
   }
 
   Future<void> _selectDateRange() async {
@@ -351,6 +459,8 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
       startDate: _startDate,
       endDate: _endDate,
       search: search.isEmpty ? null : search,
+      gateEntryPeriod:
+          _usesServerPeriod() ? _periodForGateEntryFilter() : null,
     );
     final previewAsync = ref.watch(reportsPreviewProvider(query));
 
@@ -390,33 +500,36 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                   ),
                 ),
               ),
-              data: (data) => Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _buildSummaryCards(context, isMob, data),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    height: isMob ? 430 : 560,
-                    child: Card(
-                      elevation: 0,
-                      margin: const EdgeInsets.only(bottom: 24),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        side: BorderSide(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .outlineVariant
-                              .withValues(alpha: 0.5),
+              data: (data) {
+                final effectiveData = _previewWithCardFilter(data);
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _buildSummaryCards(context, isMob, data),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height: isMob ? 430 : 560,
+                      child: Card(
+                        elevation: 0,
+                        margin: const EdgeInsets.only(bottom: 24),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          side: BorderSide(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .outlineVariant
+                                .withValues(alpha: 0.5),
+                          ),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(14.0),
+                          child: _buildPreview(context, isMob, effectiveData),
                         ),
                       ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(14.0),
-                        child: _buildPreview(context, isMob, data),
-                      ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                );
+              },
             ),
           ],
         ),
@@ -516,7 +629,10 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                             .toList(),
                         onChanged: (val) {
                           if (val == null) return;
-                          setState(() => _selectedReport = val);
+                          setState(() {
+                            _selectedReport = val;
+                            _gateEntryCardFilter = _reportAllFilter;
+                          });
                         },
                       ),
                     ),
@@ -670,20 +786,124 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
     final tiles = <Widget>[];
 
     if (_selectedReport == 'Gate Entry Register') {
-      final total = data.gateEntries.length;
-      final gateIn =
-          data.gateEntries.where((e) => e.direction.toLowerCase().contains('in')).length;
-      final gateOut = total - gateIn;
-      final totalQty = data.gateEntries.fold<int>(0, (sum, e) => sum + e.qty);
-      tiles.addAll([
-        _summaryCard(
-            context, 'Total Entries', total.toString(), Icons.list_alt, Colors.blue),
-        _summaryCard(context, 'Gate In', gateIn.toString(), Icons.login, Colors.indigo),
-        _summaryCard(
-            context, 'Gate Out', gateOut.toString(), Icons.logout, Colors.deepOrange),
-        _summaryCard(
-            context, 'Total Qty', totalQty.toString(), Icons.inventory_2, Colors.teal),
-      ]);
+      final items = data.gateEntries;
+      final now = DateTime.now();
+      final today = _dateOnly(now);
+      final yesterday = today.subtract(const Duration(days: 1));
+      final weekStart = today.subtract(Duration(days: today.weekday - 1));
+      final monthStart = DateTime(today.year, today.month, 1);
+      final tomorrow = today.add(const Duration(days: 1));
+      final nextMonth = today.month == 12
+          ? DateTime(today.year + 1, 1, 1)
+          : DateTime(today.year, today.month + 1, 1);
+
+      final total = items.length;
+      final gateIn = items.where(_isGateEntryGateIn).length;
+      final gateOut = items.where(_isGateEntryGateOut).length;
+      final todayCount = items
+          .where((e) => _isGateEntryOnDate(e, today, includeExit: true))
+          .length;
+      final yesterdayCount = items
+          .where((e) => _isGateEntryOnDate(e, yesterday, includeExit: true))
+          .length;
+      final thisWeekCount = items.where((e) {
+        final ts = e.date.toLocal();
+        return !ts.isBefore(weekStart) && ts.isBefore(tomorrow);
+      }).length;
+      final thisMonthCount = items.where((e) {
+        final ts = e.date.toLocal();
+        return !ts.isBefore(monthStart) && ts.isBefore(nextMonth);
+      }).length;
+
+      final cards = [
+        _gateEntryFilterCard(
+          context,
+          title: _gateInFilter,
+          value: '$gateIn',
+          subtitle: 'Incoming',
+          icon: Icons.login,
+          accent: Colors.indigo,
+          isSelected: _gateEntryCardFilter == _gateInFilter,
+          onTap: () => setState(() => _gateEntryCardFilter = _gateInFilter),
+        ),
+        _gateEntryFilterCard(
+          context,
+          title: _gateOutFilter,
+          value: '$gateOut',
+          subtitle: 'Outgoing',
+          icon: Icons.logout,
+          accent: Colors.deepOrange,
+          isSelected: _gateEntryCardFilter == _gateOutFilter,
+          onTap: () => setState(() => _gateEntryCardFilter = _gateOutFilter),
+        ),
+        _gateEntryFilterCard(
+          context,
+          title: 'Total',
+          value: '$total',
+          subtitle: 'All entries',
+          icon: Icons.dashboard_customize,
+          accent: Colors.blueGrey,
+          isSelected: _gateEntryCardFilter == _reportAllFilter,
+          onTap: () => setState(() => _gateEntryCardFilter = _reportAllFilter),
+        ),
+        _gateEntryFilterCard(
+          context,
+          title: _todayFilter,
+          value: '$todayCount',
+          subtitle: 'Entries today',
+          icon: Icons.today,
+          accent: Colors.teal,
+          isSelected: _gateEntryCardFilter == _todayFilter,
+          onTap: () => setState(() => _gateEntryCardFilter = _todayFilter),
+        ),
+        _gateEntryFilterCard(
+          context,
+          title: _yesterdayFilter,
+          value: '$yesterdayCount',
+          subtitle: 'Yesterday',
+          icon: Icons.history,
+          accent: Colors.purple,
+          isSelected: _gateEntryCardFilter == _yesterdayFilter,
+          onTap: () => setState(() => _gateEntryCardFilter = _yesterdayFilter),
+        ),
+        _gateEntryFilterCard(
+          context,
+          title: _thisWeekFilter,
+          value: '$thisWeekCount',
+          subtitle: 'This week',
+          icon: Icons.view_week,
+          accent: Colors.cyan,
+          isSelected: _gateEntryCardFilter == _thisWeekFilter,
+          onTap: () => setState(() => _gateEntryCardFilter = _thisWeekFilter),
+        ),
+        _gateEntryFilterCard(
+          context,
+          title: _thisMonthFilter,
+          value: '$thisMonthCount',
+          subtitle: 'This month',
+          icon: Icons.calendar_month,
+          accent: Colors.amber.shade800,
+          isSelected: _gateEntryCardFilter == _thisMonthFilter,
+          onTap: () => setState(() => _gateEntryCardFilter = _thisMonthFilter),
+        ),
+      ];
+
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final spacing = isMob ? 8.0 : 10.0;
+          final columns = isMob ? 2 : 5;
+          final width =
+              (constraints.maxWidth - (spacing * (columns - 1))) / columns;
+
+          return Wrap(
+            spacing: spacing,
+            runSpacing: spacing,
+            children: cards
+                .map((card) => SizedBox(width: width, child: card))
+                .toList(),
+          );
+        },
+      );
     } else if (_selectedReport == 'GRN Reconciliation Report') {
       int matched = 0;
       int exception = 0;
@@ -757,6 +977,87 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
             ),
           )
           .toList(),
+    );
+  }
+
+  Widget _gateEntryFilterCard(
+    BuildContext context, {
+    required String title,
+    required String value,
+    required String subtitle,
+    required IconData icon,
+    required Color accent,
+    required VoidCallback onTap,
+    bool isSelected = false,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final borderColor = isSelected
+        ? accent.withValues(alpha: 0.7)
+        : colorScheme.outlineVariant.withValues(alpha: 0.5);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? accent.withValues(alpha: 0.08)
+                : colorScheme.surface,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: borderColor,
+              width: isSelected ? 1.4 : 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: isSelected ? 0.2 : 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, size: 18, color: accent),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      value,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                    ),
+                    Text(
+                      title,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
+                          ),
+                    ),
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                            fontSize: 10,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -908,7 +1209,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final e = items[index];
-        final isGateIn = e.direction.toLowerCase().contains('in');
+        final isGateIn = _isGateEntryGateIn(e);
         final accent = isGateIn ? Colors.indigo : Colors.deepOrange;
         return Container(
           margin: const EdgeInsets.only(bottom: 10),

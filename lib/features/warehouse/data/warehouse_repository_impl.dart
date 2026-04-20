@@ -6,6 +6,7 @@ import '../domain/models/warehouse_gate_entry.dart';
 import '../domain/models/warehouse_grn.dart';
 import '../domain/models/warehouse_reconciliation.dart';
 import '../domain/warehouse_repository.dart';
+import '../../reconciliation/domain/reconciliation_period_filter.dart';
 
 final warehouseRepositoryProvider = Provider<WarehouseRepository>((ref) {
   return WarehouseRepositoryImpl(apiClient: ref.read(apiClientProvider));
@@ -117,13 +118,18 @@ class WarehouseRepositoryImpl implements WarehouseRepository {
   Future<List<WarehouseReconciliationRecord>> getReconciliations({
     DateTime? dateFrom,
     DateTime? dateTo,
+    ReconciliationPeriodFilter? filter,
   }) async {
     final params = <String, dynamic>{};
+    final hasExplicitRange = dateFrom != null || dateTo != null;
     if (dateFrom != null) {
       params['dateFrom'] = dateFrom.toIso8601String();
     }
     if (dateTo != null) {
       params['dateTo'] = dateTo.toIso8601String();
+    }
+    if (!hasExplicitRange && filter != null) {
+      params['filter'] = filter.apiValue;
     }
 
     final response = await _apiClient.getRaw(

@@ -11,6 +11,7 @@ import '../../../core/ui/widgets/section_header.dart';
 import '../../../core/ui/widgets/status_chip.dart';
 import '../../../core/ui/widgets/logout_action.dart';
 import '../domain/entities/reco_exception.dart';
+import '../domain/reconciliation_period_filter.dart';
 import 'controllers/reco_list_controller.dart';
 import '../domain/usecases/import_sap_grns.dart';
 import 'controllers/import_history_controller.dart';
@@ -20,7 +21,6 @@ import 'reconciliation_security_view.dart';
 import '../../warehouse/domain/models/warehouse_reconciliation.dart';
 import '../../warehouse/presentation/controllers/warehouse_providers.dart';
 import '../../warehouse/presentation/controllers/warehouse_reconciliation_list_controller.dart';
-import 'reco_exception_detail_page.dart';
 import '../../../core/ui/widgets/filter_bar.dart';
 import '../../../core/ui/widgets/skeleton_loader.dart';
 
@@ -46,6 +46,7 @@ class RecoPage extends ConsumerWidget {
 
 class _RecoOperationsView extends ConsumerWidget {
   const _RecoOperationsView();
+  static final DateFormat _displayDateFormat = DateFormat('dd MMM yyyy');
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -157,10 +158,14 @@ class _RecoOperationsView extends ConsumerWidget {
     return Icons.error_outline;
   }
 
-  Future<bool?> _showImportConfirmDialog(
+  Future<_RecoImportOptions?> _showImportConfirmDialog(
       BuildContext context, String fileName) async {
     bool runRecon = true;
-    return showDialog<bool>(
+    _RecoImportMode mode = _RecoImportMode.singleDate;
+    DateTime? selectedDate = DateTime.now();
+    DateTime? rangeStart;
+    DateTime? rangeEnd;
+    return showDialog<_RecoImportOptions>(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
@@ -178,6 +183,85 @@ class _RecoOperationsView extends ConsumerWidget {
                 onChanged: (val) => setState(() => runRecon = val ?? false),
                 contentPadding: EdgeInsets.zero,
               ),
+              if (runRecon) ...[
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    ChoiceChip(
+                      label: const Text('Single Date'),
+                      selected: mode == _RecoImportMode.singleDate,
+                      onSelected: (_) =>
+                          setState(() => mode = _RecoImportMode.singleDate),
+                    ),
+                    ChoiceChip(
+                      label: const Text('Date Range'),
+                      selected: mode == _RecoImportMode.dateRange,
+                      onSelected: (_) =>
+                          setState(() => mode = _RecoImportMode.dateRange),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                if (mode == _RecoImportMode.singleDate)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        final now = DateTime.now();
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: selectedDate ?? now,
+                          firstDate: DateTime(now.year - 5),
+                          lastDate: DateTime(now.year + 2),
+                        );
+                        if (picked != null) {
+                          setState(() => selectedDate = picked);
+                        }
+                      },
+                      icon: const Icon(Icons.event_rounded, size: 18),
+                      label: Text(
+                        selectedDate == null
+                            ? 'Select reconciliation date'
+                            : _displayDateFormat.format(selectedDate!),
+                      ),
+                    ),
+                  ),
+                if (mode == _RecoImportMode.dateRange)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        final now = DateTime.now();
+                        final picked = await showDateRangePicker(
+                          context: context,
+                          firstDate: DateTime(now.year - 5),
+                          lastDate: DateTime(now.year + 2),
+                          initialDateRange:
+                              rangeStart != null && rangeEnd != null
+                                  ? DateTimeRange(
+                                      start: rangeStart!,
+                                      end: rangeEnd!,
+                                    )
+                                  : null,
+                        );
+                        if (picked != null) {
+                          setState(() {
+                            rangeStart = picked.start;
+                            rangeEnd = picked.end;
+                          });
+                        }
+                      },
+                      icon: const Icon(Icons.date_range_rounded, size: 18),
+                      label: Text(
+                        rangeStart != null && rangeEnd != null
+                            ? '${_displayDateFormat.format(rangeStart!)} - ${_displayDateFormat.format(rangeEnd!)}'
+                            : 'Select reconciliation range',
+                      ),
+                    ),
+                  ),
+              ],
             ],
           ),
           actions: [
@@ -186,7 +270,30 @@ class _RecoOperationsView extends ConsumerWidget {
               child: const Text('Cancel'),
             ),
             FilledButton(
-              onPressed: () => Navigator.pop(context, runRecon),
+              onPressed: !runRecon ||
+                      (mode == _RecoImportMode.singleDate &&
+                          selectedDate != null) ||
+                      (mode == _RecoImportMode.dateRange &&
+                          rangeStart != null &&
+                          rangeEnd != null)
+                  ? () => Navigator.pop(
+                        context,
+                        _RecoImportOptions(
+                          runReconciliation: runRecon,
+                          date: runRecon && mode == _RecoImportMode.singleDate
+                              ? selectedDate
+                              : null,
+                          rangeStart:
+                              runRecon && mode == _RecoImportMode.dateRange
+                                  ? rangeStart
+                                  : null,
+                          rangeEnd:
+                              runRecon && mode == _RecoImportMode.dateRange
+                                  ? rangeEnd
+                                  : null,
+                        ),
+                      )
+                  : null,
               child: const Text('Import'),
             ),
           ],
@@ -200,12 +307,19 @@ class _RecoOperationsView extends ConsumerWidget {
     if (fileResult == null) return;
 
     if (!context.mounted) return;
-    final runRecon = await _showImportConfirmDialog(context, fileResult.name);
-    if (runRecon == null) return;
+    final importOptions =
+        await _showImportConfirmDialog(context, fileResult.name);
+    if (importOptions == null) return;
 
     final response = await ref
         .read(importSapGrnsUseCaseProvider)
-        .execute(fileResult, runReconciliation: runRecon);
+        .execute(
+          fileResult,
+          runReconciliation: importOptions.runReconciliation,
+          reconciliationDate: importOptions.date,
+          reconciliationRangeStart: importOptions.rangeStart,
+          reconciliationRangeEnd: importOptions.rangeEnd,
+        );
 
     ref.read(importHistoryProvider.notifier).addItem(
           ImportHistoryItem(
@@ -226,7 +340,7 @@ class _RecoOperationsView extends ConsumerWidget {
            ? 'Successfully imported $imported records' 
            : 'Import completed';
 
-        if (runRecon) {
+        if (importOptions.runReconciliation) {
           if (result?.summary != null) {
             final matched = result!.summary!.gateEntries.matched;
             final total = result.summary!.gateEntries.total;
@@ -514,6 +628,22 @@ class _RecoOperationsView extends ConsumerWidget {
   }
 }
 
+enum _RecoImportMode { singleDate, dateRange }
+
+class _RecoImportOptions {
+  const _RecoImportOptions({
+    required this.runReconciliation,
+    this.date,
+    this.rangeStart,
+    this.rangeEnd,
+  });
+
+  final bool runReconciliation;
+  final DateTime? date;
+  final DateTime? rangeStart;
+  final DateTime? rangeEnd;
+}
+
 
 
 // ---------------------------------------------------------------------------
@@ -532,6 +662,8 @@ class __WarehouseReconciliationViewState
     extends ConsumerState<_WarehouseReconciliationView> {
   String _searchQuery = '';
   String _statusFilter = 'All';
+  ReconciliationPeriodFilter _periodFilter = ReconciliationPeriodFilter.all;
+  bool _hasExplicitPeriodSelection = false;
 
   @override
   Widget build(BuildContext context) {
@@ -558,7 +690,7 @@ class __WarehouseReconciliationViewState
             onPressed: () async {
               await ref
                   .read(warehouseReconciliationListControllerProvider.notifier)
-                  .refresh();
+                  .refresh(filter: _periodFilter);
               ref.invalidate(warehouseManagerDashboardSummaryProvider);
             },
           ),
@@ -572,7 +704,7 @@ class __WarehouseReconciliationViewState
               onRefresh: () async {
                 await ref
                     .read(warehouseReconciliationListControllerProvider.notifier)
-                    .refresh();
+                    .refresh(filter: _periodFilter);
                 ref.invalidate(warehouseManagerDashboardSummaryProvider);
               },
               child: LayoutBuilder(
@@ -593,13 +725,6 @@ class __WarehouseReconciliationViewState
                           vertical: isMob ? 16 : 24,
                         ),
                         children: [
-                          _buildHeroSection(
-                            context,
-                            total: state.pagination?.total ?? state.items.length,
-                            filtered: filtered.length,
-                            isCompact: isMob,
-                          ),
-                          const SizedBox(height: 16),
                           _buildSummarySection(context, filtered, state.items, isMob, isTab),
                           const SizedBox(height: 16),
                           _buildFilters(context, filtered.length, isMob),
@@ -613,8 +738,6 @@ class __WarehouseReconciliationViewState
                               : isMob
                                   ? _buildMobileList(context, filtered)
                                   : _buildDesktopTable(context, filtered, isTab),
-                          const SizedBox(height: 12),
-                          _buildPaginationSection(context, ref, state),
                         ],
                       ),
                     ),
@@ -647,88 +770,6 @@ class __WarehouseReconciliationViewState
 
       return matchesSearch && matchesStatus;
     }).toList();
-  }
-
-  Widget _buildHeroSection(
-    BuildContext context, {
-    required int total,
-    required int filtered,
-    required bool isCompact,
-  }) {
-    return Container(
-      padding: EdgeInsets.all(isCompact ? 18 : 24),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: LinearGradient(
-          colors: [
-            Colors.blueGrey.shade900,
-            Colors.indigo.shade700,
-            Colors.teal.shade600,
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Reconciliation Control',
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: Colors.white.withValues(alpha: 0.8),
-                  letterSpacing: 0.4,
-                ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Review matched and exception records before final closure.',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                  height: 1.2,
-                ),
-          ),
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: [
-              _heroMetric('Showing', '$filtered'),
-              _heroMetric('Total', '$total'),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _heroMetric(String label, String value) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(color: Colors.white70, fontSize: 12),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            value,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w700,
-              fontSize: 18,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   Widget _buildSummarySection(
@@ -880,6 +921,31 @@ class __WarehouseReconciliationViewState
         ),
       ),
       children: [
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final period in ReconciliationPeriodFilter.values)
+              ChoiceChip(
+                label: Text(period.label),
+                selected:
+                    _hasExplicitPeriodSelection && _periodFilter == period,
+                onSelected: (_) async {
+                  if (_hasExplicitPeriodSelection && _periodFilter == period) {
+                    return;
+                  }
+                  setState(() {
+                    _periodFilter = period;
+                    _hasExplicitPeriodSelection = true;
+                  });
+                  await ref
+                      .read(warehouseReconciliationListControllerProvider.notifier)
+                      .refresh(filter: period);
+                  ref.invalidate(warehouseManagerDashboardSummaryProvider);
+                },
+              ),
+          ],
+        ),
         SizedBox(
           width: isMob ? double.infinity : 320,
           child: TextField(
@@ -937,35 +1003,35 @@ class __WarehouseReconciliationViewState
         const SkeletonLoader(width: double.infinity, height: 150),
         const SizedBox(height: 16),
         if (isMob)
-          const SkeletonLoader(width: double.infinity, height: 100)
+          const SkeletonLoader(width: double.infinity, height: 88)
         else
           Row(
             children: [
               Expanded(
                 child: SkeletonLoader(
                   width: double.infinity,
-                  height: isTab ? 88 : 100,
+                  height: isTab ? 82 : 92,
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: SkeletonLoader(
                   width: double.infinity,
-                  height: isTab ? 88 : 100,
+                  height: isTab ? 82 : 92,
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: SkeletonLoader(
                   width: double.infinity,
-                  height: isTab ? 88 : 100,
+                  height: isTab ? 82 : 92,
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: SkeletonLoader(
                   width: double.infinity,
-                  height: isTab ? 88 : 100,
+                  height: isTab ? 82 : 92,
                 ),
               ),
             ],
@@ -1185,50 +1251,6 @@ class __WarehouseReconciliationViewState
     if (item.isResolved) return Colors.blue;
     if (item.isException) return Colors.red;
     return Colors.grey;
-  }
-
-  Widget _buildPaginationSection(
-    BuildContext context,
-    WidgetRef ref,
-    WarehouseReconciliationListState state,
-  ) {
-    final pagination = state.pagination;
-    if (pagination == null) return const SizedBox.shrink();
-
-    return Column(
-      children: [
-        Text(
-          'Loaded ${state.items.length} of ${pagination.total} records',
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-        ),
-        const SizedBox(height: 8),
-        if (pagination.hasNext)
-          OutlinedButton.icon(
-            onPressed: state.isLoadingMore
-                ? null
-                : () => ref
-                    .read(warehouseReconciliationListControllerProvider.notifier)
-                    .loadMore(),
-            icon: state.isLoadingMore
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.expand_more),
-            label: Text(state.isLoadingMore ? 'Loading...' : 'Load More'),
-          )
-        else
-          Text(
-            'All records loaded',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-          ),
-      ],
-    );
   }
 
   Widget _buildErrorBanner(BuildContext context, String error) {

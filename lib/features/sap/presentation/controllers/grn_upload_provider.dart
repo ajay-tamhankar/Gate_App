@@ -45,10 +45,42 @@ class GrnUploadNotifier extends Notifier<GrnUploadState> {
   }
 
   /// Toggles the auto-reconciliation flag for the selected file.
-  void toggleReconciliation(bool value) {
+  void setUploadMode(GrnUploadMode mode) {
     final current = state;
     if (current is GrnUploadFileSelected) {
-      state = GrnUploadFileSelected(current.file, runReconciliation: value);
+      state = GrnUploadFileSelected(
+        current.file,
+        mode: mode,
+        selectedDate: current.selectedDate,
+        rangeStart: current.rangeStart,
+        rangeEnd: current.rangeEnd,
+      );
+    }
+  }
+
+  void setSingleDate(DateTime? value) {
+    final current = state;
+    if (current is GrnUploadFileSelected) {
+      state = GrnUploadFileSelected(
+        current.file,
+        mode: GrnUploadMode.singleDate,
+        selectedDate: value,
+        rangeStart: current.rangeStart,
+        rangeEnd: current.rangeEnd,
+      );
+    }
+  }
+
+  void setDateRange(DateTime? start, DateTime? end) {
+    final current = state;
+    if (current is GrnUploadFileSelected) {
+      state = GrnUploadFileSelected(
+        current.file,
+        mode: GrnUploadMode.dateRange,
+        selectedDate: current.selectedDate,
+        rangeStart: start,
+        rangeEnd: end,
+      );
     }
   }
 
@@ -57,14 +89,30 @@ class GrnUploadNotifier extends Notifier<GrnUploadState> {
     final current = state;
     if (current is! GrnUploadFileSelected) return;
 
-    final runRecon = current.runReconciliation;
-    state = GrnUploadLoading(current.file, runReconciliation: runRecon);
+    if (!_hasValidSelection(current)) {
+      state = const GrnUploadError(
+        'Select a GRN date or date range before running reconciliation.',
+      );
+      return;
+    }
+
+    final runRecon = current.mode.runReconciliation;
+    state = GrnUploadLoading(
+      current.file,
+      mode: current.mode,
+      selectedDate: current.selectedDate,
+      rangeStart: current.rangeStart,
+      rangeEnd: current.rangeEnd,
+    );
 
     try {
       final service = ref.read(grnImportServiceProvider);
       final result = await service.importGrn(
         current.file,
         runReconciliation: runRecon,
+        reconciliationDate: current.selectedDate,
+        reconciliationRangeStart: current.rangeStart,
+        reconciliationRangeEnd: current.rangeEnd,
       );
 
       // Invalidate relevant providers to refresh UI
@@ -103,6 +151,17 @@ class GrnUploadNotifier extends Notifier<GrnUploadState> {
   bool _isSupportedFile(String fileName) {
     final normalized = fileName.toLowerCase();
     return normalized.endsWith('.csv') || normalized.endsWith('.xlsx');
+  }
+
+  bool _hasValidSelection(GrnUploadFileSelected state) {
+    switch (state.mode) {
+      case GrnUploadMode.importOnly:
+        return true;
+      case GrnUploadMode.singleDate:
+        return state.selectedDate != null;
+      case GrnUploadMode.dateRange:
+        return state.rangeStart != null && state.rangeEnd != null;
+    }
   }
 
   Future<void> _postAuditLog() async {

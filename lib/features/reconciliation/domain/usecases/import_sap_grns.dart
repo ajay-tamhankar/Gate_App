@@ -27,12 +27,18 @@ class ImportSapGrnsUseCase {
   Future<ApiResponse<GrnImportResult?>> execute(
     PlatformFile file, {
     bool runReconciliation = false,
+    DateTime? reconciliationDate,
+    DateTime? reconciliationRangeStart,
+    DateTime? reconciliationRangeEnd,
   }) {
     return _repository.importGrns(
       fileName: file.name,
       filePath: file.path,
       bytes: file.bytes,
       runReconciliation: runReconciliation,
+      reconciliationDate: reconciliationDate,
+      reconciliationRangeStart: reconciliationRangeStart,
+      reconciliationRangeEnd: reconciliationRangeEnd,
     );
   }
 }

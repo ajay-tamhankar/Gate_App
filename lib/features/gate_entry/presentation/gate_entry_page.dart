@@ -11,6 +11,7 @@ import '../../../core/ui/widgets/filter_bar.dart';
 import '../../../core/ui/widgets/logout_action.dart';
 import '../../../core/ui/widgets/skeleton_loader.dart';
 import '../domain/models/gate_entry.dart';
+import '../domain/models/gate_entry_query.dart';
 import 'controllers/gate_entry_controller.dart';
 import 'gate_entry_detail_page.dart';
 import 'gate_entry_form_page.dart';
@@ -44,8 +45,16 @@ class _GateEntrySecurityView extends ConsumerStatefulWidget {
 }
 
 class _GateEntrySecurityViewState extends ConsumerState<_GateEntrySecurityView> {
+  static const String _allFilter = 'All';
+  static const String _gateInFilter = 'Gate In';
+  static const String _gateOutFilter = 'Gate Out';
+  static const String _todayFilter = 'Today';
+  static const String _yesterdayFilter = 'Yesterday';
+  static const String _thisWeekFilter = 'This Week';
+  static const String _thisMonthFilter = 'This Month';
+
   String _searchQuery = '';
-  String _statusFilter = 'All';
+  String _statusFilter = _allFilter;
 
   @override
   void initState() {
@@ -80,6 +89,10 @@ class _GateEntrySecurityViewState extends ConsumerState<_GateEntrySecurityView> 
     final today = DateTime(now.year, now.month, now.day);
     final yesterday = today.subtract(const Duration(days: 1));
     final weekStart = today.subtract(Duration(days: today.weekday - 1));
+    final monthStart = DateTime(today.year, today.month, 1);
+    final tomorrow = today.add(const Duration(days: 1));
+    final nextMonth =
+        today.month == 12 ? DateTime(today.year + 1, 1, 1) : DateTime(today.year, today.month + 1, 1);
 
     return entries.where((e) {
       final matchesSearch = query.isEmpty ||
@@ -93,24 +106,29 @@ class _GateEntrySecurityViewState extends ConsumerState<_GateEntrySecurityView> 
 
       final bool matchesStatus;
       switch (_statusFilter) {
-        case 'Gate In':
+        case _gateInFilter:
           // Only show those that are "In" and HAVEN'T gone out yet
           matchesStatus = e.gateMovement == GateMovement.inMovement && e.gateOutTimestamp == null;
           break;
-        case 'Gate Out':
+        case _gateOutFilter:
           // Show those that are "Out" entries OR "In" entries that HAVE gone out
           matchesStatus = e.gateMovement == GateMovement.outMovement || e.gateOutTimestamp != null;
           break;
-        case 'Today':
+        case _todayFilter:
           matchesStatus = _isOnDate(e, today);
           break;
-        case 'Yesterday':
+        case _yesterdayFilter:
           matchesStatus = _isOnDate(e, yesterday);
           break;
-        case 'This Week':
+        case _thisWeekFilter:
           final t = e.gateTimestamp?.toLocal();
           matchesStatus =
-              t != null && !t.isBefore(weekStart) && t.isBefore(today.add(const Duration(days: 1)));
+              t != null && !t.isBefore(weekStart) && t.isBefore(tomorrow);
+          break;
+        case _thisMonthFilter:
+          final t = e.gateTimestamp?.toLocal();
+          matchesStatus =
+              t != null && !t.isBefore(monthStart) && t.isBefore(nextMonth);
           break;
         default:
           matchesStatus = true;
@@ -118,6 +136,41 @@ class _GateEntrySecurityViewState extends ConsumerState<_GateEntrySecurityView> 
 
       return matchesSearch && matchesStatus;
     }).toList();
+  }
+
+  bool _usesServerPeriod(String filter) {
+    return filter == _todayFilter ||
+        filter == _yesterdayFilter ||
+        filter == _thisWeekFilter ||
+        filter == _thisMonthFilter;
+  }
+
+  GateEntryQuery? _queryForFilter(String filter) {
+    switch (filter) {
+      case _todayFilter:
+        return const GateEntryQuery(period: 'today');
+      case _yesterdayFilter:
+        return const GateEntryQuery(period: 'yesterday');
+      case _thisWeekFilter:
+        return const GateEntryQuery(period: 'this_week');
+      case _thisMonthFilter:
+        return const GateEntryQuery(period: 'this_month');
+      default:
+        return null;
+    }
+  }
+
+  Future<void> _selectFilter(String filter) async {
+    if (!mounted) return;
+    setState(() => _statusFilter = filter);
+
+    final controller = ref.read(gateEntryControllerProvider.notifier);
+    if (_usesServerPeriod(filter)) {
+      await controller.fetchEntries(query: _queryForFilter(filter));
+      return;
+    }
+
+    controller.showAllEntries();
   }
 
   @override
@@ -128,8 +181,12 @@ class _GateEntrySecurityViewState extends ConsumerState<_GateEntrySecurityView> 
     final canCreate = role == UserRole.gateSecurity;
     final isMob = isMobile(context);
     final isTab = isTablet(context);
-
-    final filtered = _applyFilters(state.entries);
+    final baselineEntries =
+        state.allEntries.isNotEmpty ? state.allEntries : state.entries;
+    final sourceEntries = _usesServerPeriod(_statusFilter)
+        ? state.entries
+        : baselineEntries;
+    final filtered = _applyFilters(sourceEntries);
 
     return Scaffold(
       appBar: AppBar(
@@ -183,15 +240,12 @@ class _GateEntrySecurityViewState extends ConsumerState<_GateEntrySecurityView> 
                               vertical: isMob ? 16 : 24,
                             ),
                             children: [
-                              _buildHeroSection(
+                              _buildSummarySection(
                                 context,
-                                filtered: filtered,
-                                total: state.pagination?.total ?? state.entries.length,
-                                canCreate: canCreate,
-                                isCompact: isMob,
+                                baselineEntries,
+                                isMob,
+                                isTab,
                               ),
-                              const SizedBox(height: 16),
-                              _buildSummarySection(context, filtered, state.entries, isMob, isTab),
                               const SizedBox(height: 16),
                               _buildFilters(context, filtered.length, isMob),
                               if (state.error != null) ...[
@@ -204,8 +258,6 @@ class _GateEntrySecurityViewState extends ConsumerState<_GateEntrySecurityView> 
                                   : isMob
                                       ? _buildMobileList(filtered)
                                       : _buildDesktopTable(filtered, isTab),
-                              const SizedBox(height: 12),
-                              _buildPaginationSection(context, state),
                             ],
                           ),
                         ),
@@ -234,38 +286,36 @@ class _GateEntrySecurityViewState extends ConsumerState<_GateEntrySecurityView> 
         vertical: isMob ? 16 : 24,
       ),
       children: [
-        const SkeletonLoader(width: double.infinity, height: 150),
-        const SizedBox(height: 16),
         if (isMob)
-          const SkeletonLoader(width: double.infinity, height: 100)
+          const SkeletonLoader(width: double.infinity, height: 84)
         else
           Row(
             children: [
               Expanded(
                 child: SkeletonLoader(
                   width: double.infinity,
-                  height: isTab ? 88 : 100,
+                  height: isTab ? 76 : 84,
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: SkeletonLoader(
                   width: double.infinity,
-                  height: isTab ? 88 : 100,
+                  height: isTab ? 76 : 84,
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: SkeletonLoader(
                   width: double.infinity,
-                  height: isTab ? 88 : 100,
+                  height: isTab ? 76 : 84,
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: SkeletonLoader(
                   width: double.infinity,
-                  height: isTab ? 88 : 100,
+                  height: isTab ? 76 : 84,
                 ),
               ),
             ],
@@ -278,144 +328,8 @@ class _GateEntrySecurityViewState extends ConsumerState<_GateEntrySecurityView> 
     );
   }
 
-  Widget _buildHeroSection(
-    BuildContext context, {
-    required List<GateEntry> filtered,
-    required int total,
-    required bool canCreate,
-    required bool isCompact,
-  }) {
-    return Container(
-      padding: EdgeInsets.all(isCompact ? 18 : 24),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: LinearGradient(
-          colors: [
-            Colors.blueGrey.shade900,
-            Colors.indigo.shade700,
-            Colors.teal.shade600,
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: isCompact
-          ? Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeroContent(
-                  context,
-                  filtered: filtered.length,
-                  total: total,
-                ),
-              ],
-            )
-          : Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: _buildHeroContent(
-                    context,
-                    filtered: filtered.length,
-                    total: total,
-                  ),
-                ),
-                if (canCreate) ...[
-                  const SizedBox(width: 16),
-                  FilledButton.icon(
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const GateEntryFormPage(),
-                        ),
-                      );
-                    },
-                    style: FilledButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: Colors.blueGrey.shade900,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 18,
-                        vertical: 18,
-                      ),
-                    ),
-                    icon: const Icon(Icons.add),
-                    label: const Text('New Gate Entry'),
-                  ),
-                ],
-              ],
-            ),
-    );
-  }
-
-  Widget _buildHeroContent(
-    BuildContext context, {
-    required int filtered,
-    required int total,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Warehouse Gate Control',
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: Colors.white.withValues(alpha: 0.8),
-                letterSpacing: 0.4,
-              ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Track vehicle arrivals, challans, LR numbers, and approvals in one place.',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-                height: 1.2,
-              ),
-        ),
-        const SizedBox(height: 16),
-        Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: [
-            _heroMetric('Showing', '$filtered'),
-            _heroMetric('Total', '$total'),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _heroMetric(String label, String value) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(color: Colors.white70, fontSize: 12),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            value,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w700,
-              fontSize: 18,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildSummarySection(
     BuildContext context,
-    List<GateEntry> filtered,
     List<GateEntry> all,
     bool isMob,
     bool isTab,
@@ -423,72 +337,118 @@ class _GateEntrySecurityViewState extends ConsumerState<_GateEntrySecurityView> 
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final yesterday = today.subtract(const Duration(days: 1));
+    final weekStart = today.subtract(Duration(days: today.weekday - 1));
+    final monthStart = DateTime(today.year, today.month, 1);
+    final tomorrow = today.add(const Duration(days: 1));
+    final nextMonth =
+        today.month == 12 ? DateTime(today.year + 1, 1, 1) : DateTime(today.year, today.month + 1, 1);
 
-    final gateInCount = filtered
+    final gateInCount = all
         .where((e) =>
             e.gateMovement == GateMovement.inMovement &&
             e.gateOutTimestamp == null)
         .length;
-    final gateOutCount = filtered.length - gateInCount;
+    final gateOutCount = all.length - gateInCount;
+    final totalCount = all.length;
     final todayCount = all.where((e) => _isOnDate(e, today, includeExit: true)).length;
     final yesterdayCount = all.where((e) => _isOnDate(e, yesterday, includeExit: true)).length;
+    final thisWeekCount = all.where((e) {
+      final t = e.gateTimestamp?.toLocal();
+      return t != null && !t.isBefore(weekStart) && t.isBefore(tomorrow);
+    }).length;
+    final thisMonthCount = all.where((e) {
+      final t = e.gateTimestamp?.toLocal();
+      return t != null && !t.isBefore(monthStart) && t.isBefore(nextMonth);
+    }).length;
 
     final cards = [
       _summaryCard(
         context,
-        title: 'Gate In',
+        title: _gateInFilter,
         value: '$gateInCount',
         subtitle: 'Incoming vehicles',
         icon: Icons.login,
         accent: Colors.indigo,
+        isSelected: _statusFilter == _gateInFilter,
+        onTap: () => _selectFilter(_gateInFilter),
       ),
       _summaryCard(
         context,
-        title: 'Gate Out',
+        title: _gateOutFilter,
         value: '$gateOutCount',
         subtitle: 'Outgoing vehicles',
         icon: Icons.logout,
         accent: Colors.deepOrange,
+        isSelected: _statusFilter == _gateOutFilter,
+        onTap: () => _selectFilter(_gateOutFilter),
       ),
       _summaryCard(
         context,
-        title: 'Today',
+        title: 'Total',
+        value: '$totalCount',
+        subtitle: 'All gate entries',
+        icon: Icons.dashboard_customize,
+        accent: Colors.blueGrey,
+        isSelected: _statusFilter == _allFilter,
+        onTap: () => _selectFilter(_allFilter),
+      ),
+      _summaryCard(
+        context,
+        title: _todayFilter,
         value: '$todayCount',
         subtitle: 'Entries today',
         icon: Icons.today,
         accent: Colors.teal,
+        isSelected: _statusFilter == _todayFilter,
+        onTap: () => _selectFilter(_todayFilter),
       ),
       _summaryCard(
         context,
-        title: 'Yesterday',
+        title: _yesterdayFilter,
         value: '$yesterdayCount',
         subtitle: 'Entries yesterday',
         icon: Icons.history,
         accent: Colors.purple,
+        isSelected: _statusFilter == _yesterdayFilter,
+        onTap: () => _selectFilter(_yesterdayFilter),
+      ),
+      _summaryCard(
+        context,
+        title: _thisWeekFilter,
+        value: '$thisWeekCount',
+        subtitle: 'Entries this week',
+        icon: Icons.view_week,
+        accent: Colors.cyan,
+        isSelected: _statusFilter == _thisWeekFilter,
+        onTap: () => _selectFilter(_thisWeekFilter),
+      ),
+      _summaryCard(
+        context,
+        title: _thisMonthFilter,
+        value: '$thisMonthCount',
+        subtitle: 'Entries this month',
+        icon: Icons.calendar_month,
+        accent: Colors.amber.shade800,
+        isSelected: _statusFilter == _thisMonthFilter,
+        onTap: () => _selectFilter(_thisMonthFilter),
       ),
     ];
 
-    if (isMob) {
-      return Row(
-        children: [
-          Expanded(child: cards[0]),
-          const SizedBox(width: 10),
-          Expanded(child: cards[1]),
-        ],
-      );
-    }
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final spacing = isMob ? 8.0 : 10.0;
+        final columns = isMob ? 2 : (isTab ? 4 : 5);
+        final width =
+            (constraints.maxWidth - (spacing * (columns - 1))) / columns;
 
-    // Tablet / Desktop: 4 cards in a row
-    return Row(
-      children: [
-        Expanded(child: cards[0]),
-        SizedBox(width: isTab ? 10 : 12),
-        Expanded(child: cards[1]),
-        SizedBox(width: isTab ? 10 : 12),
-        Expanded(child: cards[2]),
-        SizedBox(width: isTab ? 10 : 12),
-        Expanded(child: cards[3]),
-      ],
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: cards
+              .map((card) => SizedBox(width: width, child: card))
+              .toList(),
+        );
+      },
     );
   }
 
@@ -499,57 +459,76 @@ class _GateEntrySecurityViewState extends ConsumerState<_GateEntrySecurityView> 
     required String subtitle,
     required IconData icon,
     required Color accent,
+    required VoidCallback onTap,
+    bool isSelected = false,
   }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Theme.of(context)
-              .colorScheme
-              .outlineVariant
-              .withValues(alpha: 0.5),
+    final colorScheme = Theme.of(context).colorScheme;
+    final borderColor = isSelected
+        ? accent.withValues(alpha: 0.7)
+        : colorScheme.outlineVariant.withValues(alpha: 0.5);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? accent.withValues(alpha: 0.08)
+                : colorScheme.surface,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: borderColor,
+              width: isSelected ? 1.4 : 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: isSelected ? 0.2 : 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: accent, size: 18),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      value,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                    ),
+                    Text(
+                      title,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
+                          ),
+                    ),
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                            fontSize: 10,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: accent.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: accent, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  value,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                ),
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
-                Text(
-                  subtitle,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        fontSize: 11,
-                      ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -590,6 +569,7 @@ class _GateEntrySecurityViewState extends ConsumerState<_GateEntrySecurityView> 
         SizedBox(
           width: isMob ? double.infinity : 220,
           child: DropdownButtonFormField<String>(
+            key: ValueKey(_statusFilter),
             initialValue: _statusFilter,
             decoration: InputDecoration(
               labelText: 'Filter',
@@ -601,16 +581,17 @@ class _GateEntrySecurityViewState extends ConsumerState<_GateEntrySecurityView> 
               ),
             ),
             items: const [
-              DropdownMenuItem(value: 'All', child: Text('All')),
-              DropdownMenuItem(value: 'Gate In', child: Text('Gate In')),
-              DropdownMenuItem(value: 'Gate Out', child: Text('Gate Out')),
-              DropdownMenuItem(value: 'Today', child: Text('Today')),
-              DropdownMenuItem(value: 'Yesterday', child: Text('Yesterday')),
-              DropdownMenuItem(value: 'This Week', child: Text('This Week')),
+              DropdownMenuItem(value: _allFilter, child: Text('All')),
+              DropdownMenuItem(value: _gateInFilter, child: Text('Gate In')),
+              DropdownMenuItem(value: _gateOutFilter, child: Text('Gate Out')),
+              DropdownMenuItem(value: _todayFilter, child: Text('Today')),
+              DropdownMenuItem(value: _yesterdayFilter, child: Text('Yesterday')),
+              DropdownMenuItem(value: _thisWeekFilter, child: Text('This Week')),
+              DropdownMenuItem(value: _thisMonthFilter, child: Text('This Month')),
             ],
             onChanged: (val) {
               if (val != null) {
-                setState(() => _statusFilter = val);
+                _selectFilter(val);
               }
             },
           ),
@@ -644,51 +625,6 @@ class _GateEntrySecurityViewState extends ConsumerState<_GateEntrySecurityView> 
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildPaginationSection(BuildContext context, GateEntryState state) {
-    final pagination = state.pagination;
-    if (pagination == null) return const SizedBox.shrink();
-
-    final loaded = state.entries.length;
-    final total = pagination.total;
-    final hasNext = pagination.hasNext;
-
-    return Column(
-      children: [
-        Text(
-          'Loaded $loaded of $total entries',
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-        ),
-        const SizedBox(height: 8),
-        if (hasNext)
-          OutlinedButton.icon(
-            onPressed: state.isLoading
-                ? null
-                : () => ref.read(gateEntryControllerProvider.notifier).fetchEntries(
-                      page: pagination.page + 1,
-                      limit: pagination.limit,
-                    ),
-            icon: state.isLoading
-                ? const SizedBox(
-                    height: 16,
-                    width: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.expand_more),
-            label: Text(state.isLoading ? 'Loading...' : 'Load More'),
-          )
-        else
-          Text(
-            'All entries loaded',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-          ),
-      ],
     );
   }
 

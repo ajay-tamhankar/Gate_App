@@ -14,6 +14,7 @@ import '../../domain/models/warehouse_grn.dart';
 import '../../domain/models/warehouse_reconciliation.dart';
 import '../../domain/models/reconciliation_dashboard.dart';
 import '../../domain/warehouse_repository.dart';
+import '../../../reconciliation/domain/reconciliation_period_filter.dart';
 
 final warehouseGateEntriesProvider =
     FutureProvider.autoDispose<List<WarehouseGateEntrySummary>>((ref) async {
@@ -117,11 +118,9 @@ final warehouseGateEntryManagerActionControllerProvider =
 final warehouseReconciliationSummaryProvider =
     FutureProvider.autoDispose<WarehouseReconciliationSummary>((ref) async {
   final repo = ref.read(warehouseRepositoryProvider);
-  final now = DateTime.now();
-  final start = DateTime(now.year, now.month, now.day);
-  final end =
-      start.add(const Duration(days: 1)).subtract(const Duration(seconds: 1));
-  final records = await repo.getReconciliations(dateFrom: start, dateTo: end);
+  final records = await repo.getReconciliations(
+    filter: ReconciliationPeriodFilter.today,
+  );
   int matched = 0;
   int pending = 0;
   int exception = 0;
@@ -144,7 +143,9 @@ final warehouseReconciliationSummaryProvider =
 final warehouseManagerReconciliationsProvider =
     FutureProvider.autoDispose<List<WarehouseReconciliationRecord>>((ref) async {
   final repo = ref.read(warehouseRepositoryProvider);
-  final items = await repo.getReconciliations();
+  final items = await repo.getReconciliations(
+    filter: ReconciliationPeriodFilter.today,
+  );
   return items.where((item) => item.isActive).toList();
 });
 
@@ -154,7 +155,7 @@ final reconciliationDashboardProvider =
   final apiClient = ref.read(apiClientProvider);
   final response = await apiClient.getRaw(
     '/reconciliations',
-    queryParameters: const {'page': 1, 'limit': 20},
+    queryParameters: const {'filter': 'today'},
   );
 
   final success = response['success'] as bool? ?? false;
@@ -214,37 +215,24 @@ bool _isGrnPostedStatus(String status) {
   return _statusContainsAny(status, ['grn posted', 'posted', 'completed', 'closed']);
 }
 
-DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
-
 final warehouseManagerAdminKpiProvider =
     FutureProvider.autoDispose<DashboardMetrics>((ref) async {
   final gateRepo = ref.read(gateEntryRepositoryProvider);
   final warehouseRepo = ref.read(warehouseRepositoryProvider);
 
-  // ---- Fetch all gate entries (paged) ----
-  final allEntries = <GateEntry>[];
-  int page = 1;
-  const limit = 200;
-  while (true) {
-    final resp = await gateRepo.getGateEntries(page: page, limit: limit);
-    if (!resp.success || resp.data == null) {
-      final msg = resp.error?.message.isNotEmpty == true
-          ? resp.error!.message
-          : resp.message;
-      throw Exception(msg.isNotEmpty ? msg : 'Failed to load gate entries');
-    }
-    allEntries.addAll(resp.data!.items);
-    final p = resp.data!.pagination;
-    if (!p.hasNext || page >= p.totalPages) break;
-    page++;
+  final resp = await gateRepo.getGateEntries();
+  if (!resp.success || resp.data == null) {
+    final msg = resp.error?.message.isNotEmpty == true
+        ? resp.error!.message
+        : resp.message;
+    throw Exception(msg.isNotEmpty ? msg : 'Failed to load gate entries');
   }
+  final allEntries = resp.data!.items;
 
   // ---- Fetch reconciliation records ----
   final recoRecords = await warehouseRepo.getReconciliations();
 
   final now = DateTime.now();
-  final today = _dateOnly(now);
-  final monthStart = DateTime(now.year, now.month, 1);
 
   int todayCount = 0;
   int monthCount = 0;
@@ -413,4 +401,3 @@ final warehouseGrnControllerProvider =
   final repo = ref.read(warehouseRepositoryProvider);
   return WarehouseGrnController(repo);
 });
-

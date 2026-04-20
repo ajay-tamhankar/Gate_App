@@ -2,9 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/network/dio_provider.dart';
-import '../../../core/network/pagination_model.dart';
 import '../domain/entities/reco_exception.dart';
 import '../domain/entities/reconciliation_item.dart';
+import '../domain/reconciliation_period_filter.dart';
 import '../domain/reco_repository.dart';
 
 final recoRepositoryProvider = Provider<RecoRepository>((ref) {
@@ -17,21 +17,23 @@ class RecoRepositoryImpl implements RecoRepository {
   RecoRepositoryImpl({required ApiClient apiClient}) : _apiClient = apiClient;
 
   @override
-  Future<PaginatedResponse<ReconciliationItem>> getReconciliations({
+  Future<List<ReconciliationItem>> getReconciliations({
     DateTime? dateFrom,
     DateTime? dateTo,
-    int page = 1,
-    int limit = 20,
+    ReconciliationPeriodFilter? filter,
   }) async {
-    final query = <String, dynamic>{
-      'page': page,
-      'limit': limit,
-    };
+    final query = <String, dynamic>{};
+    final hasExplicitRange = dateFrom != null || dateTo != null;
     if (dateFrom != null) {
       query['dateFrom'] = dateFrom.toIso8601String();
     }
     if (dateTo != null) {
       query['dateTo'] = dateTo.toIso8601String();
+    }
+    if (!hasExplicitRange &&
+        filter != null &&
+        filter != ReconciliationPeriodFilter.all) {
+      query['filter'] = filter.apiValue;
     }
 
     final response = await _apiClient.getRaw(
@@ -41,26 +43,14 @@ class RecoRepositoryImpl implements RecoRepository {
 
     final success = response['success'] as bool? ?? false;
     if (!success) {
-      return PaginatedResponse(
-        items: const [],
-        pagination: PaginationModel.fromJson(
-          response['pagination'] as Map<String, dynamic>? ??
-              const <String, dynamic>{},
-        ),
-      );
+      return const [];
     }
 
     final data = response['data'];
     final list = data is List ? data : (response['items'] as List? ?? []);
-    final items = list
+    return list
         .map((e) => ReconciliationItem.fromJson(e as Map<String, dynamic>))
         .toList();
-    final pagination = PaginationModel.fromJson(
-      response['pagination'] as Map<String, dynamic>? ??
-          const <String, dynamic>{},
-    );
-
-    return PaginatedResponse(items: items, pagination: pagination);
   }
 
   @override

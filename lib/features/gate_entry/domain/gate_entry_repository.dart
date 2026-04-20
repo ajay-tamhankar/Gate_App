@@ -1,14 +1,16 @@
 import '../../../../core/network/api_response.dart';
-import '../../../../core/network/pagination_model.dart';
 import '../data/dto/create_gate_entry_request.dart';
 import '../data/dto/check_challan_uniqueness_response.dart';
 import 'models/attachment.dart';
 import 'models/gate_entry.dart';
+import 'models/gate_entry_list_response.dart';
+import 'models/gate_entry_query.dart';
 import 'models/vendor.dart';
 
 abstract class GateEntryRepository {
-  Future<ApiResponse<PaginatedResponse<GateEntry>>> getGateEntries(
-      {int page = 1, int limit = 20});
+  Future<ApiResponse<GateEntryListResponse>> getGateEntries({
+    GateEntryQuery? query,
+  });
   Future<ApiResponse<GateEntry>> getGateEntry(String id);
   Future<ApiResponse<GateEntry>> createGateEntry(
       CreateGateEntryRequest request);
