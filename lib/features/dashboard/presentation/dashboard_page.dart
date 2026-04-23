@@ -296,11 +296,12 @@ class _SecurityDashboard extends ConsumerWidget {
     return userAsync.when(
       data: (user) {
         if (user.fullName.isNotEmpty) return user.fullName;
+        if (session != null && session.fullName.isNotEmpty) return session.fullName;
         if (user.email.isNotEmpty) return user.email;
-        return session?.userId ?? 'User';
+        return 'User';
       },
-      loading: () => session?.userId ?? 'User',
-      error: (_, __) => session?.userId ?? 'User',
+      loading: () => session?.fullName.isNotEmpty == true ? session!.fullName : 'User',
+      error: (_, __) => session?.fullName.isNotEmpty == true ? session!.fullName : 'User',
     );
   }
 
@@ -318,13 +319,15 @@ class _SecurityDashboard extends ConsumerWidget {
     return userAsync.when(
       data: (user) {
         final parts = <String>[];
-        if (user.employeeCode.isNotEmpty) parts.add(user.employeeCode);
+        if (user.employeeCode?.isNotEmpty == true) {
+          parts.add(user.employeeCode!);
+        }
         if (user.email.isNotEmpty) parts.add(user.email);
         if (parts.isNotEmpty) return 'Logged in as ${parts.join(' • ')}';
-        return 'Logged in as ${session?.userId ?? 'User'}';
+        return 'Logged in';
       },
-      loading: () => 'Logged in as ${session?.userId ?? 'User'}',
-      error: (_, __) => 'Logged in as ${session?.userId ?? 'User'}',
+      loading: () => 'Logged in',
+      error: (_, __) => 'Logged in',
     );
   }
 }

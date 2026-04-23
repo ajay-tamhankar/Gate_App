@@ -28,6 +28,8 @@ abstract class GateEntryRepository {
   });
   Future<ApiResponse<String>> getAttachmentUrl(String id, String attachmentId);
   Future<ApiResponse<List<Vendor>>> searchVendors(String query);
-  Future<ApiResponse<CheckChallanUniquenessResponse>> checkChallanUniqueness(String challanNo);
+  Future<ApiResponse<CheckChallanUniquenessResponse>> checkChallanUniqueness(
+      String challanNo,
+      {String? vendorCode});
   Future<ApiResponse<GateEntry>> gateOut(String id, {String? remarks});
 }

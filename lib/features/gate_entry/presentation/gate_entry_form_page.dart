@@ -49,7 +49,17 @@ class _ChallanFieldState {
   String? duplicateGateEntryId;
   String? duplicateGateEntryNo;
 
-  String? get errorText => localError ?? serverError;
+  bool get hasDuplicateEntryLink => (duplicateGateEntryId ?? '').trim().isNotEmpty;
+
+  bool get hasDuplicateWarning =>
+      hasDuplicateEntryLink || (duplicateGateEntryNo ?? '').trim().isNotEmpty;
+
+  String? get duplicateWarningText {
+    if (!hasDuplicateWarning) return null;
+    return 'Challan already exists (Entry: ${duplicateGateEntryNo?.trim().isNotEmpty == true ? duplicateGateEntryNo!.trim() : '-'})';
+  }
+
+  String? get blockingErrorText => localError ?? (hasDuplicateWarning ? null : serverError);
 
   void clearRemoteState() {
     isUnique = null;
@@ -80,13 +90,6 @@ class GateEntryFormPage extends ConsumerStatefulWidget {
 }
 
 class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
-  static const List<String> _baseMaterialOptions = [
-    'Parts',
-    'Consumables',
-    'Stationary',
-    'Other',
-  ];
-
   final _formKey = GlobalKey<FormState>();
 
   final List<_ChallanFieldState> _challanFields = [];
@@ -95,6 +98,7 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
   final _lrNumberCtrl = TextEditingController();
   final _driverContactCtrl = TextEditingController();
   final _vehicleCtrl = TextEditingController();
+  final _materialCtrl = TextEditingController();
   final _poCtrl = TextEditingController();
   final _transporterCtrl = TextEditingController();
   final _quantityCtrl = TextEditingController();
@@ -126,16 +130,6 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
     return [
       FilteringTextInputFormatter.allow(RegExp(r'[0-9/-]')),
     ];
-  }
-
-  List<String> get _materialOptions {
-    if (_materialCode.trim().isEmpty) {
-      return _baseMaterialOptions;
-    }
-    if (_baseMaterialOptions.contains(_materialCode)) {
-      return _baseMaterialOptions;
-    }
-    return [_materialCode, ..._baseMaterialOptions];
   }
 
   @override
@@ -172,7 +166,7 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
         _poCtrl.text = first.poNumber;
         _materialCode = first.materialCode.isNotEmpty
             ? first.materialCode
-            : _baseMaterialOptions.first;
+            : 'Parts';
         _quantityCtrl.text = first.challanQty.toString();
         _challanFields.first.poNumberController.text = first.poNumber;
         _challanFields.first.partNumberController.text = first.materialCode;
@@ -181,12 +175,36 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
         _challanFields.first.uomController.text =
             first.uom.isNotEmpty ? first.uom : 'EA';
       }
+      _materialCtrl.text = _materialCode;
       
       _isVendorFound = true;
       _isVendorNameReadOnly = true;
       _lastLookedUpVendorCode = entry.vendorCode;
     } else {
+      _materialCtrl.text = _materialCode;
       _addChallanField();
+    }
+
+    _vendorCodeCtrl.addListener(_onVendorCodeChangedForValidation);
+  }
+
+  void _onVendorCodeChangedForValidation() {
+    final code = _vendorCodeCtrl.text.trim();
+    // Only re-validate if the code has actually changed meaningfully
+    if (code != _lastValidatedVendorCode) {
+      _lastValidatedVendorCode = code;
+      _revalidateAllChallans();
+    }
+  }
+
+  String? _lastValidatedVendorCode;
+
+  void _revalidateAllChallans() {
+    // Re-check all non-empty challans with the new vendor context
+    for (int i = 0; i < _challanFields.length; i++) {
+      if (_challanFields[i].controller.text.trim().isNotEmpty) {
+        _checkSingleChallan(i);
+      }
     }
   }
 
@@ -327,7 +345,11 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
 
     try {
       final repo = ref.read(gateEntryRepositoryProvider);
-      final result = await repo.checkChallanUniqueness(challanNo);
+      final vendorCode = _vendorCodeCtrl.text.trim();
+      final result = await repo.checkChallanUniqueness(
+        challanNo,
+        vendorCode: vendorCode.isNotEmpty ? vendorCode : null,
+      );
       if (!mounted) return;
 
       setState(() {
@@ -401,7 +423,7 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
 
     return !_challanFields.any((f) {
       final hasText = f.controller.text.trim().isNotEmpty;
-      return hasText && (f.localError != null || f.serverError != null);
+      return hasText && f.blockingErrorText != null;
     });
   }
 
@@ -426,6 +448,7 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
     _lrNumberCtrl.dispose();
     _driverContactCtrl.dispose();
     _vehicleCtrl.dispose();
+    _materialCtrl.dispose();
     _poCtrl.dispose();
     _transporterCtrl.dispose();
     _quantityCtrl.dispose();
@@ -653,7 +676,7 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
             decoration: InputDecoration(
               labelText: i == 0 ? 'Invoice/Challan Number' : 'Challan Number ${i + 1}',
               prefixIcon: const Icon(Icons.receipt_long),
-              errorText: _challanFields[i].errorText,
+              errorText: _challanFields[i].blockingErrorText,
               suffixIcon: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -692,7 +715,7 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
                       ),
                     )
                   else if (_challanFields[i].isUnique == true &&
-                      _challanFields[i].errorText == null &&
+                      _challanFields[i].blockingErrorText == null &&
                       _challanFields[i].controller.text.trim().isNotEmpty)
                     const Padding(
                       padding: EdgeInsets.only(right: 10),
@@ -724,9 +747,43 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
                     ? 'Use only letters, numbers, / and -'
                     : 'Use only numbers, / and -';
               }
-              return _challanFields[i].errorText;
+              return _challanFields[i].blockingErrorText;
             },
           ),
+          if (_challanFields[i].duplicateWarningText != null) ...[
+            const SizedBox(height: 6),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: InkWell(
+                onTap: _challanFields[i].hasDuplicateEntryLink
+                    ? () => _openDuplicateEntryDetail(
+                          _challanFields[i].duplicateGateEntryId!,
+                        )
+                    : null,
+                borderRadius: BorderRadius.circular(6),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.info_outline, size: 16, color: Colors.red),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          _challanFields[i].duplicateWarningText!,
+                          style: TextStyle(
+                            color: Colors.red.shade700,
+                            decoration: _challanFields[i].hasDuplicateEntryLink
+                                ? TextDecoration.underline
+                                : TextDecoration.none,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: 12),
           _buildDesktopOrMobileRow(
             TextFormField(
@@ -806,7 +863,16 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
           const SizedBox(height: 12),
           _buildDesktopOrMobileRow(
             DropdownButtonFormField<String>(
-              initialValue: const ['EA', 'NOS', 'PCS', 'KG', 'BOX'].contains(
+              initialValue: const [
+                'EA',
+                'NOS',
+                'PCS',
+                'KG',
+                'BOX',
+                'LITER',
+                'ML',
+                'GRAM',
+              ].contains(
                       _challanFields[i].uomController.text.trim())
                   ? _challanFields[i].uomController.text.trim()
                   : 'EA',
@@ -820,6 +886,9 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
                 DropdownMenuItem(value: 'PCS', child: Text('PCS')),
                 DropdownMenuItem(value: 'KG', child: Text('KG')),
                 DropdownMenuItem(value: 'BOX', child: Text('BOX')),
+                DropdownMenuItem(value: 'LITER', child: Text('Liter')),
+                DropdownMenuItem(value: 'ML', child: Text('ML')),
+                DropdownMenuItem(value: 'GRAM', child: Text('Gram')),
               ],
               onChanged: (value) {
                 _challanFields[i].uomController.text = value ?? 'EA';
@@ -834,8 +903,7 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
             ),
             const SizedBox.shrink(),
           ),
-          if (_challanFields[i].duplicateGateEntryId != null &&
-              _challanFields[i].duplicateGateEntryId!.isNotEmpty)
+          if (_challanFields[i].hasDuplicateEntryLink)
             Align(
               alignment: Alignment.centerRight,
               child: TextButton.icon(
@@ -1163,26 +1231,17 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
                         _buildSectionHeader(
                             '3. Material Details', Icons.inventory_2_outlined),
                         _buildDesktopOrMobileRow(
-                          DropdownButtonFormField<String>(
-                            isExpanded: true,
-                            initialValue: _materialCode,
+                          TextFormField(
+                            controller: _materialCtrl,
                             decoration: const InputDecoration(
                               labelText: 'Material Name',
                               prefixIcon: Icon(Icons.category),
                             ),
-                            items: _materialOptions
-                                .map(
-                                  (material) => DropdownMenuItem(
-                                    value: material,
-                                    child: Text(
-                                      material,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                )
-                                .toList(),
-                            onChanged: (val) =>
-                                setState(() => _materialCode = val!),
+                            onChanged: (value) =>
+                                _materialCode = value.trim(),
+                            validator: (value) => value == null || value.trim().isEmpty
+                                ? 'Material name required'
+                                : null,
                           ),
                           TextFormField(
                             controller: _poCtrl,
@@ -1327,4 +1386,3 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
     );
   }
 }
-

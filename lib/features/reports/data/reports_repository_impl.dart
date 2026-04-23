@@ -159,6 +159,8 @@ class ReportsRepository {
           ? 'Gate Out'
           : 'Gate In';
       final vendor = (map['vendorName'] ?? map['vendor'] ?? '').toString();
+      final vendorCode =
+          (map['vendorCode'] ?? map['vendor_code'] ?? '').toString();
       final poNumber =
           (map['poNumber'] ?? map['po_number'] ?? '').toString();
       final vehicleNo =
@@ -194,6 +196,7 @@ class ReportsRepository {
         material: material,
         qty: qty,
         vendor: vendor,
+        vendorCode: vendorCode,
         transporter: transporter,
         vehicleNo: vehicleNo,
         poNumber: poNumber,

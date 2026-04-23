@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../../core/auth/session_controller.dart';
 
@@ -11,6 +12,7 @@ class LoginPage extends ConsumerStatefulWidget {
 }
 
 class _LoginPageState extends ConsumerState<LoginPage> {
+  final _organizationCodeCtrl = TextEditingController();
   final _usernameCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   bool _isLoading = false;
@@ -18,19 +20,51 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   @override
   void dispose() {
+    _organizationCodeCtrl.dispose();
     _usernameCtrl.dispose();
     _passwordCtrl.dispose();
     super.dispose();
   }
 
+  void _normalizeOrganizationCode() {
+    final normalized = _organizationCodeCtrl.text.trim().toUpperCase();
+    if (_organizationCodeCtrl.text != normalized) {
+      _organizationCodeCtrl.value = TextEditingValue(
+        text: normalized,
+        selection: TextSelection.collapsed(offset: normalized.length),
+      );
+    }
+  }
+
   void _login() async {
+    final organizationCode = _organizationCodeCtrl.text.trim();
     final username = _usernameCtrl.text.trim();
     final password = _passwordCtrl.text;
+
+    if (organizationCode.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Organization code is required.'),
+        ),
+      );
+      return;
+    }
+
+    if (!RegExp(r'^[A-Za-z0-9_-]{2,32}$').hasMatch(organizationCode)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Organization code must be 2-32 characters and use only letters, numbers, _ or -.',
+          ),
+        ),
+      );
+      return;
+    }
 
     if (username.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Enter both username and password.'),
+          content: Text('Enter email or username and password.'),
         ),
       );
       return;
@@ -41,7 +75,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     try {
       errorMessage = await ref
           .read(sessionControllerProvider.notifier)
-          .login(username: username, password: password);
+          .login(
+            organizationCode: organizationCode,
+            identifier: username,
+            password: password,
+          );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -104,10 +142,26 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     ),
                     const SizedBox(height: 18),
                     TextField(
+                      controller: _organizationCodeCtrl,
+                      textCapitalization: TextCapitalization.characters,
+                      inputFormatters: [
+                        LengthLimitingTextInputFormatter(32),
+                        FilteringTextInputFormatter.allow(
+                          RegExp(r'[A-Za-z0-9_-]'),
+                        ),
+                      ],
+                      onEditingComplete: _normalizeOrganizationCode,
+                      decoration: const InputDecoration(
+                        labelText: 'Organization Code',
+                        hintText: 'e.g. DEFAULT',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
                       controller: _usernameCtrl,
                       decoration: const InputDecoration(
-                        labelText: 'Username',
-                        hintText: 'e.g. admin',
+                        labelText: 'Email or Username',
+                        hintText: 'e.g. admin@warehouse.local or ADM001',
                       ),
                     ),
                     const SizedBox(height: 12),

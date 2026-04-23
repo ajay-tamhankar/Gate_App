@@ -1,4 +1,6 @@
 import 'user_role.dart';
+import '../../features/auth/domain/models/organization.dart';
+import '../../features/auth/domain/models/user.dart';
 
 sealed class SessionState {
   const SessionState();
@@ -13,8 +15,16 @@ class Unauthenticated extends SessionState {
 }
 
 class Authenticated extends SessionState {
-  final String userId;
+  final User user;
+  final Organization organization;
   final UserRole role;
 
-  const Authenticated({required this.userId, required this.role});
+  const Authenticated({
+    required this.user,
+    required this.organization,
+    required this.role,
+  });
+
+  String get userId => user.id;
+  String get fullName => user.fullName;
 }

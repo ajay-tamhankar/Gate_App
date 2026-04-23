@@ -23,6 +23,10 @@ mixin _$GrnImportResult {
   int? get processed => throw _privateConstructorUsedError;
   @JsonKey(name: 'importedCount')
   int? get importedCount => throw _privateConstructorUsedError;
+  @JsonKey(name: 'totalRows')
+  int? get totalRows => throw _privateConstructorUsedError;
+  @JsonKey(name: 'skippedCount')
+  int? get skippedCount => throw _privateConstructorUsedError;
   String? get adapterMode => throw _privateConstructorUsedError;
   ReconciliationSummary? get summary => throw _privateConstructorUsedError;
   List<BatchReconResult> get results => throw _privateConstructorUsedError;
@@ -46,6 +50,8 @@ abstract class $GrnImportResultCopyWith<$Res> {
   $Res call(
       {int? processed,
       @JsonKey(name: 'importedCount') int? importedCount,
+      @JsonKey(name: 'totalRows') int? totalRows,
+      @JsonKey(name: 'skippedCount') int? skippedCount,
       String? adapterMode,
       ReconciliationSummary? summary,
       List<BatchReconResult> results});
@@ -70,6 +76,8 @@ class _$GrnImportResultCopyWithImpl<$Res, $Val extends GrnImportResult>
   $Res call({
     Object? processed = freezed,
     Object? importedCount = freezed,
+    Object? totalRows = freezed,
+    Object? skippedCount = freezed,
     Object? adapterMode = freezed,
     Object? summary = freezed,
     Object? results = null,
@@ -82,6 +90,14 @@ class _$GrnImportResultCopyWithImpl<$Res, $Val extends GrnImportResult>
       importedCount: freezed == importedCount
           ? _value.importedCount
           : importedCount // ignore: cast_nullable_to_non_nullable
+              as int?,
+      totalRows: freezed == totalRows
+          ? _value.totalRows
+          : totalRows // ignore: cast_nullable_to_non_nullable
+              as int?,
+      skippedCount: freezed == skippedCount
+          ? _value.skippedCount
+          : skippedCount // ignore: cast_nullable_to_non_nullable
               as int?,
       adapterMode: freezed == adapterMode
           ? _value.adapterMode
@@ -124,6 +140,8 @@ abstract class _$$GrnImportResultImplCopyWith<$Res>
   $Res call(
       {int? processed,
       @JsonKey(name: 'importedCount') int? importedCount,
+      @JsonKey(name: 'totalRows') int? totalRows,
+      @JsonKey(name: 'skippedCount') int? skippedCount,
       String? adapterMode,
       ReconciliationSummary? summary,
       List<BatchReconResult> results});
@@ -147,6 +165,8 @@ class __$$GrnImportResultImplCopyWithImpl<$Res>
   $Res call({
     Object? processed = freezed,
     Object? importedCount = freezed,
+    Object? totalRows = freezed,
+    Object? skippedCount = freezed,
     Object? adapterMode = freezed,
     Object? summary = freezed,
     Object? results = null,
@@ -159,6 +179,14 @@ class __$$GrnImportResultImplCopyWithImpl<$Res>
       importedCount: freezed == importedCount
           ? _value.importedCount
           : importedCount // ignore: cast_nullable_to_non_nullable
+              as int?,
+      totalRows: freezed == totalRows
+          ? _value.totalRows
+          : totalRows // ignore: cast_nullable_to_non_nullable
+              as int?,
+      skippedCount: freezed == skippedCount
+          ? _value.skippedCount
+          : skippedCount // ignore: cast_nullable_to_non_nullable
               as int?,
       adapterMode: freezed == adapterMode
           ? _value.adapterMode
@@ -182,6 +210,8 @@ class _$GrnImportResultImpl implements _GrnImportResult {
   const _$GrnImportResultImpl(
       {this.processed,
       @JsonKey(name: 'importedCount') this.importedCount,
+      @JsonKey(name: 'totalRows') this.totalRows,
+      @JsonKey(name: 'skippedCount') this.skippedCount,
       this.adapterMode,
       this.summary,
       final List<BatchReconResult> results = const []})
@@ -195,6 +225,12 @@ class _$GrnImportResultImpl implements _GrnImportResult {
   @override
   @JsonKey(name: 'importedCount')
   final int? importedCount;
+  @override
+  @JsonKey(name: 'totalRows')
+  final int? totalRows;
+  @override
+  @JsonKey(name: 'skippedCount')
+  final int? skippedCount;
   @override
   final String? adapterMode;
   @override
@@ -210,7 +246,7 @@ class _$GrnImportResultImpl implements _GrnImportResult {
 
   @override
   String toString() {
-    return 'GrnImportResult(processed: $processed, importedCount: $importedCount, adapterMode: $adapterMode, summary: $summary, results: $results)';
+    return 'GrnImportResult(processed: $processed, importedCount: $importedCount, totalRows: $totalRows, skippedCount: $skippedCount, adapterMode: $adapterMode, summary: $summary, results: $results)';
   }
 
   @override
@@ -222,6 +258,10 @@ class _$GrnImportResultImpl implements _GrnImportResult {
                 other.processed == processed) &&
             (identical(other.importedCount, importedCount) ||
                 other.importedCount == importedCount) &&
+            (identical(other.totalRows, totalRows) ||
+                other.totalRows == totalRows) &&
+            (identical(other.skippedCount, skippedCount) ||
+                other.skippedCount == skippedCount) &&
             (identical(other.adapterMode, adapterMode) ||
                 other.adapterMode == adapterMode) &&
             (identical(other.summary, summary) || other.summary == summary) &&
@@ -230,8 +270,15 @@ class _$GrnImportResultImpl implements _GrnImportResult {
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(runtimeType, processed, importedCount,
-      adapterMode, summary, const DeepCollectionEquality().hash(_results));
+  int get hashCode => Object.hash(
+      runtimeType,
+      processed,
+      importedCount,
+      totalRows,
+      skippedCount,
+      adapterMode,
+      summary,
+      const DeepCollectionEquality().hash(_results));
 
   /// Create a copy of GrnImportResult
   /// with the given fields replaced by the non-null parameter values.
@@ -254,6 +301,8 @@ abstract class _GrnImportResult implements GrnImportResult {
   const factory _GrnImportResult(
       {final int? processed,
       @JsonKey(name: 'importedCount') final int? importedCount,
+      @JsonKey(name: 'totalRows') final int? totalRows,
+      @JsonKey(name: 'skippedCount') final int? skippedCount,
       final String? adapterMode,
       final ReconciliationSummary? summary,
       final List<BatchReconResult> results}) = _$GrnImportResultImpl;
@@ -266,6 +315,12 @@ abstract class _GrnImportResult implements GrnImportResult {
   @override
   @JsonKey(name: 'importedCount')
   int? get importedCount;
+  @override
+  @JsonKey(name: 'totalRows')
+  int? get totalRows;
+  @override
+  @JsonKey(name: 'skippedCount')
+  int? get skippedCount;
   @override
   String? get adapterMode;
   @override

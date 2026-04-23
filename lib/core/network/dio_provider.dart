@@ -40,10 +40,7 @@ final dioProvider = Provider<Dio>((ref) {
       final isAuthError = status == 401;
 
       if (isAuthError) {
-        // Clear token on 401
-        await ref.read(tokenStorageProvider).deleteToken();
-        // Log out user
-        ref.read(sessionControllerProvider.notifier).logout();
+        await ref.read(sessionControllerProvider.notifier).invalidateSession();
       }
 
       return handler.next(e);

@@ -5,6 +5,7 @@ import '../../../../core/network/api_response.dart';
 import '../../../../core/network/token_storage.dart';
 import '../domain/auth_repository.dart';
 import '../domain/models/auth_result.dart';
+import '../domain/models/organization.dart';
 import '../domain/models/user.dart';
 import 'dto/login_request.dart';
 import 'dto/user_response.dart';
@@ -80,9 +81,10 @@ class AuthRepositoryImpl implements AuthRepository {
         success: true,
         message: message,
         data: AuthResult(
-          userId: parsed.userId!,
-          username: parsed.username!,
+          accessToken: parsed.token!,
           role: parsed.role!,
+          user: parsed.user!,
+          organization: parsed.organization!,
         ),
       );
     } on DioException catch (e) {
@@ -125,6 +127,7 @@ class AuthRepositoryImpl implements AuthRepository {
         message: response.message,
         data: User(
           id: data.id,
+          organizationId: data.organizationId,
           employeeCode: data.employeeCode,
           fullName: data.fullName,
           email: data.email,
@@ -133,6 +136,16 @@ class AuthRepositoryImpl implements AuthRepository {
           lastLoginAt: data.lastLoginAt,
           createdAt: data.createdAt,
           updatedAt: data.updatedAt,
+          organization: data.organization == null
+              ? null
+              : Organization(
+                  id: data.organization!.id,
+                  code: data.organization!.code,
+                  name: data.organization!.name,
+                  isActive: data.organization!.isActive,
+                  createdAt: data.organization!.createdAt,
+                  updatedAt: data.organization!.updatedAt,
+                ),
         ),
       );
     }
@@ -177,16 +190,16 @@ class AuthRepositoryImpl implements AuthRepository {
 
 class _ParsedLoginPayload {
   final String? token;
-  final String? userId;
-  final String? username;
   final String? role;
+  final User? user;
+  final Organization? organization;
   final String? error;
 
   const _ParsedLoginPayload({
     this.token,
-    this.userId,
-    this.username,
     this.role,
+    this.user,
+    this.organization,
     this.error,
   });
 }
@@ -197,28 +210,71 @@ _ParsedLoginPayload _parseLoginPayload(Map<String, dynamic> data) {
       : const <String, dynamic>{};
   final token = (data['token'] ?? data['accessToken'] ?? '').toString();
   final userId = (user['id'] ?? data['userId'] ?? '').toString();
-  final username = (user['username'] ??
-          user['name'] ??
-          user['fullName'] ??
-          data['username'] ??
-          '')
+  final employeeCode = _nullableString(
+    user['employeeCode'] ?? user['employee_code'] ?? data['username'],
+  );
+  final fullName = (user['fullName'] ?? user['full_name'] ?? employeeCode ?? '')
       .toString();
+  final email = (user['email'] ?? '').toString();
   final role = (user['role'] ?? data['role'] ?? '').toString();
+  final organizationData = data['organization'] is Map<String, dynamic>
+      ? data['organization'] as Map<String, dynamic>
+      : const <String, dynamic>{};
+  final organizationId =
+      (organizationData['id'] ?? user['organizationId'] ?? '').toString();
+  final organizationCode = (organizationData['code'] ?? '').toString();
+  final organizationName = (organizationData['name'] ?? '').toString();
+  final organizationIsActive = organizationData['isActive'] as bool?;
 
   if (token.isEmpty) {
     return const _ParsedLoginPayload(error: 'Login token missing in response');
   }
 
-  if (userId.isEmpty || username.isEmpty || role.isEmpty) {
+  if (userId.isEmpty ||
+      organizationId.isEmpty ||
+      organizationCode.isEmpty ||
+      organizationName.isEmpty ||
+      role.isEmpty ||
+      fullName.isEmpty ||
+      email.isEmpty) {
     return const _ParsedLoginPayload(
-      error: 'Login response is missing user details',
+      error: 'Login response is missing user or organization details',
     );
   }
 
   return _ParsedLoginPayload(
     token: token,
-    userId: userId,
-    username: username,
     role: role,
+    organization: Organization(
+      id: organizationId,
+      code: organizationCode,
+      name: organizationName,
+      isActive: organizationIsActive ?? true,
+      createdAt: _parseDateTime(organizationData['createdAt']),
+      updatedAt: _parseDateTime(organizationData['updatedAt']),
+    ),
+    user: User(
+      id: userId,
+      organizationId: organizationId,
+      employeeCode: employeeCode,
+      fullName: fullName,
+      email: email,
+      role: role,
+      isActive: user['isActive'] as bool? ?? true,
+      lastLoginAt: _parseDateTime(user['lastLoginAt']),
+      createdAt: _parseDateTime(user['createdAt']),
+      updatedAt: _parseDateTime(user['updatedAt']),
+    ),
   );
+}
+
+DateTime? _parseDateTime(dynamic value) {
+  if (value is! String || value.trim().isEmpty) return null;
+  return DateTime.tryParse(value);
+}
+
+String? _nullableString(dynamic value) {
+  if (value == null) return null;
+  final normalized = value.toString().trim();
+  return normalized.isEmpty ? null : normalized;
 }

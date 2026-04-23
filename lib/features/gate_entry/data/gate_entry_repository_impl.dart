@@ -487,11 +487,18 @@ class GateEntryRepositoryImpl implements GateEntryRepository {
   }
 
   @override
-  Future<ApiResponse<CheckChallanUniquenessResponse>> checkChallanUniqueness(String challanNo) async {
+  Future<ApiResponse<CheckChallanUniquenessResponse>> checkChallanUniqueness(
+      String challanNo,
+      {String? vendorCode}) async {
     try {
+      final queryParams = {'challanNo': challanNo};
+      if (vendorCode != null && vendorCode.isNotEmpty) {
+        queryParams['vendorCode'] = vendorCode;
+      }
+
       final response = await _apiClient.getRaw(
         '/gate-entries/challan-unique',
-        queryParameters: {'challanNo': challanNo},
+        queryParameters: queryParams,
       );
 
       final success = response['success'] as bool? ?? false;

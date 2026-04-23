@@ -243,6 +243,7 @@ mixin _$GateEntryReportItem {
   String get material => throw _privateConstructorUsedError;
   int get qty => throw _privateConstructorUsedError;
   String get vendor => throw _privateConstructorUsedError;
+  String get vendorCode => throw _privateConstructorUsedError;
   String get transporter => throw _privateConstructorUsedError;
   String get vehicleNo => throw _privateConstructorUsedError;
   String get poNumber => throw _privateConstructorUsedError;
@@ -274,6 +275,7 @@ abstract class $GateEntryReportItemCopyWith<$Res> {
       String material,
       int qty,
       String vendor,
+      String vendorCode,
       String transporter,
       String vehicleNo,
       String poNumber,
@@ -304,6 +306,7 @@ class _$GateEntryReportItemCopyWithImpl<$Res, $Val extends GateEntryReportItem>
     Object? material = null,
     Object? qty = null,
     Object? vendor = null,
+    Object? vendorCode = null,
     Object? transporter = null,
     Object? vehicleNo = null,
     Object? poNumber = null,
@@ -346,6 +349,10 @@ class _$GateEntryReportItemCopyWithImpl<$Res, $Val extends GateEntryReportItem>
           ? _value.vendor
           : vendor // ignore: cast_nullable_to_non_nullable
               as String,
+      vendorCode: null == vendorCode
+          ? _value.vendorCode
+          : vendorCode // ignore: cast_nullable_to_non_nullable
+              as String,
       transporter: null == transporter
           ? _value.transporter
           : transporter // ignore: cast_nullable_to_non_nullable
@@ -384,6 +391,7 @@ abstract class _$$GateEntryReportItemImplCopyWith<$Res>
       String material,
       int qty,
       String vendor,
+      String vendorCode,
       String transporter,
       String vehicleNo,
       String poNumber,
@@ -412,6 +420,7 @@ class __$$GateEntryReportItemImplCopyWithImpl<$Res>
     Object? material = null,
     Object? qty = null,
     Object? vendor = null,
+    Object? vendorCode = null,
     Object? transporter = null,
     Object? vehicleNo = null,
     Object? poNumber = null,
@@ -454,6 +463,10 @@ class __$$GateEntryReportItemImplCopyWithImpl<$Res>
           ? _value.vendor
           : vendor // ignore: cast_nullable_to_non_nullable
               as String,
+      vendorCode: null == vendorCode
+          ? _value.vendorCode
+          : vendorCode // ignore: cast_nullable_to_non_nullable
+              as String,
       transporter: null == transporter
           ? _value.transporter
           : transporter // ignore: cast_nullable_to_non_nullable
@@ -487,6 +500,7 @@ class _$GateEntryReportItemImpl implements _GateEntryReportItem {
       required this.material,
       required this.qty,
       required this.vendor,
+      required this.vendorCode,
       required this.transporter,
       required this.vehicleNo,
       required this.poNumber,
@@ -514,6 +528,8 @@ class _$GateEntryReportItemImpl implements _GateEntryReportItem {
   @override
   final String vendor;
   @override
+  final String vendorCode;
+  @override
   final String transporter;
   @override
   final String vehicleNo;
@@ -524,7 +540,7 @@ class _$GateEntryReportItemImpl implements _GateEntryReportItem {
 
   @override
   String toString() {
-    return 'GateEntryReportItem(gateEntryNo: $gateEntryNo, direction: $direction, challanNo: $challanNo, lrNo: $lrNo, date: $date, gateOutDate: $gateOutDate, material: $material, qty: $qty, vendor: $vendor, transporter: $transporter, vehicleNo: $vehicleNo, poNumber: $poNumber, status: $status)';
+    return 'GateEntryReportItem(gateEntryNo: $gateEntryNo, direction: $direction, challanNo: $challanNo, lrNo: $lrNo, date: $date, gateOutDate: $gateOutDate, material: $material, qty: $qty, vendor: $vendor, vendorCode: $vendorCode, transporter: $transporter, vehicleNo: $vehicleNo, poNumber: $poNumber, status: $status)';
   }
 
   @override
@@ -546,6 +562,8 @@ class _$GateEntryReportItemImpl implements _GateEntryReportItem {
                 other.material == material) &&
             (identical(other.qty, qty) || other.qty == qty) &&
             (identical(other.vendor, vendor) || other.vendor == vendor) &&
+            (identical(other.vendorCode, vendorCode) ||
+                other.vendorCode == vendorCode) &&
             (identical(other.transporter, transporter) ||
                 other.transporter == transporter) &&
             (identical(other.vehicleNo, vehicleNo) ||
@@ -568,6 +586,7 @@ class _$GateEntryReportItemImpl implements _GateEntryReportItem {
       material,
       qty,
       vendor,
+      vendorCode,
       transporter,
       vehicleNo,
       poNumber,
@@ -601,6 +620,7 @@ abstract class _GateEntryReportItem implements GateEntryReportItem {
       required final String material,
       required final int qty,
       required final String vendor,
+      required final String vendorCode,
       required final String transporter,
       required final String vehicleNo,
       required final String poNumber,
@@ -627,6 +647,8 @@ abstract class _GateEntryReportItem implements GateEntryReportItem {
   int get qty;
   @override
   String get vendor;
+  @override
+  String get vendorCode;
   @override
   String get transporter;
   @override

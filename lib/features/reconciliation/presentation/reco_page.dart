@@ -755,6 +755,7 @@ class __WarehouseReconciliationViewState
 
     return items.where((item) {
       final matchesSearch = query.isEmpty ||
+          item.gateEntryId.toLowerCase().contains(query) ||
           item.gateEntryNo.toLowerCase().contains(query) ||
           item.displayReason.toLowerCase().contains(query) ||
           item.reasonCode.toLowerCase().contains(query) ||
@@ -950,7 +951,7 @@ class __WarehouseReconciliationViewState
           width: isMob ? double.infinity : 320,
           child: TextField(
             decoration: InputDecoration(
-              labelText: 'Search gate entry, reason, GRN, status',
+              labelText: 'Search gate entry no, reason, GRN, status',
               prefixIcon: const Icon(Icons.search, size: 18),
               isDense: true,
               contentPadding:

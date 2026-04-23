@@ -11,6 +11,8 @@ _$GrnImportResultImpl _$$GrnImportResultImplFromJson(
     _$GrnImportResultImpl(
       processed: (json['processed'] as num?)?.toInt(),
       importedCount: (json['importedCount'] as num?)?.toInt(),
+      totalRows: (json['totalRows'] as num?)?.toInt(),
+      skippedCount: (json['skippedCount'] as num?)?.toInt(),
       adapterMode: json['adapterMode'] as String?,
       summary: json['summary'] == null
           ? null
@@ -27,6 +29,8 @@ Map<String, dynamic> _$$GrnImportResultImplToJson(
     <String, dynamic>{
       'processed': instance.processed,
       'importedCount': instance.importedCount,
+      'totalRows': instance.totalRows,
+      'skippedCount': instance.skippedCount,
       'adapterMode': instance.adapterMode,
       'summary': instance.summary,
       'results': instance.results,

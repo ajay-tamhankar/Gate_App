@@ -1,6 +1,9 @@
+import 'organization.dart';
+
 class User {
   final String id;
-  final String employeeCode;
+  final String organizationId;
+  final String? employeeCode;
   final String fullName;
   final String email;
   final String role;
@@ -8,9 +11,11 @@ class User {
   final DateTime? lastLoginAt;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  final Organization? organization;
 
   User({
     required this.id,
+    required this.organizationId,
     required this.employeeCode,
     required this.fullName,
     required this.email,
@@ -19,5 +24,6 @@ class User {
     this.lastLoginAt,
     this.createdAt,
     this.updatedAt,
+    this.organization,
   });
 }

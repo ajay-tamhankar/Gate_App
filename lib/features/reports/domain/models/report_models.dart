@@ -28,6 +28,7 @@ class GateEntryReportItem with _$GateEntryReportItem {
     required String material,
     required int qty,
     required String vendor,
+    required String vendorCode,
     required String transporter,
     required String vehicleNo,
     required String poNumber,

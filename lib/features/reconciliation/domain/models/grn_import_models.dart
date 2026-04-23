@@ -8,6 +8,8 @@ class GrnImportResult with _$GrnImportResult {
   const factory GrnImportResult({
     int? processed,
     @JsonKey(name: 'importedCount') int? importedCount,
+    @JsonKey(name: 'totalRows') int? totalRows,
+    @JsonKey(name: 'skippedCount') int? skippedCount,
     String? adapterMode,
     ReconciliationSummary? summary,
     @Default([]) List<BatchReconResult> results,
