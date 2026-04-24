@@ -92,58 +92,62 @@ class ReportExportService {
     final pdf = pw.Document();
 
     pdf.addPage(
-      pw.Page(
+      pw.MultiPage(
         pageFormat: PdfPageFormat.a4.landscape,
-        build: (pw.Context context) {
-          return pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Text('Gate Entry Register',
-                  style: const pw.TextStyle(fontSize: 24)),
-              pw.SizedBox(height: 20),
-              // ignore: deprecated_member_use
-              pw.Table.fromTextArray(
-                headerStyle: pw.TextStyle(
-                  fontWeight: pw.FontWeight.bold,
-                  fontSize: 8,
-                ),
-                cellStyle: const pw.TextStyle(fontSize: 7),
-                headers: [
-                  'Gate Entry No',
-                  'Invoice/Challan Number',
-                  'Gate In Date',
-                  'Gate In Time',
-                  'Gate Out Time',
-                  'Turnaround Time',
-                  'Vendor',
-                  'Vendor Code',
-                  'PO Number',
-                  'Vehicle No',
-                  'LR Number',
-                  'Number Boxes (qty)',
-                  'Material',
-                ],
-                data: data
-                    .map((item) => [
-                          item.gateEntryNo,
-                          item.challanNo,
-                          _formatDate(item.date),
-                          _formatTime(item.date),
-                          _formatTime(item.gateOutDate),
-                          _formatTurnaroundTime(item.date, item.gateOutDate),
-                          item.vendor,
-                          item.vendorCode,
-                          item.poNumber,
-                          item.vehicleNo,
-                          item.lrNo,
-                          item.qty.toString(),
-                          item.material,
-                        ])
-                    .toList(),
+        build: (pw.Context context) => [
+          pw.Text(
+            'Gate Entry Register',
+            style: const pw.TextStyle(fontSize: 24),
+          ),
+          pw.SizedBox(height: 20),
+          if (data.isEmpty)
+            pw.Text(
+              'No records found',
+              style: const pw.TextStyle(fontSize: 12),
+            )
+          else
+            // ignore: deprecated_member_use
+            pw.Table.fromTextArray(
+              headerStyle: pw.TextStyle(
+                fontWeight: pw.FontWeight.bold,
+                fontSize: 8,
               ),
-            ],
-          );
-        },
+              cellStyle: const pw.TextStyle(fontSize: 7),
+              cellAlignment: pw.Alignment.centerLeft,
+              headers: [
+                'Gate Entry No',
+                'Invoice/Challan Number',
+                'Gate In Date',
+                'Gate In Time',
+                'Gate Out Time',
+                'Turnaround Time',
+                'Vendor',
+                'Vendor Code',
+                'PO Number',
+                'Vehicle No',
+                'LR Number',
+                'Number Boxes (qty)',
+                'Material',
+              ],
+              data: data
+                  .map((item) => [
+                        item.gateEntryNo,
+                        item.challanNo,
+                        _formatDate(item.date),
+                        _formatTime(item.date),
+                        _formatTime(item.gateOutDate),
+                        _formatTurnaroundTime(item.date, item.gateOutDate),
+                        item.vendor,
+                        item.vendorCode,
+                        item.poNumber,
+                        item.vehicleNo,
+                        item.lrNo,
+                        item.qty.toString(),
+                        item.material,
+                      ])
+                  .toList(),
+            ),
+        ],
       ),
     );
 
