@@ -3,6 +3,7 @@ class GateEntrySummary {
     this.total = 0,
     this.gateIn = 0,
     this.gateOut = 0,
+    this.gatedOut = 0,
     this.today = 0,
     this.yesterday = 0,
     this.thisWeek = 0,
@@ -12,6 +13,7 @@ class GateEntrySummary {
   final int total;
   final int gateIn;
   final int gateOut;
+  final int gatedOut;
   final int today;
   final int yesterday;
   final int thisWeek;
@@ -27,6 +29,9 @@ class GateEntrySummary {
       total: parseInt(json['total']),
       gateIn: parseInt(json['gateIn']),
       gateOut: parseInt(json['gateOut']),
+      gatedOut: parseInt(
+        json['gatedOut'] ?? json['gated_out'] ?? json['gateOutCompleted'],
+      ),
       today: parseInt(json['today']),
       yesterday: parseInt(json['yesterday']),
       thisWeek: parseInt(json['thisWeek']),

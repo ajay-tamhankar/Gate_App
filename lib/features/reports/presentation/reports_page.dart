@@ -177,13 +177,6 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
   ];
 
   @override
-  void initState() {
-    super.initState();
-    _startDate = DateTime.now().subtract(const Duration(days: 7));
-    _endDate = DateTime.now();
-  }
-
-  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();

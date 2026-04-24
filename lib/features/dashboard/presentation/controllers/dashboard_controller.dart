@@ -5,6 +5,7 @@ import '../../data/dashboard_repository_impl.dart';
 import '../../domain/entities/dashboard_metrics.dart';
 import '../../../gate_entry/data/gate_entry_repository_impl.dart';
 import '../../../gate_entry/domain/models/gate_entry.dart';
+import '../../../gate_entry/domain/models/gate_entry_summary.dart';
 import '../../../../core/auth/session_controller.dart';
 import '../../../../core/auth/session_state.dart';
 import '../../../../core/auth/user_role.dart';
@@ -41,7 +42,9 @@ class DashboardController extends AsyncNotifier<DashboardMetrics> {
   Future<DashboardMetrics> _buildGateSecurityMetrics() async {
     final repo = ref.read(gateEntryRepositoryProvider);
     final response = await repo.getGateEntries();
-    final entries = response.data?.items ?? const <GateEntry>[];
+    final listResponse = response.data;
+    final entries = listResponse?.items ?? const <GateEntry>[];
+    final summary = listResponse?.summary;
 
     final now = DateTime.now();
 
@@ -54,43 +57,10 @@ class DashboardController extends AsyncNotifier<DashboardMetrics> {
     int agingMoreThan3 = 0;
 
     for (final e in entries) {
-      final isExited = e.gateOutTimestamp != null;
-      if (e.gateMovement == GateMovement.inMovement && !isExited) {
-        gateInCount++;
-      } else if (e.gateMovement == GateMovement.outMovement || isExited) {
-        gateOutCount++;
-      }
-
       final rawTs = e.gateTimestamp;
       if (rawTs == null) continue;
 
       final tsLocal = rawTs.toLocal();
-      final tsDateString = DateFormat('yyyy-MM-dd').format(tsLocal);
-      final todayString = DateFormat('yyyy-MM-dd').format(now);
-      final monthStartString = DateFormat('yyyy-MM').format(now);
-
-      if (tsDateString.startsWith(monthStartString)) {
-        monthCount++;
-      } else if (e.gateOutTimestamp != null) {
-        final outDateString = DateFormat('yyyy-MM').format(e.gateOutTimestamp!.toLocal());
-        if (outDateString == monthStartString) {
-          monthCount++;
-        }
-      }
-
-      if (tsDateString == todayString) {
-        todayCount++;
-      } else if (e.gateOutTimestamp != null) {
-        final outDateString = DateFormat('yyyy-MM-dd').format(e.gateOutTimestamp!.toLocal());
-        if (outDateString == todayString) {
-          todayCount++;
-        }
-      }
-
-      // Special case: if it gated out TODAY, it should also be counted in today's entry activity?
-      // Actually "Entries" usually means arrivals. But if the user says it shows 2/7 while 
-      // they see 5 In and 4 Out, let's ensure we are not missing anything.
-      
       final ageDays = now.difference(tsLocal).inDays;
       if (_isPendingForAging(e.status) && e.gateOutTimestamp == null) {
         if (ageDays <= 1) {
@@ -99,6 +69,51 @@ class DashboardController extends AsyncNotifier<DashboardMetrics> {
           aging2To3++;
         } else {
           agingMoreThan3++;
+        }
+      }
+    }
+
+    if (_hasGateEntrySummary(summary)) {
+      todayCount = summary!.today;
+      monthCount = summary.thisMonth;
+      gateInCount = summary.gateIn;
+      gateOutCount = summary.gatedOut;
+    } else {
+      final todayString = DateFormat('yyyy-MM-dd').format(now);
+      final monthStartString = DateFormat('yyyy-MM').format(now);
+
+      for (final e in entries) {
+        final isExited = e.gateOutTimestamp != null;
+        if (e.gateMovement == GateMovement.inMovement && !isExited) {
+          gateInCount++;
+        } else if (e.gateMovement == GateMovement.outMovement || isExited) {
+          gateOutCount++;
+        }
+
+        final rawTs = e.gateTimestamp;
+        if (rawTs == null) continue;
+
+        final tsLocal = rawTs.toLocal();
+        final tsDateString = DateFormat('yyyy-MM-dd').format(tsLocal);
+
+        if (tsDateString.startsWith(monthStartString)) {
+          monthCount++;
+        } else if (e.gateOutTimestamp != null) {
+          final outDateString =
+              DateFormat('yyyy-MM').format(e.gateOutTimestamp!.toLocal());
+          if (outDateString == monthStartString) {
+            monthCount++;
+          }
+        }
+
+        if (tsDateString == todayString) {
+          todayCount++;
+        } else if (e.gateOutTimestamp != null) {
+          final outDateString =
+              DateFormat('yyyy-MM-dd').format(e.gateOutTimestamp!.toLocal());
+          if (outDateString == todayString) {
+            todayCount++;
+          }
         }
       }
     }
@@ -121,6 +136,18 @@ class DashboardController extends AsyncNotifier<DashboardMetrics> {
       pendingGrnAgingMoreThan3: agingMoreThan3,
       recentActivity: recentActivity,
     );
+  }
+
+  bool _hasGateEntrySummary(GateEntrySummary? summary) {
+    if (summary == null) return false;
+    return summary.total > 0 ||
+        summary.gateIn > 0 ||
+        summary.gateOut > 0 ||
+        summary.gatedOut > 0 ||
+        summary.today > 0 ||
+        summary.yesterday > 0 ||
+        summary.thisWeek > 0 ||
+        summary.thisMonth > 0;
   }
 
   bool _isPendingForAging(String status) {
