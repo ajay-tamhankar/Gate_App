@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_client.dart';
+import '../../../core/network/pagination_model.dart';
 import '../../../core/network/dio_provider.dart';
+import '../../gate_entry/domain/models/gate_entry_summary.dart';
 import '../domain/models/report_models.dart';
 import '../domain/models/exception_report_item.dart';
 
@@ -17,6 +19,8 @@ class ReportsRepository {
   Map<String, dynamic> _buildQuery(
     ReportFilter filter, {
     bool includeLimit = true,
+    int? page,
+    int? limit,
     String? q,
     String? period,
     String? sortBy,
@@ -28,7 +32,12 @@ class ReportsRepository {
   }) {
     final query = <String, dynamic>{};
     if (includeLimit) {
-      query['limit'] = 100000;
+      query['limit'] = limit ?? 100000;
+    } else if (limit != null) {
+      query['limit'] = limit;
+    }
+    if (page != null) {
+      query['page'] = page;
     }
     if (filter.startDate != null) {
       query['dateFrom'] = filter.startDate!.toIso8601String();
@@ -203,6 +212,126 @@ class ReportsRepository {
         status: status,
       );
     }).toList();
+  }
+
+  Future<GateEntryReportPage> getGateEntryRegisterPage(
+    ReportFilter filter, {
+    String? q,
+    String? period,
+    String? sortBy,
+    String? sortOrder,
+    String? status,
+    String? challan,
+    String? vendor,
+    String? po,
+    int? page,
+    int? limit,
+  }) async {
+    final response = await _apiClient.getRaw(
+      '/gate-entries',
+      queryParameters: _buildQuery(
+        filter,
+        includeLimit: false,
+        page: page,
+        limit: limit == null ? null : (limit > 100 ? 100 : limit),
+        q: q,
+        period: period,
+        sortBy: sortBy,
+        sortOrder: sortOrder,
+        status: status,
+        challan: challan,
+        vendor: vendor,
+        po: po,
+      ),
+    );
+
+    final success = response['success'] as bool? ?? false;
+    if (!success) return const GateEntryReportPage();
+    final list = _extractList(response);
+    final items = list.map((e) {
+      final map = e as Map<String, dynamic>;
+      final items = map['items'];
+      final itemList = items is List ? items : const [];
+      final gateEntryNo = (map['gateEntryNo'] ?? map['gate_entry_no'] ?? '')
+          .toString();
+      final directionRaw =
+          (map['gateMovement'] ?? map['gate_movement'] ?? '').toString();
+      final challanNo =
+          (map['challanNo'] ?? map['challan_no'] ?? map['invoiceNo'] ?? '')
+              .toString();
+      final lrNo = (map['lrNumber'] ?? map['lr_number'] ?? '').toString();
+      final dateRaw =
+          map['gateTimestamp'] ?? map['entryTime'] ?? map['createdAt'];
+      final date = DateTime.tryParse(dateRaw?.toString() ?? '') ??
+          DateTime.now();
+      final gateOutRaw = map['gateOutTimestamp'] ??
+          map['gate_out_timestamp'] ??
+          map['gateOutTime'];
+      final gateOutDate = DateTime.tryParse(gateOutRaw?.toString() ?? '');
+      final isExited = gateOutDate != null;
+      final direction = isExited ||
+              directionRaw == 'out' ||
+              directionRaw == 'outMovement'
+          ? 'Gate Out'
+          : 'Gate In';
+      final vendor = (map['vendorName'] ?? map['vendor'] ?? '').toString();
+      final vendorCode =
+          (map['vendorCode'] ?? map['vendor_code'] ?? '').toString();
+      final poNumber =
+          (map['poNumber'] ?? map['po_number'] ?? '').toString();
+      final vehicleNo =
+          (map['vehicleNo'] ?? map['vehicleNumber'] ?? '').toString();
+      final material = itemList.isNotEmpty
+          ? ((itemList.first as Map<String, dynamic>)['materialCode'] ??
+                  (itemList.first as Map<String, dynamic>)['material'] ??
+                  '')
+              .toString()
+          : (map['materialCode'] ?? map['material'] ?? '').toString();
+      final qty = itemList.isNotEmpty
+          ? itemList.fold<int>(0, (sum, item) {
+              final itemMap = item as Map<String, dynamic>;
+              final value = itemMap['challanQty'] ?? itemMap['challan_qty'] ?? 0;
+              return sum + ((value is num) ? value.toInt() : 0);
+            })
+          : ((map['qty'] ?? map['quantity'] ?? 0) is num
+              ? (map['qty'] ?? map['quantity'] ?? 0) as num
+              : 0)
+                  .toInt();
+      final transporter =
+          (map['transporterName'] ?? map['transporter'] ?? '').toString();
+      final status =
+          (map['statusLabel'] ?? map['status'] ?? 'Pending').toString();
+
+      return GateEntryReportItem(
+        gateEntryNo: gateEntryNo,
+        direction: direction,
+        challanNo: challanNo,
+        lrNo: lrNo,
+        date: date,
+        gateOutDate: gateOutDate,
+        material: material,
+        qty: qty,
+        vendor: vendor,
+        vendorCode: vendorCode,
+        transporter: transporter,
+        vehicleNo: vehicleNo,
+        poNumber: poNumber,
+        status: status,
+      );
+    }).toList();
+
+    final summaryJson = response['summary'] as Map<String, dynamic>?;
+    final paginationJson = response['pagination'] as Map<String, dynamic>?;
+
+    return GateEntryReportPage(
+      items: items,
+      summary: summaryJson == null
+          ? const GateEntrySummary()
+          : GateEntrySummary.fromJson(summaryJson),
+      pagination: paginationJson == null
+          ? null
+          : PaginationModel.fromJson(paginationJson),
+    );
   }
 
   Future<List<GrnReconReportItem>> getGrnReconReport(

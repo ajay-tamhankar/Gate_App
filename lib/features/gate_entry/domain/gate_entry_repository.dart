@@ -1,4 +1,4 @@
-import '../../../../core/network/api_response.dart';
+import '../../../core/network/api_response.dart';
 import '../data/dto/create_gate_entry_request.dart';
 import '../data/dto/check_challan_uniqueness_response.dart';
 import 'models/attachment.dart';

@@ -10,6 +10,7 @@ import '../domain/models/gate_entry.dart';
 import '../domain/models/gate_entry_item.dart';
 import '../domain/models/gate_entry_list_response.dart';
 import '../domain/models/gate_entry_query.dart';
+import '../domain/models/gate_entry_summary.dart';
 import '../domain/models/vendor.dart';
 import 'dto/create_gate_entry_request.dart';
 import 'dto/gate_entry_response.dart';
@@ -83,11 +84,19 @@ class GateEntryRepositoryImpl implements GateEntryRepository {
         final pagination = paginationJson == null
             ? null
             : PaginationModel.fromJson(paginationJson);
+        final summaryJson = response['summary'] as Map<String, dynamic>?;
+        final summary = summaryJson == null
+            ? const GateEntrySummary()
+            : GateEntrySummary.fromJson(summaryJson);
 
         return ApiResponse<GateEntryListResponse>(
           success: true,
           message: message,
-          data: GateEntryListResponse(items: items, pagination: pagination),
+          data: GateEntryListResponse(
+            items: items,
+            summary: summary,
+            pagination: pagination,
+          ),
         );
       }
 

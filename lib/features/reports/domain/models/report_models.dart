@@ -1,4 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import '../../../../core/network/pagination_model.dart';
+import '../../../gate_entry/domain/models/gate_entry_summary.dart';
 
 part 'report_models.freezed.dart';
 part 'report_models.g.dart';
@@ -152,4 +154,16 @@ class AuditTrailReportItem with _$AuditTrailReportItem {
 
   factory AuditTrailReportItem.fromJson(Map<String, dynamic> json) =>
       _$AuditTrailReportItemFromJson(json);
+}
+
+class GateEntryReportPage {
+  const GateEntryReportPage({
+    this.items = const [],
+    this.summary = const GateEntrySummary(),
+    this.pagination,
+  });
+
+  final List<GateEntryReportItem> items;
+  final GateEntrySummary summary;
+  final PaginationModel? pagination;
 }

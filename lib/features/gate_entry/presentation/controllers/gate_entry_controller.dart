@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/models/gate_entry.dart';
+import '../../domain/models/gate_entry_summary.dart';
 import '../../domain/models/gate_entry_query.dart';
 import '../../domain/usecases/get_gate_entries_usecase.dart';
 import '../../domain/usecases/create_gate_entry_usecase.dart';
@@ -7,6 +8,7 @@ import '../../domain/usecases/gate_entry_actions_usecase.dart';
 import '../../domain/usecases/gate_out_usecase.dart';
 import '../../data/dto/create_gate_entry_request.dart';
 import '../../../../core/network/api_response.dart';
+import '../../../../core/network/pagination_model.dart';
 import '../../../dashboard/presentation/controllers/dashboard_controller.dart';
 
 const _queryNotProvided = Object();
@@ -15,14 +17,16 @@ class GateEntryState {
   final bool isLoading;
   final String? error;
   final List<GateEntry> entries;
-  final List<GateEntry> allEntries;
+  final GateEntrySummary summary;
+  final PaginationModel? pagination;
   final GateEntryQuery? activeQuery;
 
   GateEntryState({
     this.isLoading = false,
     this.error,
     this.entries = const [],
-    this.allEntries = const [],
+    this.summary = const GateEntrySummary(),
+    this.pagination,
     this.activeQuery,
   });
 
@@ -30,14 +34,18 @@ class GateEntryState {
     bool? isLoading,
     String? error,
     List<GateEntry>? entries,
-    List<GateEntry>? allEntries,
+    GateEntrySummary? summary,
+    Object? pagination = _queryNotProvided,
     Object? activeQuery = _queryNotProvided,
   }) {
     return GateEntryState(
       isLoading: isLoading ?? this.isLoading,
       error: error,
       entries: entries ?? this.entries,
-      allEntries: allEntries ?? this.allEntries,
+      summary: summary ?? this.summary,
+      pagination: identical(pagination, _queryNotProvided)
+          ? this.pagination
+          : pagination as PaginationModel?,
       activeQuery: identical(activeQuery, _queryNotProvided)
           ? this.activeQuery
           : activeQuery as GateEntryQuery?,
@@ -86,53 +94,39 @@ class GateEntryController extends StateNotifier<GateEntryState> {
 
   Future<void> fetchEntries(
       {Object? query = _queryNotProvided,
-      bool refresh = false,
-      bool syncAllEntries = false}) async {
-    if (state.isLoading) return;
-
-    final effectiveQuery = identical(query, _queryNotProvided)
+      int? page,
+      int? limit,
+      bool? usePagination,
+      bool refresh = false}) async {
+    final baseQuery = identical(query, _queryNotProvided)
         ? state.activeQuery
         : query as GateEntryQuery?;
-    final shouldSyncAllEntries =
-        refresh || syncAllEntries || state.allEntries.isEmpty;
+    final shouldPaginate = usePagination ??
+        page != null ||
+        limit != null ||
+        state.pagination != null ||
+        baseQuery?.page != null ||
+        baseQuery?.limit != null;
+    final effectiveQuery = shouldPaginate
+        ? (baseQuery ?? const GateEntryQuery()).copyWith(
+            page: refresh ? 1 : (page ?? baseQuery?.page ?? state.pagination?.page ?? 1),
+            limit: _normalizeLimit(limit ?? baseQuery?.limit ?? state.pagination?.limit ?? 20),
+          )
+        : (baseQuery ?? const GateEntryQuery()).copyWith(
+            page: null,
+            limit: null,
+          );
 
     state = state.copyWith(isLoading: true, error: null);
-
-    List<GateEntry>? refreshedAllEntries;
-    if (shouldSyncAllEntries) {
-      final allResponse = await _getGateEntriesUseCase.execute();
-      if (allResponse.success && allResponse.data != null) {
-        refreshedAllEntries = allResponse.data!.items;
-      } else if (effectiveQuery == null) {
-        state = state.copyWith(
-          isLoading: false,
-          error: allResponse.message,
-        );
-        return;
-      }
-    }
-
-    if (effectiveQuery == null && refreshedAllEntries != null) {
-      state = state.copyWith(
-        isLoading: false,
-        entries: refreshedAllEntries,
-        allEntries: refreshedAllEntries,
-        activeQuery: null,
-      );
-      return;
-    }
 
     final response = await _getGateEntriesUseCase.execute(query: effectiveQuery);
 
     if (response.success && response.data != null) {
-      final nextEntries = response.data!.items;
-      final nextAllEntries = refreshedAllEntries ??
-          (effectiveQuery == null ? nextEntries : state.allEntries);
-
       state = state.copyWith(
         isLoading: false,
-        entries: nextEntries,
-        allEntries: nextAllEntries,
+        entries: response.data!.items,
+        summary: response.data!.summary,
+        pagination: response.data!.pagination,
         activeQuery: effectiveQuery,
       );
     } else {
@@ -144,11 +138,7 @@ class GateEntryController extends StateNotifier<GateEntryState> {
   }
 
   void showAllEntries() {
-    state = state.copyWith(
-      entries: state.allEntries.isNotEmpty ? state.allEntries : state.entries,
-      activeQuery: null,
-      error: null,
-    );
+    fetchEntries(query: null, usePagination: false);
   }
 
   Future<GateEntry?> createEntry(CreateGateEntryRequest request) async {
@@ -157,11 +147,7 @@ class GateEntryController extends StateNotifier<GateEntryState> {
     final response = await _createGateEntryUseCase.execute(request);
 
     if (response.success && response.data != null) {
-      // Prepend to current list
-      state = state.copyWith(
-        isLoading: false,
-        entries: [response.data!, ...state.entries],
-      );
+      await fetchEntries(refresh: true);
       _ref.invalidate(dashboardControllerProvider);
       return response.data!;
     } else {
@@ -172,16 +158,16 @@ class GateEntryController extends StateNotifier<GateEntryState> {
 
   Future<bool> verifyEntry(String id) async {
     return _handleActionVoid(
-        _verifyGateEntryUseCase.execute(id), id, 'verification_pending');
+        _verifyGateEntryUseCase.execute(id), id);
   }
 
   Future<bool> approveEntry(String id) async {
     return _handleActionVoid(
-        _approveGateEntryUseCase.execute(id), id, 'approved');
+        _approveGateEntryUseCase.execute(id), id);
   }
 
   Future<bool> closeEntry(String id) async {
-    return _handleActionVoid(_closeGateEntryUseCase.execute(id), id, 'closed');
+    return _handleActionVoid(_closeGateEntryUseCase.execute(id), id);
   }
 
   Future<bool> gateOutEntry(String id, {String? remarks}) async {
@@ -199,7 +185,7 @@ class GateEntryController extends StateNotifier<GateEntryState> {
   }
 
   Future<bool> _handleActionVoid(
-      Future<ApiResponse<void>> action, String id, String newMockStatus) async {
+      Future<ApiResponse<void>> action, String id) async {
     state = state.copyWith(isLoading: true, error: null);
     final response = await action;
 
@@ -213,5 +199,11 @@ class GateEntryController extends StateNotifier<GateEntryState> {
       state = state.copyWith(isLoading: false, error: response.message);
       return false;
     }
+  }
+
+  int _normalizeLimit(int value) {
+    if (value < 1) return 20;
+    if (value > 100) return 100;
+    return value;
   }
 }

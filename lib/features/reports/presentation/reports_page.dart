@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/network/pagination_model.dart';
 import '../../../core/ui/responsive.dart';
 import '../../../core/ui/widgets/status_chip.dart';
 import '../../../core/ui/widgets/logout_action.dart';
+import '../../gate_entry/domain/models/gate_entry_summary.dart';
 import '../data/reports_repository_impl.dart';
 import '../domain/models/report_models.dart';
 import '../domain/models/exception_report_item.dart';
@@ -16,6 +18,8 @@ class _ReportQuery {
   final DateTime? endDate;
   final String? search;
   final String? gateEntryPeriod;
+  final int? gateEntryPage;
+  final int? gateEntryLimit;
 
   const _ReportQuery({
     required this.reportType,
@@ -23,6 +27,8 @@ class _ReportQuery {
     required this.endDate,
     required this.search,
     required this.gateEntryPeriod,
+    required this.gateEntryPage,
+    required this.gateEntryLimit,
   });
 
   @override
@@ -32,7 +38,9 @@ class _ReportQuery {
         _dtKey(startDate) == _dtKey(other.startDate) &&
         _dtKey(endDate) == _dtKey(other.endDate) &&
         search == other.search &&
-        gateEntryPeriod == other.gateEntryPeriod;
+        gateEntryPeriod == other.gateEntryPeriod &&
+        gateEntryPage == other.gateEntryPage &&
+        gateEntryLimit == other.gateEntryLimit;
   }
 
   @override
@@ -42,6 +50,8 @@ class _ReportQuery {
         _dtKey(endDate),
         search,
         gateEntryPeriod,
+        gateEntryPage,
+        gateEntryLimit,
       );
 
   String? _dtKey(DateTime? value) => value?.toIso8601String();
@@ -49,11 +59,15 @@ class _ReportQuery {
 
 class _ReportPreviewData {
   final List<GateEntryReportItem> gateEntries;
+  final GateEntrySummary gateEntrySummary;
+  final PaginationModel? gateEntryPagination;
   final List<GrnReconReportItem> grnRecons;
   final List<ExceptionReportItem> exceptions;
 
   const _ReportPreviewData({
     this.gateEntries = const [],
+    this.gateEntrySummary = const GateEntrySummary(),
+    this.gateEntryPagination,
     this.grnRecons = const [],
     this.exceptions = const [],
   });
@@ -82,12 +96,18 @@ final reportsPreviewProvider =
     final search = query.search;
 
     if (query.reportType == 'Gate Entry Register') {
-      final data = await repo.getGateEntryRegister(
+      final data = await repo.getGateEntryRegisterPage(
         filter,
         q: search,
         period: query.gateEntryPeriod,
+        page: query.gateEntryPage,
+        limit: query.gateEntryLimit,
       );
-      return _ReportPreviewData(gateEntries: data);
+      return _ReportPreviewData(
+        gateEntries: data.items,
+        gateEntrySummary: data.summary,
+        gateEntryPagination: data.pagination,
+      );
     }
     if (query.reportType == 'GRN Reconciliation Report') {
       final data = await repo.getGrnReconReport(filter);
@@ -130,6 +150,7 @@ class ReportsPage extends ConsumerStatefulWidget {
 }
 
 class _ReportsPageState extends ConsumerState<ReportsPage> {
+  static const List<int> _pageSizeOptions = [20, 50, 100];
   static const String _reportAllFilter = 'All';
   static const String _gateInFilter = 'Gate In';
   static const String _gateOutFilter = 'Gate Out';
@@ -141,6 +162,8 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
   final _exportService = ReportExportService();
   String _selectedReport = 'Gate Entry Register';
   String _gateEntryCardFilter = _reportAllFilter;
+  int? _gateEntryPage;
+  int? _gateEntryLimit;
 
   // Filters
   DateTime? _startDate;
@@ -168,6 +191,10 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
 
   DateTime _dateOnly(DateTime value) =>
       DateTime(value.year, value.month, value.day);
+
+  void _resetGateEntryPaging() {
+    _gateEntryPage = _gateEntryLimit == null ? null : 1;
+  }
 
   bool _isGateEntryOnDate(
     GateEntryReportItem item,
@@ -234,6 +261,8 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
     }
     return _ReportPreviewData(
       gateEntries: _applyGateEntryLocalFilter(data.gateEntries),
+      gateEntrySummary: data.gateEntrySummary,
+      gateEntryPagination: data.gateEntryPagination,
     );
   }
 
@@ -439,6 +468,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
       setState(() {
         _startDate = picked.start;
         _endDate = picked.end;
+        _resetGateEntryPaging();
       });
     }
   }
@@ -461,6 +491,8 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
       search: search.isEmpty ? null : search,
       gateEntryPeriod:
           _usesServerPeriod() ? _periodForGateEntryFilter() : null,
+      gateEntryPage: _gateEntryPage,
+      gateEntryLimit: _gateEntryLimit,
     );
     final previewAsync = ref.watch(reportsPreviewProvider(query));
 
@@ -527,6 +559,10 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                         ),
                       ),
                     ),
+                    if (_selectedReport == 'Gate Entry Register') ...[
+                      const SizedBox(height: 12),
+                      _buildGateEntryPagination(context, isMob, effectiveData),
+                    ],
                   ],
                 );
               },
@@ -582,14 +618,17 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                           'Search vendor / PO / challan / gate no',
                           Icons.search,
                         ),
-                        onChanged: (_) => setState(() {}),
+                        onChanged: (_) => setState(_resetGateEntryPaging),
                       ),
                     ),
                     const SizedBox(width: 8),
                     SizedBox(
                       width: tiny ? 46 : 86,
                       child: OutlinedButton(
-                        onPressed: () => setState(() => _searchController.clear()),
+                        onPressed: () => setState(() {
+                          _searchController.clear();
+                          _resetGateEntryPaging();
+                        }),
                         style: OutlinedButton.styleFrom(
                           padding: EdgeInsets.symmetric(
                             horizontal: tiny ? 8 : 10,
@@ -632,6 +671,8 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                           setState(() {
                             _selectedReport = val;
                             _gateEntryCardFilter = _reportAllFilter;
+                            _gateEntryPage = null;
+                            _gateEntryLimit = null;
                           });
                         },
                       ),
@@ -726,6 +767,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
           onDeleted: () => setState(() {
             _startDate = null;
             _endDate = null;
+            _resetGateEntryPaging();
           }),
         ),
       );
@@ -734,7 +776,10 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
       chips.add(
         InputChip(
           label: Text('Search: ${_searchController.text.trim()}'),
-          onDeleted: () => setState(_searchController.clear),
+          onDeleted: () => setState(() {
+            _searchController.clear();
+            _resetGateEntryPaging();
+          }),
         ),
       );
     }
@@ -786,105 +831,99 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
     final tiles = <Widget>[];
 
     if (_selectedReport == 'Gate Entry Register') {
-      final items = data.gateEntries;
-      final now = DateTime.now();
-      final today = _dateOnly(now);
-      final yesterday = today.subtract(const Duration(days: 1));
-      final weekStart = today.subtract(Duration(days: today.weekday - 1));
-      final monthStart = DateTime(today.year, today.month, 1);
-      final tomorrow = today.add(const Duration(days: 1));
-      final nextMonth = today.month == 12
-          ? DateTime(today.year + 1, 1, 1)
-          : DateTime(today.year, today.month + 1, 1);
-
-      final total = items.length;
-      final gateIn = items.where(_isGateEntryGateIn).length;
-      final gateOut = items.where(_isGateEntryGateOut).length;
-      final todayCount = items
-          .where((e) => _isGateEntryOnDate(e, today, includeExit: true))
-          .length;
-      final yesterdayCount = items
-          .where((e) => _isGateEntryOnDate(e, yesterday, includeExit: true))
-          .length;
-      final thisWeekCount = items.where((e) {
-        final ts = e.date.toLocal();
-        return !ts.isBefore(weekStart) && ts.isBefore(tomorrow);
-      }).length;
-      final thisMonthCount = items.where((e) {
-        final ts = e.date.toLocal();
-        return !ts.isBefore(monthStart) && ts.isBefore(nextMonth);
-      }).length;
+      final summary = data.gateEntrySummary;
 
       final cards = [
         _gateEntryFilterCard(
           context,
           title: _gateInFilter,
-          value: '$gateIn',
+          value: '${summary.gateIn}',
           subtitle: 'Incoming',
           icon: Icons.login,
           accent: Colors.indigo,
           isSelected: _gateEntryCardFilter == _gateInFilter,
-          onTap: () => setState(() => _gateEntryCardFilter = _gateInFilter),
+          onTap: () => setState(() {
+            _gateEntryCardFilter = _gateInFilter;
+            _resetGateEntryPaging();
+          }),
         ),
         _gateEntryFilterCard(
           context,
           title: _gateOutFilter,
-          value: '$gateOut',
+          value: '${summary.gateOut}',
           subtitle: 'Outgoing',
           icon: Icons.logout,
           accent: Colors.deepOrange,
           isSelected: _gateEntryCardFilter == _gateOutFilter,
-          onTap: () => setState(() => _gateEntryCardFilter = _gateOutFilter),
+          onTap: () => setState(() {
+            _gateEntryCardFilter = _gateOutFilter;
+            _resetGateEntryPaging();
+          }),
         ),
         _gateEntryFilterCard(
           context,
           title: 'Total',
-          value: '$total',
+          value: '${summary.total}',
           subtitle: 'All entries',
           icon: Icons.dashboard_customize,
           accent: Colors.blueGrey,
           isSelected: _gateEntryCardFilter == _reportAllFilter,
-          onTap: () => setState(() => _gateEntryCardFilter = _reportAllFilter),
+          onTap: () => setState(() {
+            _gateEntryCardFilter = _reportAllFilter;
+            _resetGateEntryPaging();
+          }),
         ),
         _gateEntryFilterCard(
           context,
           title: _todayFilter,
-          value: '$todayCount',
+          value: '${summary.today}',
           subtitle: 'Entries today',
           icon: Icons.today,
           accent: Colors.teal,
           isSelected: _gateEntryCardFilter == _todayFilter,
-          onTap: () => setState(() => _gateEntryCardFilter = _todayFilter),
+          onTap: () => setState(() {
+            _gateEntryCardFilter = _todayFilter;
+            _resetGateEntryPaging();
+          }),
         ),
         _gateEntryFilterCard(
           context,
           title: _yesterdayFilter,
-          value: '$yesterdayCount',
+          value: '${summary.yesterday}',
           subtitle: 'Yesterday',
           icon: Icons.history,
           accent: Colors.purple,
           isSelected: _gateEntryCardFilter == _yesterdayFilter,
-          onTap: () => setState(() => _gateEntryCardFilter = _yesterdayFilter),
+          onTap: () => setState(() {
+            _gateEntryCardFilter = _yesterdayFilter;
+            _resetGateEntryPaging();
+          }),
         ),
         _gateEntryFilterCard(
           context,
           title: _thisWeekFilter,
-          value: '$thisWeekCount',
+          value: '${summary.thisWeek}',
           subtitle: 'This week',
           icon: Icons.view_week,
           accent: Colors.cyan,
           isSelected: _gateEntryCardFilter == _thisWeekFilter,
-          onTap: () => setState(() => _gateEntryCardFilter = _thisWeekFilter),
+          onTap: () => setState(() {
+            _gateEntryCardFilter = _thisWeekFilter;
+            _resetGateEntryPaging();
+          }),
         ),
         _gateEntryFilterCard(
           context,
           title: _thisMonthFilter,
-          value: '$thisMonthCount',
+          value: '${summary.thisMonth}',
           subtitle: 'This month',
           icon: Icons.calendar_month,
           accent: Colors.amber.shade800,
           isSelected: _gateEntryCardFilter == _thisMonthFilter,
-          onTap: () => setState(() => _gateEntryCardFilter = _thisMonthFilter),
+          onTap: () => setState(() {
+            _gateEntryCardFilter = _thisMonthFilter;
+            _resetGateEntryPaging();
+          }),
         ),
       ];
 
@@ -977,6 +1016,162 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
             ),
           )
           .toList(),
+    );
+  }
+
+  Widget _buildGateEntryPagination(
+    BuildContext context,
+    bool isMob,
+    _ReportPreviewData data,
+  ) {
+    final pagination = data.gateEntryPagination;
+    final visibleCount = data.gateEntries.length;
+    final total = pagination?.total ??
+        (data.gateEntrySummary.total > 0
+            ? data.gateEntrySummary.total
+            : data.gateEntries.length);
+    final from = pagination == null
+        ? (visibleCount == 0 ? 0 : 1)
+        : (pagination.total == 0 ? 0 : ((pagination.page - 1) * pagination.limit) + 1);
+    final to = pagination == null
+        ? visibleCount
+        : (pagination.total == 0
+            ? 0
+            : (((pagination.page - 1) * pagination.limit) + visibleCount)
+                .clamp(0, pagination.total));
+    final pageSizeValue = _pageSizeOptions.contains(pagination?.limit)
+        ? pagination!.limit
+        : _pageSizeOptions.first;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Theme.of(context)
+              .colorScheme
+              .outlineVariant
+              .withValues(alpha: 0.5),
+        ),
+      ),
+      child: isMob
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  pagination == null
+                      ? 'Showing all $visibleCount of $total'
+                      : 'Showing $from-$to of ${pagination.total}',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<int>(
+                  initialValue: pageSizeValue,
+                  decoration: InputDecoration(
+                    labelText: 'Per page',
+                    isDense: true,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  items: _pageSizeOptions
+                      .map(
+                        (size) => DropdownMenuItem<int>(
+                          value: size,
+                          child: Text('$size'),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    if (value == null) return;
+                    setState(() {
+                      _gateEntryLimit = value;
+                      _gateEntryPage = 1;
+                    });
+                  },
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: pagination != null && pagination.hasPrev
+                            ? () => setState(() => _gateEntryPage = pagination.page - 1)
+                            : null,
+                        icon: const Icon(Icons.chevron_left),
+                        label: const Text('Previous'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: pagination != null && pagination.hasNext
+                            ? () => setState(() => _gateEntryPage = pagination.page + 1)
+                            : null,
+                        icon: const Icon(Icons.chevron_right),
+                        label: const Text('Next'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            )
+          : Row(
+              children: [
+                Text(
+                  pagination == null
+                      ? 'Showing all $visibleCount of $total'
+                      : 'Showing $from-$to of ${pagination.total}',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const Spacer(),
+                SizedBox(
+                  width: 140,
+                  child: DropdownButtonFormField<int>(
+                    initialValue: pageSizeValue,
+                    decoration: InputDecoration(
+                      labelText: 'Per page',
+                      isDense: true,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    items: _pageSizeOptions
+                        .map(
+                          (size) => DropdownMenuItem<int>(
+                            value: size,
+                            child: Text('$size'),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      if (value == null) return;
+                      setState(() {
+                        _gateEntryLimit = value;
+                        _gateEntryPage = 1;
+                      });
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                OutlinedButton.icon(
+                  onPressed: pagination != null && pagination.hasPrev
+                      ? () => setState(() => _gateEntryPage = pagination.page - 1)
+                      : null,
+                  icon: const Icon(Icons.chevron_left),
+                  label: const Text('Previous'),
+                ),
+                const SizedBox(width: 8),
+                FilledButton.icon(
+                  onPressed: pagination != null && pagination.hasNext
+                      ? () => setState(() => _gateEntryPage = pagination.page + 1)
+                      : null,
+                  icon: const Icon(Icons.chevron_right),
+                  label: const Text('Next'),
+                ),
+              ],
+            ),
     );
   }
 

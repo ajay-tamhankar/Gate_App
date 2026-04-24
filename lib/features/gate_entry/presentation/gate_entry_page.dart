@@ -12,6 +12,7 @@ import '../../../core/ui/widgets/logout_action.dart';
 import '../../../core/ui/widgets/skeleton_loader.dart';
 import '../domain/models/gate_entry.dart';
 import '../domain/models/gate_entry_query.dart';
+import '../domain/models/gate_entry_summary.dart';
 import 'controllers/gate_entry_controller.dart';
 import 'gate_entry_detail_page.dart';
 import 'gate_entry_form_page.dart';
@@ -45,6 +46,7 @@ class _GateEntrySecurityView extends ConsumerStatefulWidget {
 }
 
 class _GateEntrySecurityViewState extends ConsumerState<_GateEntrySecurityView> {
+  static const List<int> _pageSizeOptions = [20, 50, 100];
   static const String _allFilter = 'All';
   static const String _gateInFilter = 'Gate In';
   static const String _gateOutFilter = 'Gate Out';
@@ -165,8 +167,13 @@ class _GateEntrySecurityViewState extends ConsumerState<_GateEntrySecurityView> 
     setState(() => _statusFilter = filter);
 
     final controller = ref.read(gateEntryControllerProvider.notifier);
+    final gateEntryState = ref.read(gateEntryControllerProvider);
     if (_usesServerPeriod(filter)) {
-      await controller.fetchEntries(query: _queryForFilter(filter));
+      await controller.fetchEntries(
+        query: _queryForFilter(filter),
+        page: 1,
+        usePagination: gateEntryState.pagination != null,
+      );
       return;
     }
 
@@ -181,12 +188,8 @@ class _GateEntrySecurityViewState extends ConsumerState<_GateEntrySecurityView> 
     final canCreate = role == UserRole.gateSecurity;
     final isMob = isMobile(context);
     final isTab = isTablet(context);
-    final baselineEntries =
-        state.allEntries.isNotEmpty ? state.allEntries : state.entries;
-    final sourceEntries = _usesServerPeriod(_statusFilter)
-        ? state.entries
-        : baselineEntries;
-    final filtered = _applyFilters(sourceEntries);
+    final filtered = _applyFilters(state.entries);
+    final bottomActionClearance = canCreate ? (isMob ? 112.0 : 128.0) : 24.0;
 
     return Scaffold(
       appBar: AppBar(
@@ -235,14 +238,16 @@ class _GateEntrySecurityViewState extends ConsumerState<_GateEntrySecurityView> 
                           width: contentWidth,
                           child: ListView(
                             physics: const AlwaysScrollableScrollPhysics(),
-                            padding: EdgeInsets.symmetric(
-                              horizontal: isMob ? 16 : 24,
-                              vertical: isMob ? 16 : 24,
+                            padding: EdgeInsets.fromLTRB(
+                              isMob ? 16 : 24,
+                              isMob ? 16 : 24,
+                              isMob ? 16 : 24,
+                              bottomActionClearance,
                             ),
                             children: [
                               _buildSummarySection(
                                 context,
-                                baselineEntries,
+                                state.summary,
                                 isMob,
                                 isTab,
                               ),
@@ -258,6 +263,14 @@ class _GateEntrySecurityViewState extends ConsumerState<_GateEntrySecurityView> 
                                   : isMob
                                       ? _buildMobileList(filtered)
                                       : _buildDesktopTable(filtered, isTab),
+                              const SizedBox(height: 16),
+                              _buildPaginationSection(
+                                context,
+                                state,
+                                filtered.length,
+                                isMob,
+                              ),
+                              SizedBox(height: canCreate ? 16 : 0),
                             ],
                           ),
                         ),
@@ -330,42 +343,15 @@ class _GateEntrySecurityViewState extends ConsumerState<_GateEntrySecurityView> 
 
   Widget _buildSummarySection(
     BuildContext context,
-    List<GateEntry> all,
+    GateEntrySummary summary,
     bool isMob,
     bool isTab,
   ) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final yesterday = today.subtract(const Duration(days: 1));
-    final weekStart = today.subtract(Duration(days: today.weekday - 1));
-    final monthStart = DateTime(today.year, today.month, 1);
-    final tomorrow = today.add(const Duration(days: 1));
-    final nextMonth =
-        today.month == 12 ? DateTime(today.year + 1, 1, 1) : DateTime(today.year, today.month + 1, 1);
-
-    final gateInCount = all
-        .where((e) =>
-            e.gateMovement == GateMovement.inMovement &&
-            e.gateOutTimestamp == null)
-        .length;
-    final gateOutCount = all.length - gateInCount;
-    final totalCount = all.length;
-    final todayCount = all.where((e) => _isOnDate(e, today, includeExit: true)).length;
-    final yesterdayCount = all.where((e) => _isOnDate(e, yesterday, includeExit: true)).length;
-    final thisWeekCount = all.where((e) {
-      final t = e.gateTimestamp?.toLocal();
-      return t != null && !t.isBefore(weekStart) && t.isBefore(tomorrow);
-    }).length;
-    final thisMonthCount = all.where((e) {
-      final t = e.gateTimestamp?.toLocal();
-      return t != null && !t.isBefore(monthStart) && t.isBefore(nextMonth);
-    }).length;
-
     final cards = [
       _summaryCard(
         context,
         title: _gateInFilter,
-        value: '$gateInCount',
+        value: '${summary.gateIn}',
         subtitle: 'Incoming vehicles',
         icon: Icons.login,
         accent: Colors.indigo,
@@ -375,7 +361,7 @@ class _GateEntrySecurityViewState extends ConsumerState<_GateEntrySecurityView> 
       _summaryCard(
         context,
         title: _gateOutFilter,
-        value: '$gateOutCount',
+        value: '${summary.gateOut}',
         subtitle: 'Outgoing vehicles',
         icon: Icons.logout,
         accent: Colors.deepOrange,
@@ -385,7 +371,7 @@ class _GateEntrySecurityViewState extends ConsumerState<_GateEntrySecurityView> 
       _summaryCard(
         context,
         title: 'Total',
-        value: '$totalCount',
+        value: '${summary.total}',
         subtitle: 'All gate entries',
         icon: Icons.dashboard_customize,
         accent: Colors.blueGrey,
@@ -395,7 +381,7 @@ class _GateEntrySecurityViewState extends ConsumerState<_GateEntrySecurityView> 
       _summaryCard(
         context,
         title: _todayFilter,
-        value: '$todayCount',
+        value: '${summary.today}',
         subtitle: 'Entries today',
         icon: Icons.today,
         accent: Colors.teal,
@@ -405,7 +391,7 @@ class _GateEntrySecurityViewState extends ConsumerState<_GateEntrySecurityView> 
       _summaryCard(
         context,
         title: _yesterdayFilter,
-        value: '$yesterdayCount',
+        value: '${summary.yesterday}',
         subtitle: 'Entries yesterday',
         icon: Icons.history,
         accent: Colors.purple,
@@ -415,7 +401,7 @@ class _GateEntrySecurityViewState extends ConsumerState<_GateEntrySecurityView> 
       _summaryCard(
         context,
         title: _thisWeekFilter,
-        value: '$thisWeekCount',
+        value: '${summary.thisWeek}',
         subtitle: 'Entries this week',
         icon: Icons.view_week,
         accent: Colors.cyan,
@@ -425,7 +411,7 @@ class _GateEntrySecurityViewState extends ConsumerState<_GateEntrySecurityView> 
       _summaryCard(
         context,
         title: _thisMonthFilter,
-        value: '$thisMonthCount',
+        value: '${summary.thisMonth}',
         subtitle: 'Entries this month',
         icon: Icons.calendar_month,
         accent: Colors.amber.shade800,
@@ -534,6 +520,9 @@ class _GateEntrySecurityViewState extends ConsumerState<_GateEntrySecurityView> 
   }
 
   Widget _buildFilters(BuildContext context, int count, bool isMob) {
+    final pagination = ref.watch(gateEntryControllerProvider).pagination;
+    final total = pagination?.total ?? count;
+
     return FilterBar(
       trailing: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -542,7 +531,7 @@ class _GateEntrySecurityViewState extends ConsumerState<_GateEntrySecurityView> 
           borderRadius: BorderRadius.circular(12),
         ),
         child: Text(
-          '$count records',
+          '$count of $total records',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w600,
                 color: Theme.of(context).colorScheme.primary,
@@ -847,6 +836,172 @@ class _GateEntrySecurityViewState extends ConsumerState<_GateEntrySecurityView> 
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildPaginationSection(
+    BuildContext context,
+    GateEntryState state,
+    int visibleCount,
+    bool isMob,
+  ) {
+    final pagination = state.pagination;
+    final controller = ref.read(gateEntryControllerProvider.notifier);
+    final total = pagination?.total ??
+        (state.summary.total > 0 ? state.summary.total : state.entries.length);
+    final from = pagination == null
+        ? (visibleCount == 0 ? 0 : 1)
+        : (pagination.total == 0 ? 0 : ((pagination.page - 1) * pagination.limit) + 1);
+    final to = pagination == null
+        ? visibleCount
+        : (pagination.total == 0
+            ? 0
+            : (((pagination.page - 1) * pagination.limit) + visibleCount)
+                .clamp(0, pagination.total));
+
+    final statusText = pagination == null
+        ? 'Showing all $visibleCount of $total'
+        : (visibleCount == pagination.limit || visibleCount == 0
+            ? 'Showing $from-$to of ${pagination.total}'
+            : 'Showing $visibleCount filtered items on page ${pagination.page} of ${pagination.totalPages}');
+
+    final pageSizeValue = _pageSizeOptions.contains(pagination?.limit)
+        ? pagination!.limit
+        : _pageSizeOptions.first;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Theme.of(context)
+              .colorScheme
+              .outlineVariant
+              .withValues(alpha: 0.5),
+        ),
+      ),
+      child: isMob
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  statusText,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: DropdownButtonFormField<int>(
+                        initialValue: pageSizeValue,
+                        decoration: InputDecoration(
+                          labelText: 'Per page',
+                          isDense: true,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        items: _pageSizeOptions
+                            .map(
+                              (size) => DropdownMenuItem<int>(
+                                value: size,
+                                child: Text('$size'),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (value) {
+                          if (value == null) return;
+                          controller.fetchEntries(
+                            page: 1,
+                            limit: value,
+                            usePagination: true,
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: pagination != null && pagination.hasPrev
+                            ? () => controller.fetchEntries(page: pagination.page - 1)
+                            : null,
+                        icon: const Icon(Icons.chevron_left),
+                        label: const Text('Previous'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: pagination != null && pagination.hasNext
+                            ? () => controller.fetchEntries(page: pagination.page + 1)
+                            : null,
+                        icon: const Icon(Icons.chevron_right),
+                        label: const Text('Next'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            )
+          : Row(
+              children: [
+                Text(
+                  statusText,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const Spacer(),
+                SizedBox(
+                  width: 140,
+                  child: DropdownButtonFormField<int>(
+                    initialValue: pageSizeValue,
+                    decoration: InputDecoration(
+                      labelText: 'Per page',
+                      isDense: true,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    items: _pageSizeOptions
+                        .map(
+                          (size) => DropdownMenuItem<int>(
+                            value: size,
+                            child: Text('$size'),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      if (value == null) return;
+                      controller.fetchEntries(
+                        page: 1,
+                        limit: value,
+                        usePagination: true,
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                OutlinedButton.icon(
+                  onPressed: pagination != null && pagination.hasPrev
+                      ? () => controller.fetchEntries(page: pagination.page - 1)
+                      : null,
+                  icon: const Icon(Icons.chevron_left),
+                  label: const Text('Previous'),
+                ),
+                const SizedBox(width: 8),
+                FilledButton.icon(
+                  onPressed: pagination != null && pagination.hasNext
+                      ? () => controller.fetchEntries(page: pagination.page + 1)
+                      : null,
+                  icon: const Icon(Icons.chevron_right),
+                  label: const Text('Next'),
+                ),
+              ],
+            ),
     );
   }
 

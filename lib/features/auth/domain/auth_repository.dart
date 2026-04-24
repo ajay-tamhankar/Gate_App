@@ -1,4 +1,4 @@
-import '../../../../core/network/api_response.dart';
+import '../../../core/network/api_response.dart';
 import '../data/dto/login_request.dart';
 import 'models/auth_result.dart';
 import 'models/user.dart';

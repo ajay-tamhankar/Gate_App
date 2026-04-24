@@ -1,5 +1,9 @@
+const _gateEntryQueryUnset = Object();
+
 class GateEntryQuery {
   const GateEntryQuery({
+    this.page,
+    this.limit,
     this.sortBy,
     this.sortOrder,
     this.status,
@@ -18,6 +22,8 @@ class GateEntryQuery {
     this.thisMonth,
   });
 
+  final int? page;
+  final int? limit;
   final String? sortBy;
   final String? sortOrder;
   final String? status;
@@ -35,6 +41,48 @@ class GateEntryQuery {
   final bool? thisWeek;
   final bool? thisMonth;
 
+  GateEntryQuery copyWith({
+    Object? page = _gateEntryQueryUnset,
+    Object? limit = _gateEntryQueryUnset,
+    String? sortBy,
+    String? sortOrder,
+    String? status,
+    String? challan,
+    String? vendor,
+    String? po,
+    String? q,
+    String? startDate,
+    String? endDate,
+    String? dateFrom,
+    String? dateTo,
+    String? period,
+    bool? today,
+    bool? yesterday,
+    bool? thisWeek,
+    bool? thisMonth,
+  }) {
+    return GateEntryQuery(
+      page: identical(page, _gateEntryQueryUnset) ? this.page : page as int?,
+      limit: identical(limit, _gateEntryQueryUnset) ? this.limit : limit as int?,
+      sortBy: sortBy ?? this.sortBy,
+      sortOrder: sortOrder ?? this.sortOrder,
+      status: status ?? this.status,
+      challan: challan ?? this.challan,
+      vendor: vendor ?? this.vendor,
+      po: po ?? this.po,
+      q: q ?? this.q,
+      startDate: startDate ?? this.startDate,
+      endDate: endDate ?? this.endDate,
+      dateFrom: dateFrom ?? this.dateFrom,
+      dateTo: dateTo ?? this.dateTo,
+      period: period ?? this.period,
+      today: today ?? this.today,
+      yesterday: yesterday ?? this.yesterday,
+      thisWeek: thisWeek ?? this.thisWeek,
+      thisMonth: thisMonth ?? this.thisMonth,
+    );
+  }
+
   Map<String, dynamic> toQueryParameters() {
     final params = <String, dynamic>{};
 
@@ -44,6 +92,8 @@ class GateEntryQuery {
       params[key] = value;
     }
 
+    add('page', page);
+    add('limit', _normalizedLimit(limit));
     add('sortBy', sortBy);
     add('sortOrder', sortOrder);
     add('status', status);
@@ -62,5 +112,12 @@ class GateEntryQuery {
     add('thisMonth', thisMonth);
 
     return params;
+  }
+
+  int? _normalizedLimit(int? value) {
+    if (value == null) return null;
+    if (value < 1) return 20;
+    if (value > 100) return 100;
+    return value;
   }
 }
