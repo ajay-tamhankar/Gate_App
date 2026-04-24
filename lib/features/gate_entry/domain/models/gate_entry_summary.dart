@@ -8,6 +8,8 @@ class GateEntrySummary {
     this.yesterday = 0,
     this.thisWeek = 0,
     this.thisMonth = 0,
+    this.gateTat = 0,
+    this.dockTat = 0,
   });
 
   final int total;
@@ -18,11 +20,18 @@ class GateEntrySummary {
   final int yesterday;
   final int thisWeek;
   final int thisMonth;
+  final double gateTat;
+  final double dockTat;
 
   factory GateEntrySummary.fromJson(Map<String, dynamic> json) {
     int parseInt(dynamic value) {
       if (value is int) return value;
       return int.tryParse(value?.toString() ?? '') ?? 0;
+    }
+
+    double parseDouble(dynamic value) {
+      if (value is num) return value.toDouble();
+      return double.tryParse(value?.toString() ?? '') ?? 0;
     }
 
     return GateEntrySummary(
@@ -36,6 +45,8 @@ class GateEntrySummary {
       yesterday: parseInt(json['yesterday']),
       thisWeek: parseInt(json['thisWeek']),
       thisMonth: parseInt(json['thisMonth']),
+      gateTat: parseDouble(json['gateTat']),
+      dockTat: parseDouble(json['dockTat']),
     );
   }
 }

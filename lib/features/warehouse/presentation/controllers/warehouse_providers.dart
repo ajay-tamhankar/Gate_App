@@ -310,7 +310,10 @@ final warehouseManagerAdminKpiProvider =
   const dockTat = 0.0;
 
   return DashboardMetrics(
+    totalGateEntriesOverall: todayCount + gateOut,
     totalGateEntriesToday: todayCount,
+    totalGateEntriesYesterday: 0,
+    totalGateEntriesThisWeek: 0,
     totalGateEntriesMonth: monthCount,
     gateInCount: gateIn,
     gateOutCount: gateOut,

@@ -48,10 +48,15 @@ class DashboardController extends AsyncNotifier<DashboardMetrics> {
 
     final now = DateTime.now();
 
+    int totalCount = 0;
     int todayCount = 0;
+    int yesterdayCount = 0;
+    int thisWeekCount = 0;
     int monthCount = 0;
     int gateInCount = 0;
     int gateOutCount = 0;
+    double gateTat = 0;
+    double dockTat = 0;
     int aging0To1 = 0;
     int aging2To3 = 0;
     int agingMoreThan3 = 0;
@@ -74,16 +79,26 @@ class DashboardController extends AsyncNotifier<DashboardMetrics> {
     }
 
     if (_hasGateEntrySummary(summary)) {
-      todayCount = summary!.today;
+      totalCount = summary!.total;
+      todayCount = summary.today;
+      yesterdayCount = summary.yesterday;
+      thisWeekCount = summary.thisWeek;
       monthCount = summary.thisMonth;
       gateInCount = summary.gateIn;
-      gateOutCount = summary.gatedOut;
+      gateOutCount = summary.gateOut;
+      gateTat = summary.gateTat;
+      dockTat = summary.dockTat;
     } else {
       final todayString = DateFormat('yyyy-MM-dd').format(now);
+      final yesterdayString = DateFormat('yyyy-MM-dd')
+          .format(now.subtract(const Duration(days: 1)));
       final monthStartString = DateFormat('yyyy-MM').format(now);
+      final weekStart = DateTime(now.year, now.month, now.day)
+          .subtract(Duration(days: now.weekday - 1));
 
       for (final e in entries) {
         final isExited = e.gateOutTimestamp != null;
+        totalCount++;
         if (e.gateMovement == GateMovement.inMovement && !isExited) {
           gateInCount++;
         } else if (e.gateMovement == GateMovement.outMovement || isExited) {
@@ -108,11 +123,26 @@ class DashboardController extends AsyncNotifier<DashboardMetrics> {
 
         if (tsDateString == todayString) {
           todayCount++;
+        } else if (tsDateString == yesterdayString) {
+          yesterdayCount++;
         } else if (e.gateOutTimestamp != null) {
           final outDateString =
               DateFormat('yyyy-MM-dd').format(e.gateOutTimestamp!.toLocal());
           if (outDateString == todayString) {
             todayCount++;
+          } else if (outDateString == yesterdayString) {
+            yesterdayCount++;
+          }
+        }
+
+        final entryDay = DateTime(tsLocal.year, tsLocal.month, tsLocal.day);
+        if (!entryDay.isBefore(weekStart)) {
+          thisWeekCount++;
+        } else if (e.gateOutTimestamp != null) {
+          final outLocal = e.gateOutTimestamp!.toLocal();
+          final outDay = DateTime(outLocal.year, outLocal.month, outLocal.day);
+          if (!outDay.isBefore(weekStart)) {
+            thisWeekCount++;
           }
         }
       }
@@ -121,7 +151,10 @@ class DashboardController extends AsyncNotifier<DashboardMetrics> {
     final recentActivity = _buildRecentActivity(entries, now);
 
     return DashboardMetrics(
+      totalGateEntriesOverall: totalCount,
       totalGateEntriesToday: todayCount,
+      totalGateEntriesYesterday: yesterdayCount,
+      totalGateEntriesThisWeek: thisWeekCount,
       totalGateEntriesMonth: monthCount,
       gateInCount: gateInCount,
       gateOutCount: gateOutCount,
@@ -129,8 +162,8 @@ class DashboardController extends AsyncNotifier<DashboardMetrics> {
       pendingGrnCount: 0,
       quantityMismatchCases: 0,
       duplicateGrnCases: 0,
-      gateTat: 0,
-      dockTat: 0,
+      gateTat: gateTat,
+      dockTat: dockTat,
       pendingGrnAging0To1: aging0To1,
       pendingGrnAging2To3: aging2To3,
       pendingGrnAgingMoreThan3: agingMoreThan3,
@@ -147,7 +180,9 @@ class DashboardController extends AsyncNotifier<DashboardMetrics> {
         summary.today > 0 ||
         summary.yesterday > 0 ||
         summary.thisWeek > 0 ||
-        summary.thisMonth > 0;
+        summary.thisMonth > 0 ||
+        summary.gateTat > 0 ||
+        summary.dockTat > 0;
   }
 
   bool _isPendingForAging(String status) {

@@ -1,6 +1,9 @@
 class DashboardMetrics {
   const DashboardMetrics({
+    required this.totalGateEntriesOverall,
     required this.totalGateEntriesToday,
+    required this.totalGateEntriesYesterday,
+    required this.totalGateEntriesThisWeek,
     required this.totalGateEntriesMonth,
     required this.gateInCount,
     required this.gateOutCount,
@@ -16,7 +19,10 @@ class DashboardMetrics {
     required this.recentActivity,
   });
 
+  final int totalGateEntriesOverall;
   final int totalGateEntriesToday;
+  final int totalGateEntriesYesterday;
+  final int totalGateEntriesThisWeek;
   final int totalGateEntriesMonth;
   final int gateInCount;
   final int gateOutCount;
@@ -33,7 +39,19 @@ class DashboardMetrics {
 
   factory DashboardMetrics.fromJson(Map<String, dynamic> json) {
     return DashboardMetrics(
+      totalGateEntriesOverall:
+          (json['totalGateEntriesOverall'] as num?)?.toInt() ??
+              (json['total'] as num?)?.toInt() ??
+              0,
       totalGateEntriesToday: (json['totalGateEntriesToday'] as num?)?.toInt() ?? 0,
+      totalGateEntriesYesterday:
+          (json['totalGateEntriesYesterday'] as num?)?.toInt() ??
+              (json['yesterday'] as num?)?.toInt() ??
+              0,
+      totalGateEntriesThisWeek:
+          (json['totalGateEntriesThisWeek'] as num?)?.toInt() ??
+              (json['thisWeek'] as num?)?.toInt() ??
+              0,
       totalGateEntriesMonth: (json['totalGateEntriesMonth'] as num?)?.toInt() ?? 0,
       gateInCount: (json['gateInCount'] as num?)?.toInt() ?? 0,
       gateOutCount: (json['gateOutCount'] as num?)?.toInt() ?? 0,
@@ -54,7 +72,10 @@ class DashboardMetrics {
 
   Map<String, dynamic> toJson() {
     return {
+      'totalGateEntriesOverall': totalGateEntriesOverall,
       'totalGateEntriesToday': totalGateEntriesToday,
+      'totalGateEntriesYesterday': totalGateEntriesYesterday,
+      'totalGateEntriesThisWeek': totalGateEntriesThisWeek,
       'totalGateEntriesMonth': totalGateEntriesMonth,
       'gateInCount': gateInCount,
       'gateOutCount': gateOutCount,

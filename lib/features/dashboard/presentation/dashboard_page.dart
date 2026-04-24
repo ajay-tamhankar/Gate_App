@@ -123,13 +123,6 @@ class _SecurityDashboard extends ConsumerWidget {
                 builder: (context) {
                   final cards = <Widget>[
                     StatCard(
-                      title: 'Entries (Today/Month)',
-                      value:
-                          '${metrics.totalGateEntriesToday} / ${metrics.totalGateEntriesMonth}',
-                      icon: Icons.local_shipping,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                    StatCard(
                       title: 'Gate In',
                       value: metrics.gateInCount.toString(),
                       icon: Icons.login,
@@ -140,6 +133,36 @@ class _SecurityDashboard extends ConsumerWidget {
                       value: metrics.gateOutCount.toString(),
                       icon: Icons.logout,
                       color: Colors.deepOrange,
+                    ),
+                    StatCard(
+                      title: 'Total',
+                      value: metrics.totalGateEntriesOverall.toString(),
+                      icon: Icons.dashboard_customize,
+                      color: Colors.blueGrey,
+                    ),
+                    StatCard(
+                      title: 'Today',
+                      value: metrics.totalGateEntriesToday.toString(),
+                      icon: Icons.today,
+                      color: Colors.teal,
+                    ),
+                    StatCard(
+                      title: 'Yesterday',
+                      value: metrics.totalGateEntriesYesterday.toString(),
+                      icon: Icons.history,
+                      color: Colors.purple,
+                    ),
+                    StatCard(
+                      title: 'This Week',
+                      value: metrics.totalGateEntriesThisWeek.toString(),
+                      icon: Icons.view_week,
+                      color: Colors.cyan,
+                    ),
+                    StatCard(
+                      title: 'This Month',
+                      value: metrics.totalGateEntriesMonth.toString(),
+                      icon: Icons.calendar_month,
+                      color: Colors.amber.shade800,
                     ),
                   ];
 
