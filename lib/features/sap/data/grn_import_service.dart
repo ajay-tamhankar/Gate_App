@@ -45,15 +45,8 @@ class GrnImportService {
     'localdate': 'localDate',
   };
 
-  /// Uploads [file] to POST /sap/grns/import.
-  /// Throws a [GrnImportException] on failure.
-  Future<GrnImportResult?> importGrn(
-    PlatformFile file, {
-    bool runReconciliation = false,
-    DateTime? reconciliationDate,
-    DateTime? reconciliationRangeStart,
-    DateTime? reconciliationRangeEnd,
-  }) async {
+  /// Uploads [file] to POST /sap/grns/import and always runs full reconciliation.
+  Future<GrnImportResult?> importGrn(PlatformFile file) async {
     if (!_isSupportedFile(file.name)) {
       throw GrnImportException('Only CSV and XLSX files are supported.');
     }
@@ -91,15 +84,11 @@ class GrnImportService {
       }
 
       final response = await _repository.importGrns(
-        fileName: normalizedName.endsWith('.xlsx') 
+        fileName: normalizedName.endsWith('.xlsx')
             ? fileName.replaceAll(RegExp(r'\.xlsx$', caseSensitive: false), '.csv')
             : fileName,
         bytes: bytes,
         filePath: filePath,
-        runReconciliation: runReconciliation,
-        reconciliationDate: reconciliationDate,
-        reconciliationRangeStart: reconciliationRangeStart,
-        reconciliationRangeEnd: reconciliationRangeEnd,
       );
 
       if (!response.success) {

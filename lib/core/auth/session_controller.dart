@@ -13,6 +13,9 @@ final sessionControllerProvider =
     NotifierProvider<SessionController, SessionState>(SessionController.new);
 
 class SessionController extends Notifier<SessionState> {
+  bool _isClearingSession = false;
+  bool get isClearingSession => _isClearingSession;
+
   @override
   SessionState build() {
     // Attempt to restore session on initialization
@@ -90,9 +93,18 @@ class SessionController extends Notifier<SessionState> {
   }
 
   Future<void> logout() async {
-    await ref.read(authRepositoryProvider).logout();
-    clearOrgScopedState(ref);
-    state = const Unauthenticated();
+    if (_isClearingSession || state is Unauthenticated) return;
+
+    _isClearingSession = true;
+    try {
+      // Flip auth state first so widgets/router stop issuing authed requests
+      // while provider cleanup is happening.
+      state = const Unauthenticated();
+      await ref.read(authRepositoryProvider).logout();
+      scheduleOrgScopedStateClear(ref);
+    } finally {
+      _isClearingSession = false;
+    }
   }
 
   bool get isAuthed => state is Authenticated;
@@ -101,13 +113,21 @@ class SessionController extends Notifier<SessionState> {
       state is Authenticated ? state as Authenticated : null;
 
   Future<void> invalidateSession() async {
+    if (_isClearingSession) return;
     await _clearSession();
   }
 
   Future<void> _clearSession() async {
-    await ref.read(tokenStorageProvider).deleteToken();
-    clearOrgScopedState(ref);
-    state = const Unauthenticated();
+    if (_isClearingSession) return;
+
+    _isClearingSession = true;
+    try {
+      state = const Unauthenticated();
+      await ref.read(tokenStorageProvider).deleteToken();
+      scheduleOrgScopedStateClear(ref);
+    } finally {
+      _isClearingSession = false;
+    }
   }
 
   bool _looksLikeNetworkIssue(String message) {

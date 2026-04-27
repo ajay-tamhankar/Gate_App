@@ -46,7 +46,6 @@ class RecoPage extends ConsumerWidget {
 
 class _RecoOperationsView extends ConsumerWidget {
   const _RecoOperationsView();
-  static final DateFormat _displayDateFormat = DateFormat('dd MMM yyyy');
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -158,168 +157,47 @@ class _RecoOperationsView extends ConsumerWidget {
     return Icons.error_outline;
   }
 
-  Future<_RecoImportOptions?> _showImportConfirmDialog(
-      BuildContext context, String fileName) async {
-    bool runRecon = true;
-    _RecoImportMode mode = _RecoImportMode.singleDate;
-    DateTime? selectedDate = DateTime.now();
-    DateTime? rangeStart;
-    DateTime? rangeEnd;
-    return showDialog<_RecoImportOptions>(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text('Confirm Import'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('File: $fileName'),
-              const SizedBox(height: 16),
-              CheckboxListTile(
-                title: const Text('Run Reconciliation'),
-                subtitle: const Text('Sync with Gate Entries immediately'),
-                value: runRecon,
-                onChanged: (val) => setState(() => runRecon = val ?? false),
-                contentPadding: EdgeInsets.zero,
-              ),
-              if (runRecon) ...[
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    ChoiceChip(
-                      label: const Text('Single Date'),
-                      selected: mode == _RecoImportMode.singleDate,
-                      onSelected: (_) =>
-                          setState(() => mode = _RecoImportMode.singleDate),
-                    ),
-                    ChoiceChip(
-                      label: const Text('Date Range'),
-                      selected: mode == _RecoImportMode.dateRange,
-                      onSelected: (_) =>
-                          setState(() => mode = _RecoImportMode.dateRange),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                if (mode == _RecoImportMode.singleDate)
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: OutlinedButton.icon(
-                      onPressed: () async {
-                        final now = DateTime.now();
-                        final picked = await showDatePicker(
-                          context: context,
-                          initialDate: selectedDate ?? now,
-                          firstDate: DateTime(now.year - 5),
-                          lastDate: DateTime(now.year + 2),
-                        );
-                        if (picked != null) {
-                          setState(() => selectedDate = picked);
-                        }
-                      },
-                      icon: const Icon(Icons.event_rounded, size: 18),
-                      label: Text(
-                        selectedDate == null
-                            ? 'Select reconciliation date'
-                            : _displayDateFormat.format(selectedDate!),
-                      ),
-                    ),
-                  ),
-                if (mode == _RecoImportMode.dateRange)
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: OutlinedButton.icon(
-                      onPressed: () async {
-                        final now = DateTime.now();
-                        final picked = await showDateRangePicker(
-                          context: context,
-                          firstDate: DateTime(now.year - 5),
-                          lastDate: DateTime(now.year + 2),
-                          initialDateRange:
-                              rangeStart != null && rangeEnd != null
-                                  ? DateTimeRange(
-                                      start: rangeStart!,
-                                      end: rangeEnd!,
-                                    )
-                                  : null,
-                        );
-                        if (picked != null) {
-                          setState(() {
-                            rangeStart = picked.start;
-                            rangeEnd = picked.end;
-                          });
-                        }
-                      },
-                      icon: const Icon(Icons.date_range_rounded, size: 18),
-                      label: Text(
-                        rangeStart != null && rangeEnd != null
-                            ? '${_displayDateFormat.format(rangeStart!)} - ${_displayDateFormat.format(rangeEnd!)}'
-                            : 'Select reconciliation range',
-                      ),
-                    ),
-                  ),
-              ],
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: !runRecon ||
-                      (mode == _RecoImportMode.singleDate &&
-                          selectedDate != null) ||
-                      (mode == _RecoImportMode.dateRange &&
-                          rangeStart != null &&
-                          rangeEnd != null)
-                  ? () => Navigator.pop(
-                        context,
-                        _RecoImportOptions(
-                          runReconciliation: runRecon,
-                          date: runRecon && mode == _RecoImportMode.singleDate
-                              ? selectedDate
-                              : null,
-                          rangeStart:
-                              runRecon && mode == _RecoImportMode.dateRange
-                                  ? rangeStart
-                                  : null,
-                          rangeEnd:
-                              runRecon && mode == _RecoImportMode.dateRange
-                                  ? rangeEnd
-                                  : null,
-                        ),
-                      )
-                  : null,
-              child: const Text('Import'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Future<void> _importSap(BuildContext context, WidgetRef ref) async {
     final fileResult = await ref.read(importSapGrnsUseCaseProvider).pickFile();
     if (fileResult == null) return;
 
     if (!context.mounted) return;
-    final importOptions =
-        await _showImportConfirmDialog(context, fileResult.name);
-    if (importOptions == null) return;
+
+    // Simple confirmation — no date options needed, reconciliation is automatic
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Import GRN Data'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('File: ${fileResult.name}'),
+            const SizedBox(height: 12),
+            const Text(
+              'All GRN records will be imported and automatically reconciled against all gate entries.',
+              style: TextStyle(fontSize: 13),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Import & Reconcile'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
 
     final response = await ref
         .read(importSapGrnsUseCaseProvider)
-        .execute(
-          fileResult,
-          runReconciliation: importOptions.runReconciliation,
-          reconciliationDate: importOptions.date,
-          reconciliationRangeStart: importOptions.rangeStart,
-          reconciliationRangeEnd: importOptions.rangeEnd,
-        );
+        .execute(fileResult);
 
     ref.read(importHistoryProvider.notifier).addItem(
           ImportHistoryItem(
@@ -336,18 +214,14 @@ class _RecoOperationsView extends ConsumerWidget {
       if (response.success) {
         final result = response.data;
         final imported = result?.importedCount ?? result?.processed ?? 0;
-        String msg = imported > 0 
-           ? 'Successfully imported $imported records' 
-           : 'Import completed';
+        String msg = imported > 0
+            ? 'Imported $imported records'
+            : 'Import completed';
 
-        if (importOptions.runReconciliation) {
-          if (result?.summary != null) {
-            final matched = result!.summary!.gateEntries.matched;
-            final total = result.summary!.gateEntries.total;
-            msg = 'Imported $imported & Reconciled: $matched/$total Matched';
-          } else {
-            msg = 'Imported $imported records. Reconciliation is in progress.';
-          }
+        if (result?.summary != null) {
+          final matched = result!.summary!.gateEntries.matched;
+          final total = result.summary!.gateEntries.total;
+          msg = 'Imported $imported · Reconciled: $matched/$total matched';
         }
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -628,21 +502,7 @@ class _RecoOperationsView extends ConsumerWidget {
   }
 }
 
-enum _RecoImportMode { singleDate, dateRange }
 
-class _RecoImportOptions {
-  const _RecoImportOptions({
-    required this.runReconciliation,
-    this.date,
-    this.rangeStart,
-    this.rangeEnd,
-  });
-
-  final bool runReconciliation;
-  final DateTime? date;
-  final DateTime? rangeStart;
-  final DateTime? rangeEnd;
-}
 
 
 

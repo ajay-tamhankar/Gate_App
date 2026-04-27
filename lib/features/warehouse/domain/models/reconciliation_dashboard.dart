@@ -147,13 +147,63 @@ class ReconciliationDashboardRecord {
   }
 }
 
+/// Global stats returned by GET /reconciliations alongside the filtered list.
+/// These counts cover ALL gate entries / reconciliations, not just the filtered view.
+class ReconciliationGlobalStats {
+  /// Total gate entries ever registered (excluding drafts).
+  final int totalGateEntries;
+
+  /// Gate entries fully matched to a SAP GRN.
+  final int grnMatched;
+
+  /// Gate entries reconciled but NOT matched (qty mismatch, wrong PO, duplicate, etc.).
+  final int grnNotMatched;
+
+  /// Gate entries with no GRN data uploaded yet (pending_grn + never processed).
+  final int pendingGrn;
+
+  /// Total gate entries that have a reconciliation record.
+  final int totalReconciled;
+
+  const ReconciliationGlobalStats({
+    required this.totalGateEntries,
+    required this.grnMatched,
+    required this.grnNotMatched,
+    required this.pendingGrn,
+    required this.totalReconciled,
+  });
+
+  factory ReconciliationGlobalStats.fromJson(Map<String, dynamic> json) {
+    return ReconciliationGlobalStats(
+      totalGateEntries: _readInt(json['totalGateEntries']),
+      grnMatched: _readInt(json['grnMatched']),
+      grnNotMatched: _readInt(json['grnNotMatched']),
+      pendingGrn: _readInt(json['pendingGrn']),
+      totalReconciled: _readInt(json['totalReconciled']),
+    );
+  }
+
+  static int _readInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value == null) return 0;
+    return int.tryParse(value.toString()) ?? 0;
+  }
+
+  /// e.g. "100 entries: 50 matched · 10 issues · 40 pending GRN"
+  String get summary =>
+      '$totalGateEntries entries: $grnMatched matched · $grnNotMatched issues · $pendingGrn pending GRN';
+}
+
 class ReconciliationDashboardData {
   final ReconciliationDashboardSummary summary;
   final List<ReconciliationDashboardRecord> records;
+  final ReconciliationGlobalStats? globalStats;
 
   const ReconciliationDashboardData({
     required this.summary,
     required this.records,
+    this.globalStats,
   });
 
   factory ReconciliationDashboardData.fromApiResponse(Map<String, dynamic> json) {
@@ -167,9 +217,16 @@ class ReconciliationDashboardData {
         json['reconciliation'] as Map<String, dynamic>? ?? const {};
     final summaryJson = reconciliation['summary'] as Map<String, dynamic>? ?? const {};
 
+    ReconciliationGlobalStats? globalStats;
+    final statsJson = json['stats'] as Map<String, dynamic>?;
+    if (statsJson != null) {
+      globalStats = ReconciliationGlobalStats.fromJson(statsJson);
+    }
+
     return ReconciliationDashboardData(
       summary: ReconciliationDashboardSummary.fromApiSummary(summaryJson, records),
       records: records,
+      globalStats: globalStats,
     );
   }
 }

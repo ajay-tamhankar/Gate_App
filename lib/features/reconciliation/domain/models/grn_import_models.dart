@@ -6,13 +6,21 @@ part 'grn_import_models.g.dart';
 @freezed
 class GrnImportResult with _$GrnImportResult {
   const factory GrnImportResult({
+    // Legacy fields for backward compatibility
     int? processed,
-    @JsonKey(name: 'importedCount') int? importedCount,
     @JsonKey(name: 'totalRows') int? totalRows,
-    @JsonKey(name: 'skippedCount') int? skippedCount,
     String? adapterMode,
     ReconciliationSummary? summary,
     @Default([]) List<BatchReconResult> results,
+    // New fields from backend
+    @JsonKey(name: 'importedCount') int? importedCount,
+    @JsonKey(name: 'fileRowCount') int? fileRowCount,
+    @JsonKey(name: 'validRowCount') int? validRowCount,
+    @JsonKey(name: 'uniqueGrnCount') int? uniqueGrnCount,
+    @JsonKey(name: 'upsertedRowCount') int? upsertedRowCount,
+    @JsonKey(name: 'skippedCount') int? skippedCount,
+    @JsonKey(name: 'skippedMessage') String? skippedMessage,
+    @JsonKey(name: 'reconciliation') GrnReconciliation? reconciliation,
   }) = _GrnImportResult;
 
   factory GrnImportResult.fromJson(Map<String, dynamic> json) =>
@@ -56,4 +64,14 @@ class BatchReconResult with _$BatchReconResult {
 
   factory BatchReconResult.fromJson(Map<String, dynamic> json) =>
       _$BatchReconResultFromJson(json);
+}
+
+@freezed
+class GrnReconciliation with _$GrnReconciliation {
+  const factory GrnReconciliation({
+    @JsonKey(name: 'processed') int? processed,
+  }) = _GrnReconciliation;
+
+  factory GrnReconciliation.fromJson(Map<String, dynamic> json) =>
+      _$GrnReconciliationFromJson(json);
 }

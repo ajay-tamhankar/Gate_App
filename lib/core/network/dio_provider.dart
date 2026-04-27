@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../config/env.dart';
 import '../auth/session_controller.dart';
+import '../auth/session_state.dart';
 import 'token_storage.dart';
 import 'api_client.dart';
 
@@ -27,8 +28,25 @@ final dioProvider = Provider<Dio>((ref) {
 
   dio.interceptors.add(InterceptorsWrapper(
     onRequest: (options, handler) async {
+      final session = ref.read(sessionControllerProvider);
+      final sessionController = ref.read(sessionControllerProvider.notifier);
       final tokenStorage = ref.read(tokenStorageProvider);
       final token = await tokenStorage.getToken();
+      final isAuthRequest = options.path.startsWith('/auth/');
+
+      if (!isAuthRequest &&
+          (sessionController.isClearingSession ||
+              session is Unauthenticated ||
+              token == null ||
+              token.isEmpty)) {
+        return handler.reject(
+          DioException(
+            requestOptions: options,
+            type: DioExceptionType.cancel,
+            error: 'Request cancelled because the session is inactive.',
+          ),
+        );
+      }
 
       if (token != null) {
         options.headers['Authorization'] = 'Bearer $token';

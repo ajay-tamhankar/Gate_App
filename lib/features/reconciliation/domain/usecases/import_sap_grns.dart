@@ -1,5 +1,6 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../../core/network/api_response.dart';
 import '../../data/sap_grn_repository_impl.dart';
 import '../models/grn_import_models.dart';
@@ -24,21 +25,12 @@ class ImportSapGrnsUseCase {
     return result.files.single;
   }
 
-  Future<ApiResponse<GrnImportResult?>> execute(
-    PlatformFile file, {
-    bool runReconciliation = false,
-    DateTime? reconciliationDate,
-    DateTime? reconciliationRangeStart,
-    DateTime? reconciliationRangeEnd,
-  }) {
+  /// Executes the import. Reconciliation always runs automatically on the backend.
+  Future<ApiResponse<GrnImportResult?>> execute(PlatformFile file) {
     return _repository.importGrns(
       fileName: file.name,
       filePath: file.path,
       bytes: file.bytes,
-      runReconciliation: runReconciliation,
-      reconciliationDate: reconciliationDate,
-      reconciliationRangeStart: reconciliationRangeStart,
-      reconciliationRangeEnd: reconciliationRangeEnd,
     );
   }
 }

@@ -10,9 +10,7 @@ _$GrnImportResultImpl _$$GrnImportResultImplFromJson(
         Map<String, dynamic> json) =>
     _$GrnImportResultImpl(
       processed: (json['processed'] as num?)?.toInt(),
-      importedCount: (json['importedCount'] as num?)?.toInt(),
       totalRows: (json['totalRows'] as num?)?.toInt(),
-      skippedCount: (json['skippedCount'] as num?)?.toInt(),
       adapterMode: json['adapterMode'] as String?,
       summary: json['summary'] == null
           ? null
@@ -22,18 +20,35 @@ _$GrnImportResultImpl _$$GrnImportResultImplFromJson(
               ?.map((e) => BatchReconResult.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const [],
+      importedCount: (json['importedCount'] as num?)?.toInt(),
+      fileRowCount: (json['fileRowCount'] as num?)?.toInt(),
+      validRowCount: (json['validRowCount'] as num?)?.toInt(),
+      uniqueGrnCount: (json['uniqueGrnCount'] as num?)?.toInt(),
+      upsertedRowCount: (json['upsertedRowCount'] as num?)?.toInt(),
+      skippedCount: (json['skippedCount'] as num?)?.toInt(),
+      skippedMessage: json['skippedMessage'] as String?,
+      reconciliation: json['reconciliation'] == null
+          ? null
+          : GrnReconciliation.fromJson(
+              json['reconciliation'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$$GrnImportResultImplToJson(
         _$GrnImportResultImpl instance) =>
     <String, dynamic>{
       'processed': instance.processed,
-      'importedCount': instance.importedCount,
       'totalRows': instance.totalRows,
-      'skippedCount': instance.skippedCount,
       'adapterMode': instance.adapterMode,
       'summary': instance.summary,
       'results': instance.results,
+      'importedCount': instance.importedCount,
+      'fileRowCount': instance.fileRowCount,
+      'validRowCount': instance.validRowCount,
+      'uniqueGrnCount': instance.uniqueGrnCount,
+      'upsertedRowCount': instance.upsertedRowCount,
+      'skippedCount': instance.skippedCount,
+      'skippedMessage': instance.skippedMessage,
+      'reconciliation': instance.reconciliation,
     };
 
 _$ReconciliationSummaryImpl _$$ReconciliationSummaryImplFromJson(
@@ -91,4 +106,16 @@ Map<String, dynamic> _$$BatchReconResultImplToJson(
       'overallStatus': instance.overallStatus,
       'autoClosed': instance.autoClosed,
       'qtyVariance': instance.qtyVariance,
+    };
+
+_$GrnReconciliationImpl _$$GrnReconciliationImplFromJson(
+        Map<String, dynamic> json) =>
+    _$GrnReconciliationImpl(
+      processed: (json['processed'] as num?)?.toInt(),
+    );
+
+Map<String, dynamic> _$$GrnReconciliationImplToJson(
+        _$GrnReconciliationImpl instance) =>
+    <String, dynamic>{
+      'processed': instance.processed,
     };

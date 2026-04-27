@@ -20,16 +20,30 @@ GrnImportResult _$GrnImportResultFromJson(Map<String, dynamic> json) {
 
 /// @nodoc
 mixin _$GrnImportResult {
+// Legacy fields for backward compatibility
   int? get processed => throw _privateConstructorUsedError;
-  @JsonKey(name: 'importedCount')
-  int? get importedCount => throw _privateConstructorUsedError;
   @JsonKey(name: 'totalRows')
   int? get totalRows => throw _privateConstructorUsedError;
-  @JsonKey(name: 'skippedCount')
-  int? get skippedCount => throw _privateConstructorUsedError;
   String? get adapterMode => throw _privateConstructorUsedError;
   ReconciliationSummary? get summary => throw _privateConstructorUsedError;
-  List<BatchReconResult> get results => throw _privateConstructorUsedError;
+  List<BatchReconResult> get results =>
+      throw _privateConstructorUsedError; // New fields from backend
+  @JsonKey(name: 'importedCount')
+  int? get importedCount => throw _privateConstructorUsedError;
+  @JsonKey(name: 'fileRowCount')
+  int? get fileRowCount => throw _privateConstructorUsedError;
+  @JsonKey(name: 'validRowCount')
+  int? get validRowCount => throw _privateConstructorUsedError;
+  @JsonKey(name: 'uniqueGrnCount')
+  int? get uniqueGrnCount => throw _privateConstructorUsedError;
+  @JsonKey(name: 'upsertedRowCount')
+  int? get upsertedRowCount => throw _privateConstructorUsedError;
+  @JsonKey(name: 'skippedCount')
+  int? get skippedCount => throw _privateConstructorUsedError;
+  @JsonKey(name: 'skippedMessage')
+  String? get skippedMessage => throw _privateConstructorUsedError;
+  @JsonKey(name: 'reconciliation')
+  GrnReconciliation? get reconciliation => throw _privateConstructorUsedError;
 
   /// Serializes this GrnImportResult to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -49,14 +63,21 @@ abstract class $GrnImportResultCopyWith<$Res> {
   @useResult
   $Res call(
       {int? processed,
-      @JsonKey(name: 'importedCount') int? importedCount,
       @JsonKey(name: 'totalRows') int? totalRows,
-      @JsonKey(name: 'skippedCount') int? skippedCount,
       String? adapterMode,
       ReconciliationSummary? summary,
-      List<BatchReconResult> results});
+      List<BatchReconResult> results,
+      @JsonKey(name: 'importedCount') int? importedCount,
+      @JsonKey(name: 'fileRowCount') int? fileRowCount,
+      @JsonKey(name: 'validRowCount') int? validRowCount,
+      @JsonKey(name: 'uniqueGrnCount') int? uniqueGrnCount,
+      @JsonKey(name: 'upsertedRowCount') int? upsertedRowCount,
+      @JsonKey(name: 'skippedCount') int? skippedCount,
+      @JsonKey(name: 'skippedMessage') String? skippedMessage,
+      @JsonKey(name: 'reconciliation') GrnReconciliation? reconciliation});
 
   $ReconciliationSummaryCopyWith<$Res>? get summary;
+  $GrnReconciliationCopyWith<$Res>? get reconciliation;
 }
 
 /// @nodoc
@@ -75,29 +96,27 @@ class _$GrnImportResultCopyWithImpl<$Res, $Val extends GrnImportResult>
   @override
   $Res call({
     Object? processed = freezed,
-    Object? importedCount = freezed,
     Object? totalRows = freezed,
-    Object? skippedCount = freezed,
     Object? adapterMode = freezed,
     Object? summary = freezed,
     Object? results = null,
+    Object? importedCount = freezed,
+    Object? fileRowCount = freezed,
+    Object? validRowCount = freezed,
+    Object? uniqueGrnCount = freezed,
+    Object? upsertedRowCount = freezed,
+    Object? skippedCount = freezed,
+    Object? skippedMessage = freezed,
+    Object? reconciliation = freezed,
   }) {
     return _then(_value.copyWith(
       processed: freezed == processed
           ? _value.processed
           : processed // ignore: cast_nullable_to_non_nullable
               as int?,
-      importedCount: freezed == importedCount
-          ? _value.importedCount
-          : importedCount // ignore: cast_nullable_to_non_nullable
-              as int?,
       totalRows: freezed == totalRows
           ? _value.totalRows
           : totalRows // ignore: cast_nullable_to_non_nullable
-              as int?,
-      skippedCount: freezed == skippedCount
-          ? _value.skippedCount
-          : skippedCount // ignore: cast_nullable_to_non_nullable
               as int?,
       adapterMode: freezed == adapterMode
           ? _value.adapterMode
@@ -111,6 +130,38 @@ class _$GrnImportResultCopyWithImpl<$Res, $Val extends GrnImportResult>
           ? _value.results
           : results // ignore: cast_nullable_to_non_nullable
               as List<BatchReconResult>,
+      importedCount: freezed == importedCount
+          ? _value.importedCount
+          : importedCount // ignore: cast_nullable_to_non_nullable
+              as int?,
+      fileRowCount: freezed == fileRowCount
+          ? _value.fileRowCount
+          : fileRowCount // ignore: cast_nullable_to_non_nullable
+              as int?,
+      validRowCount: freezed == validRowCount
+          ? _value.validRowCount
+          : validRowCount // ignore: cast_nullable_to_non_nullable
+              as int?,
+      uniqueGrnCount: freezed == uniqueGrnCount
+          ? _value.uniqueGrnCount
+          : uniqueGrnCount // ignore: cast_nullable_to_non_nullable
+              as int?,
+      upsertedRowCount: freezed == upsertedRowCount
+          ? _value.upsertedRowCount
+          : upsertedRowCount // ignore: cast_nullable_to_non_nullable
+              as int?,
+      skippedCount: freezed == skippedCount
+          ? _value.skippedCount
+          : skippedCount // ignore: cast_nullable_to_non_nullable
+              as int?,
+      skippedMessage: freezed == skippedMessage
+          ? _value.skippedMessage
+          : skippedMessage // ignore: cast_nullable_to_non_nullable
+              as String?,
+      reconciliation: freezed == reconciliation
+          ? _value.reconciliation
+          : reconciliation // ignore: cast_nullable_to_non_nullable
+              as GrnReconciliation?,
     ) as $Val);
   }
 
@@ -127,6 +178,20 @@ class _$GrnImportResultCopyWithImpl<$Res, $Val extends GrnImportResult>
       return _then(_value.copyWith(summary: value) as $Val);
     });
   }
+
+  /// Create a copy of GrnImportResult
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $GrnReconciliationCopyWith<$Res>? get reconciliation {
+    if (_value.reconciliation == null) {
+      return null;
+    }
+
+    return $GrnReconciliationCopyWith<$Res>(_value.reconciliation!, (value) {
+      return _then(_value.copyWith(reconciliation: value) as $Val);
+    });
+  }
 }
 
 /// @nodoc
@@ -139,15 +204,23 @@ abstract class _$$GrnImportResultImplCopyWith<$Res>
   @useResult
   $Res call(
       {int? processed,
-      @JsonKey(name: 'importedCount') int? importedCount,
       @JsonKey(name: 'totalRows') int? totalRows,
-      @JsonKey(name: 'skippedCount') int? skippedCount,
       String? adapterMode,
       ReconciliationSummary? summary,
-      List<BatchReconResult> results});
+      List<BatchReconResult> results,
+      @JsonKey(name: 'importedCount') int? importedCount,
+      @JsonKey(name: 'fileRowCount') int? fileRowCount,
+      @JsonKey(name: 'validRowCount') int? validRowCount,
+      @JsonKey(name: 'uniqueGrnCount') int? uniqueGrnCount,
+      @JsonKey(name: 'upsertedRowCount') int? upsertedRowCount,
+      @JsonKey(name: 'skippedCount') int? skippedCount,
+      @JsonKey(name: 'skippedMessage') String? skippedMessage,
+      @JsonKey(name: 'reconciliation') GrnReconciliation? reconciliation});
 
   @override
   $ReconciliationSummaryCopyWith<$Res>? get summary;
+  @override
+  $GrnReconciliationCopyWith<$Res>? get reconciliation;
 }
 
 /// @nodoc
@@ -164,29 +237,27 @@ class __$$GrnImportResultImplCopyWithImpl<$Res>
   @override
   $Res call({
     Object? processed = freezed,
-    Object? importedCount = freezed,
     Object? totalRows = freezed,
-    Object? skippedCount = freezed,
     Object? adapterMode = freezed,
     Object? summary = freezed,
     Object? results = null,
+    Object? importedCount = freezed,
+    Object? fileRowCount = freezed,
+    Object? validRowCount = freezed,
+    Object? uniqueGrnCount = freezed,
+    Object? upsertedRowCount = freezed,
+    Object? skippedCount = freezed,
+    Object? skippedMessage = freezed,
+    Object? reconciliation = freezed,
   }) {
     return _then(_$GrnImportResultImpl(
       processed: freezed == processed
           ? _value.processed
           : processed // ignore: cast_nullable_to_non_nullable
               as int?,
-      importedCount: freezed == importedCount
-          ? _value.importedCount
-          : importedCount // ignore: cast_nullable_to_non_nullable
-              as int?,
       totalRows: freezed == totalRows
           ? _value.totalRows
           : totalRows // ignore: cast_nullable_to_non_nullable
-              as int?,
-      skippedCount: freezed == skippedCount
-          ? _value.skippedCount
-          : skippedCount // ignore: cast_nullable_to_non_nullable
               as int?,
       adapterMode: freezed == adapterMode
           ? _value.adapterMode
@@ -200,6 +271,38 @@ class __$$GrnImportResultImplCopyWithImpl<$Res>
           ? _value._results
           : results // ignore: cast_nullable_to_non_nullable
               as List<BatchReconResult>,
+      importedCount: freezed == importedCount
+          ? _value.importedCount
+          : importedCount // ignore: cast_nullable_to_non_nullable
+              as int?,
+      fileRowCount: freezed == fileRowCount
+          ? _value.fileRowCount
+          : fileRowCount // ignore: cast_nullable_to_non_nullable
+              as int?,
+      validRowCount: freezed == validRowCount
+          ? _value.validRowCount
+          : validRowCount // ignore: cast_nullable_to_non_nullable
+              as int?,
+      uniqueGrnCount: freezed == uniqueGrnCount
+          ? _value.uniqueGrnCount
+          : uniqueGrnCount // ignore: cast_nullable_to_non_nullable
+              as int?,
+      upsertedRowCount: freezed == upsertedRowCount
+          ? _value.upsertedRowCount
+          : upsertedRowCount // ignore: cast_nullable_to_non_nullable
+              as int?,
+      skippedCount: freezed == skippedCount
+          ? _value.skippedCount
+          : skippedCount // ignore: cast_nullable_to_non_nullable
+              as int?,
+      skippedMessage: freezed == skippedMessage
+          ? _value.skippedMessage
+          : skippedMessage // ignore: cast_nullable_to_non_nullable
+              as String?,
+      reconciliation: freezed == reconciliation
+          ? _value.reconciliation
+          : reconciliation // ignore: cast_nullable_to_non_nullable
+              as GrnReconciliation?,
     ));
   }
 }
@@ -209,28 +312,29 @@ class __$$GrnImportResultImplCopyWithImpl<$Res>
 class _$GrnImportResultImpl implements _GrnImportResult {
   const _$GrnImportResultImpl(
       {this.processed,
-      @JsonKey(name: 'importedCount') this.importedCount,
       @JsonKey(name: 'totalRows') this.totalRows,
-      @JsonKey(name: 'skippedCount') this.skippedCount,
       this.adapterMode,
       this.summary,
-      final List<BatchReconResult> results = const []})
+      final List<BatchReconResult> results = const [],
+      @JsonKey(name: 'importedCount') this.importedCount,
+      @JsonKey(name: 'fileRowCount') this.fileRowCount,
+      @JsonKey(name: 'validRowCount') this.validRowCount,
+      @JsonKey(name: 'uniqueGrnCount') this.uniqueGrnCount,
+      @JsonKey(name: 'upsertedRowCount') this.upsertedRowCount,
+      @JsonKey(name: 'skippedCount') this.skippedCount,
+      @JsonKey(name: 'skippedMessage') this.skippedMessage,
+      @JsonKey(name: 'reconciliation') this.reconciliation})
       : _results = results;
 
   factory _$GrnImportResultImpl.fromJson(Map<String, dynamic> json) =>
       _$$GrnImportResultImplFromJson(json);
 
+// Legacy fields for backward compatibility
   @override
   final int? processed;
   @override
-  @JsonKey(name: 'importedCount')
-  final int? importedCount;
-  @override
   @JsonKey(name: 'totalRows')
   final int? totalRows;
-  @override
-  @JsonKey(name: 'skippedCount')
-  final int? skippedCount;
   @override
   final String? adapterMode;
   @override
@@ -244,9 +348,35 @@ class _$GrnImportResultImpl implements _GrnImportResult {
     return EqualUnmodifiableListView(_results);
   }
 
+// New fields from backend
+  @override
+  @JsonKey(name: 'importedCount')
+  final int? importedCount;
+  @override
+  @JsonKey(name: 'fileRowCount')
+  final int? fileRowCount;
+  @override
+  @JsonKey(name: 'validRowCount')
+  final int? validRowCount;
+  @override
+  @JsonKey(name: 'uniqueGrnCount')
+  final int? uniqueGrnCount;
+  @override
+  @JsonKey(name: 'upsertedRowCount')
+  final int? upsertedRowCount;
+  @override
+  @JsonKey(name: 'skippedCount')
+  final int? skippedCount;
+  @override
+  @JsonKey(name: 'skippedMessage')
+  final String? skippedMessage;
+  @override
+  @JsonKey(name: 'reconciliation')
+  final GrnReconciliation? reconciliation;
+
   @override
   String toString() {
-    return 'GrnImportResult(processed: $processed, importedCount: $importedCount, totalRows: $totalRows, skippedCount: $skippedCount, adapterMode: $adapterMode, summary: $summary, results: $results)';
+    return 'GrnImportResult(processed: $processed, totalRows: $totalRows, adapterMode: $adapterMode, summary: $summary, results: $results, importedCount: $importedCount, fileRowCount: $fileRowCount, validRowCount: $validRowCount, uniqueGrnCount: $uniqueGrnCount, upsertedRowCount: $upsertedRowCount, skippedCount: $skippedCount, skippedMessage: $skippedMessage, reconciliation: $reconciliation)';
   }
 
   @override
@@ -256,16 +386,28 @@ class _$GrnImportResultImpl implements _GrnImportResult {
             other is _$GrnImportResultImpl &&
             (identical(other.processed, processed) ||
                 other.processed == processed) &&
-            (identical(other.importedCount, importedCount) ||
-                other.importedCount == importedCount) &&
             (identical(other.totalRows, totalRows) ||
                 other.totalRows == totalRows) &&
-            (identical(other.skippedCount, skippedCount) ||
-                other.skippedCount == skippedCount) &&
             (identical(other.adapterMode, adapterMode) ||
                 other.adapterMode == adapterMode) &&
             (identical(other.summary, summary) || other.summary == summary) &&
-            const DeepCollectionEquality().equals(other._results, _results));
+            const DeepCollectionEquality().equals(other._results, _results) &&
+            (identical(other.importedCount, importedCount) ||
+                other.importedCount == importedCount) &&
+            (identical(other.fileRowCount, fileRowCount) ||
+                other.fileRowCount == fileRowCount) &&
+            (identical(other.validRowCount, validRowCount) ||
+                other.validRowCount == validRowCount) &&
+            (identical(other.uniqueGrnCount, uniqueGrnCount) ||
+                other.uniqueGrnCount == uniqueGrnCount) &&
+            (identical(other.upsertedRowCount, upsertedRowCount) ||
+                other.upsertedRowCount == upsertedRowCount) &&
+            (identical(other.skippedCount, skippedCount) ||
+                other.skippedCount == skippedCount) &&
+            (identical(other.skippedMessage, skippedMessage) ||
+                other.skippedMessage == skippedMessage) &&
+            (identical(other.reconciliation, reconciliation) ||
+                other.reconciliation == reconciliation));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -273,12 +415,18 @@ class _$GrnImportResultImpl implements _GrnImportResult {
   int get hashCode => Object.hash(
       runtimeType,
       processed,
-      importedCount,
       totalRows,
-      skippedCount,
       adapterMode,
       summary,
-      const DeepCollectionEquality().hash(_results));
+      const DeepCollectionEquality().hash(_results),
+      importedCount,
+      fileRowCount,
+      validRowCount,
+      uniqueGrnCount,
+      upsertedRowCount,
+      skippedCount,
+      skippedMessage,
+      reconciliation);
 
   /// Create a copy of GrnImportResult
   /// with the given fields replaced by the non-null parameter values.
@@ -300,33 +448,59 @@ class _$GrnImportResultImpl implements _GrnImportResult {
 abstract class _GrnImportResult implements GrnImportResult {
   const factory _GrnImportResult(
       {final int? processed,
-      @JsonKey(name: 'importedCount') final int? importedCount,
       @JsonKey(name: 'totalRows') final int? totalRows,
-      @JsonKey(name: 'skippedCount') final int? skippedCount,
       final String? adapterMode,
       final ReconciliationSummary? summary,
-      final List<BatchReconResult> results}) = _$GrnImportResultImpl;
+      final List<BatchReconResult> results,
+      @JsonKey(name: 'importedCount') final int? importedCount,
+      @JsonKey(name: 'fileRowCount') final int? fileRowCount,
+      @JsonKey(name: 'validRowCount') final int? validRowCount,
+      @JsonKey(name: 'uniqueGrnCount') final int? uniqueGrnCount,
+      @JsonKey(name: 'upsertedRowCount') final int? upsertedRowCount,
+      @JsonKey(name: 'skippedCount') final int? skippedCount,
+      @JsonKey(name: 'skippedMessage') final String? skippedMessage,
+      @JsonKey(name: 'reconciliation')
+      final GrnReconciliation? reconciliation}) = _$GrnImportResultImpl;
 
   factory _GrnImportResult.fromJson(Map<String, dynamic> json) =
       _$GrnImportResultImpl.fromJson;
 
+// Legacy fields for backward compatibility
   @override
   int? get processed;
   @override
-  @JsonKey(name: 'importedCount')
-  int? get importedCount;
-  @override
   @JsonKey(name: 'totalRows')
   int? get totalRows;
-  @override
-  @JsonKey(name: 'skippedCount')
-  int? get skippedCount;
   @override
   String? get adapterMode;
   @override
   ReconciliationSummary? get summary;
   @override
-  List<BatchReconResult> get results;
+  List<BatchReconResult> get results; // New fields from backend
+  @override
+  @JsonKey(name: 'importedCount')
+  int? get importedCount;
+  @override
+  @JsonKey(name: 'fileRowCount')
+  int? get fileRowCount;
+  @override
+  @JsonKey(name: 'validRowCount')
+  int? get validRowCount;
+  @override
+  @JsonKey(name: 'uniqueGrnCount')
+  int? get uniqueGrnCount;
+  @override
+  @JsonKey(name: 'upsertedRowCount')
+  int? get upsertedRowCount;
+  @override
+  @JsonKey(name: 'skippedCount')
+  int? get skippedCount;
+  @override
+  @JsonKey(name: 'skippedMessage')
+  String? get skippedMessage;
+  @override
+  @JsonKey(name: 'reconciliation')
+  GrnReconciliation? get reconciliation;
 
   /// Create a copy of GrnImportResult
   /// with the given fields replaced by the non-null parameter values.
@@ -1031,5 +1205,161 @@ abstract class _BatchReconResult implements BatchReconResult {
   @override
   @JsonKey(includeFromJson: false, includeToJson: false)
   _$$BatchReconResultImplCopyWith<_$BatchReconResultImpl> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+GrnReconciliation _$GrnReconciliationFromJson(Map<String, dynamic> json) {
+  return _GrnReconciliation.fromJson(json);
+}
+
+/// @nodoc
+mixin _$GrnReconciliation {
+  @JsonKey(name: 'processed')
+  int? get processed => throw _privateConstructorUsedError;
+
+  /// Serializes this GrnReconciliation to a JSON map.
+  Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
+
+  /// Create a copy of GrnReconciliation
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  $GrnReconciliationCopyWith<GrnReconciliation> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+abstract class $GrnReconciliationCopyWith<$Res> {
+  factory $GrnReconciliationCopyWith(
+          GrnReconciliation value, $Res Function(GrnReconciliation) then) =
+      _$GrnReconciliationCopyWithImpl<$Res, GrnReconciliation>;
+  @useResult
+  $Res call({@JsonKey(name: 'processed') int? processed});
+}
+
+/// @nodoc
+class _$GrnReconciliationCopyWithImpl<$Res, $Val extends GrnReconciliation>
+    implements $GrnReconciliationCopyWith<$Res> {
+  _$GrnReconciliationCopyWithImpl(this._value, this._then);
+
+  // ignore: unused_field
+  final $Val _value;
+  // ignore: unused_field
+  final $Res Function($Val) _then;
+
+  /// Create a copy of GrnReconciliation
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? processed = freezed,
+  }) {
+    return _then(_value.copyWith(
+      processed: freezed == processed
+          ? _value.processed
+          : processed // ignore: cast_nullable_to_non_nullable
+              as int?,
+    ) as $Val);
+  }
+}
+
+/// @nodoc
+abstract class _$$GrnReconciliationImplCopyWith<$Res>
+    implements $GrnReconciliationCopyWith<$Res> {
+  factory _$$GrnReconciliationImplCopyWith(_$GrnReconciliationImpl value,
+          $Res Function(_$GrnReconciliationImpl) then) =
+      __$$GrnReconciliationImplCopyWithImpl<$Res>;
+  @override
+  @useResult
+  $Res call({@JsonKey(name: 'processed') int? processed});
+}
+
+/// @nodoc
+class __$$GrnReconciliationImplCopyWithImpl<$Res>
+    extends _$GrnReconciliationCopyWithImpl<$Res, _$GrnReconciliationImpl>
+    implements _$$GrnReconciliationImplCopyWith<$Res> {
+  __$$GrnReconciliationImplCopyWithImpl(_$GrnReconciliationImpl _value,
+      $Res Function(_$GrnReconciliationImpl) _then)
+      : super(_value, _then);
+
+  /// Create a copy of GrnReconciliation
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? processed = freezed,
+  }) {
+    return _then(_$GrnReconciliationImpl(
+      processed: freezed == processed
+          ? _value.processed
+          : processed // ignore: cast_nullable_to_non_nullable
+              as int?,
+    ));
+  }
+}
+
+/// @nodoc
+@JsonSerializable()
+class _$GrnReconciliationImpl implements _GrnReconciliation {
+  const _$GrnReconciliationImpl({@JsonKey(name: 'processed') this.processed});
+
+  factory _$GrnReconciliationImpl.fromJson(Map<String, dynamic> json) =>
+      _$$GrnReconciliationImplFromJson(json);
+
+  @override
+  @JsonKey(name: 'processed')
+  final int? processed;
+
+  @override
+  String toString() {
+    return 'GrnReconciliation(processed: $processed)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$GrnReconciliationImpl &&
+            (identical(other.processed, processed) ||
+                other.processed == processed));
+  }
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  int get hashCode => Object.hash(runtimeType, processed);
+
+  /// Create a copy of GrnReconciliation
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  @pragma('vm:prefer-inline')
+  _$$GrnReconciliationImplCopyWith<_$GrnReconciliationImpl> get copyWith =>
+      __$$GrnReconciliationImplCopyWithImpl<_$GrnReconciliationImpl>(
+          this, _$identity);
+
+  @override
+  Map<String, dynamic> toJson() {
+    return _$$GrnReconciliationImplToJson(
+      this,
+    );
+  }
+}
+
+abstract class _GrnReconciliation implements GrnReconciliation {
+  const factory _GrnReconciliation(
+          {@JsonKey(name: 'processed') final int? processed}) =
+      _$GrnReconciliationImpl;
+
+  factory _GrnReconciliation.fromJson(Map<String, dynamic> json) =
+      _$GrnReconciliationImpl.fromJson;
+
+  @override
+  @JsonKey(name: 'processed')
+  int? get processed;
+
+  /// Create a copy of GrnReconciliation
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  _$$GrnReconciliationImplCopyWith<_$GrnReconciliationImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }

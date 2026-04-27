@@ -9,6 +9,7 @@ import '../../../../features/reports/data/audit_repository_impl.dart';
 import '../../../../features/warehouse/presentation/controllers/warehouse_providers.dart';
 import '../../data/grn_import_service.dart';
 import '../../domain/grn_upload_state.dart';
+import '../../../reconciliation/domain/models/grn_import_models.dart';
 
 /// Riverpod notifier that manages the GRN file upload workflow.
 class GrnUploadNotifier extends Notifier<GrnUploadState> {
@@ -44,76 +45,16 @@ class GrnUploadNotifier extends Notifier<GrnUploadState> {
     state = GrnUploadFileSelected(file);
   }
 
-  /// Toggles the auto-reconciliation flag for the selected file.
-  void setUploadMode(GrnUploadMode mode) {
-    final current = state;
-    if (current is GrnUploadFileSelected) {
-      state = GrnUploadFileSelected(
-        current.file,
-        mode: mode,
-        selectedDate: current.selectedDate,
-        rangeStart: current.rangeStart,
-        rangeEnd: current.rangeEnd,
-      );
-    }
-  }
-
-  void setSingleDate(DateTime? value) {
-    final current = state;
-    if (current is GrnUploadFileSelected) {
-      state = GrnUploadFileSelected(
-        current.file,
-        mode: GrnUploadMode.singleDate,
-        selectedDate: value,
-        rangeStart: current.rangeStart,
-        rangeEnd: current.rangeEnd,
-      );
-    }
-  }
-
-  void setDateRange(DateTime? start, DateTime? end) {
-    final current = state;
-    if (current is GrnUploadFileSelected) {
-      state = GrnUploadFileSelected(
-        current.file,
-        mode: GrnUploadMode.dateRange,
-        selectedDate: current.selectedDate,
-        rangeStart: start,
-        rangeEnd: end,
-      );
-    }
-  }
-
-  /// Uploads the currently selected import file.
+  /// Uploads the selected file. Reconciliation always runs automatically on the backend.
   Future<void> upload() async {
     final current = state;
     if (current is! GrnUploadFileSelected) return;
 
-    if (!_hasValidSelection(current)) {
-      state = const GrnUploadError(
-        'Select a GRN date or date range before running reconciliation.',
-      );
-      return;
-    }
-
-    final runRecon = current.mode.runReconciliation;
-    state = GrnUploadLoading(
-      current.file,
-      mode: current.mode,
-      selectedDate: current.selectedDate,
-      rangeStart: current.rangeStart,
-      rangeEnd: current.rangeEnd,
-    );
+    state = GrnUploadLoading(current.file);
 
     try {
       final service = ref.read(grnImportServiceProvider);
-      final result = await service.importGrn(
-        current.file,
-        runReconciliation: runRecon,
-        reconciliationDate: current.selectedDate,
-        reconciliationRangeStart: current.rangeStart,
-        reconciliationRangeEnd: current.rangeEnd,
-      );
+      final result = await service.importGrn(current.file);
 
       // Invalidate relevant providers to refresh UI
       ref.invalidate(dashboardControllerProvider);
@@ -124,18 +65,8 @@ class GrnUploadNotifier extends Notifier<GrnUploadState> {
 
       _postAuditLog();
 
-      final imported = result?.importedCount ?? result?.processed ?? 0;
-      String msg = 'Successfully imported $imported records';
-
-      if (runRecon) {
-        if (result?.summary != null) {
-          final matched = result!.summary!.gateEntries.matched;
-          final total = result.summary!.gateEntries.total;
-          msg = 'Imported $imported & Reconciled: $matched/$total Matched';
-        } else {
-          msg = 'Imported $imported records. Reconciliation is in progress.';
-        }
-      }
+      // Build success message from new backend response fields
+      final msg = _buildSuccessMessage(result);
 
       state = GrnUploadSuccess(msg, result: result);
     } on GrnImportException catch (e) {
@@ -145,23 +76,54 @@ class GrnUploadNotifier extends Notifier<GrnUploadState> {
     }
   }
 
+  /// Constructs the success message from the import result, using new backend fields.
+  /// Provides backward compatibility for older response structures.
+  String _buildSuccessMessage(GrnImportResult? result) {
+    if (result == null) {
+      return 'Successfully imported records';
+    }
+
+    final messageParts = <String>[];
+
+    // Primary: Imported count (use new field with fallback to legacy)
+    final importedCount = result.importedCount ??
+        result.upsertedRowCount ??
+        result.processed ??
+        0;
+    messageParts.add('Successfully imported $importedCount records');
+
+    // Secondary: Reconciliation count (new field)
+    final processedCount = result.reconciliation?.processed ?? 0;
+    if (processedCount > 0) {
+      messageParts.add('Reconciliation processed $processedCount gate entries');
+    }
+
+    // Tertiary: Skipped count with message
+    final skippedCount = result.skippedCount ?? 0;
+    if (skippedCount > 0) {
+      if (result.skippedMessage != null && result.skippedMessage!.isNotEmpty) {
+        messageParts.add(result.skippedMessage!);
+      } else {
+        messageParts.add('$skippedCount rows were skipped');
+      }
+    }
+
+    // Fallback for older response structure with summary
+    if (result.summary != null && messageParts.length == 1) {
+      final matched = result.summary!.gateEntries.matched;
+      final total = result.summary!.gateEntries.total;
+      messageParts.add('Reconciled: $matched/$total matched');
+    }
+
+    return messageParts.join('\n');
+  }
+
   /// Resets the notifier back to idle so the card can be reused.
   void reset() => state = const GrnUploadIdle();
 
   bool _isSupportedFile(String fileName) {
     final normalized = fileName.toLowerCase();
     return normalized.endsWith('.csv') || normalized.endsWith('.xlsx');
-  }
-
-  bool _hasValidSelection(GrnUploadFileSelected state) {
-    switch (state.mode) {
-      case GrnUploadMode.importOnly:
-        return true;
-      case GrnUploadMode.singleDate:
-        return state.selectedDate != null;
-      case GrnUploadMode.dateRange:
-        return state.rangeStart != null && state.rangeEnd != null;
-    }
   }
 
   Future<void> _postAuditLog() async {
@@ -183,7 +145,6 @@ class GrnUploadNotifier extends Notifier<GrnUploadState> {
   }
 }
 
-final grnUploadProvider =
-    NotifierProvider<GrnUploadNotifier, GrnUploadState>(
+final grnUploadProvider = NotifierProvider<GrnUploadNotifier, GrnUploadState>(
   GrnUploadNotifier.new,
 );

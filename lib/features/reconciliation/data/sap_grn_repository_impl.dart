@@ -1,7 +1,5 @@
-import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
-import 'package:intl/intl.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_response.dart';
@@ -14,19 +12,16 @@ final sapGrnRepositoryProvider = Provider<SapGrnRepository>((ref) {
 
 class SapGrnRepository {
   final ApiClient _apiClient;
-  static final DateFormat _apiDateFormat = DateFormat('dd-MM-yy');
 
   SapGrnRepository({required ApiClient apiClient}) : _apiClient = apiClient;
 
+  /// Sends the GRN file to POST /sap/grns/import.
+  /// Reconciliation always runs automatically on the backend.
   Future<ApiResponse<GrnImportResult?>> importGrns({
     required String fileName,
     String? filePath,
     List<int>? bytes,
-    bool runReconciliation = false,
-    DateTime? reconciliationDate,
-    DateTime? reconciliationRangeStart,
-    DateTime? reconciliationRangeEnd,
-    Map<String, dynamic>? reconciliationOptions,
+    Map<String, dynamic>? extraFields,
   }) async {
     try {
       MultipartFile filePart;
@@ -44,21 +39,10 @@ class SapGrnRepository {
 
       final Map<String, dynamic> fields = {
         'file': filePart,
-        'runReconciliation': runReconciliation.toString(),
       };
 
-      if (runReconciliation) {
-        if (reconciliationDate != null) {
-          fields['date'] = _formatApiDate(reconciliationDate);
-        } else if (reconciliationRangeStart != null &&
-            reconciliationRangeEnd != null) {
-          fields['dateRange'] =
-              '${_formatApiDate(reconciliationRangeStart)} to ${_formatApiDate(reconciliationRangeEnd)}';
-        }
-      }
-
-      if (reconciliationOptions != null) {
-        fields['reconciliation'] = jsonEncode(reconciliationOptions);
+      if (extraFields != null) {
+        fields.addAll(extraFields);
       }
 
       final formData = FormData.fromMap(fields);
@@ -99,9 +83,5 @@ class SapGrnRepository {
         error: ApiError(message: e.toString()),
       );
     }
-  }
-
-  String _formatApiDate(DateTime value) {
-    return _apiDateFormat.format(value);
   }
 }
