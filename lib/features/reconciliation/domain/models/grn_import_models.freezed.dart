@@ -42,6 +42,9 @@ mixin _$GrnImportResult {
   int? get skippedCount => throw _privateConstructorUsedError;
   @JsonKey(name: 'skippedMessage')
   String? get skippedMessage => throw _privateConstructorUsedError;
+  @JsonKey(name: 'skippedRows')
+  List<Object?> get skippedRows => throw _privateConstructorUsedError;
+  List<GrnImportRecord> get records => throw _privateConstructorUsedError;
   @JsonKey(name: 'reconciliation')
   GrnReconciliation? get reconciliation => throw _privateConstructorUsedError;
 
@@ -74,6 +77,8 @@ abstract class $GrnImportResultCopyWith<$Res> {
       @JsonKey(name: 'upsertedRowCount') int? upsertedRowCount,
       @JsonKey(name: 'skippedCount') int? skippedCount,
       @JsonKey(name: 'skippedMessage') String? skippedMessage,
+      @JsonKey(name: 'skippedRows') List<Object?> skippedRows,
+      List<GrnImportRecord> records,
       @JsonKey(name: 'reconciliation') GrnReconciliation? reconciliation});
 
   $ReconciliationSummaryCopyWith<$Res>? get summary;
@@ -107,6 +112,8 @@ class _$GrnImportResultCopyWithImpl<$Res, $Val extends GrnImportResult>
     Object? upsertedRowCount = freezed,
     Object? skippedCount = freezed,
     Object? skippedMessage = freezed,
+    Object? skippedRows = null,
+    Object? records = null,
     Object? reconciliation = freezed,
   }) {
     return _then(_value.copyWith(
@@ -158,6 +165,14 @@ class _$GrnImportResultCopyWithImpl<$Res, $Val extends GrnImportResult>
           ? _value.skippedMessage
           : skippedMessage // ignore: cast_nullable_to_non_nullable
               as String?,
+      skippedRows: null == skippedRows
+          ? _value.skippedRows
+          : skippedRows // ignore: cast_nullable_to_non_nullable
+              as List<Object?>,
+      records: null == records
+          ? _value.records
+          : records // ignore: cast_nullable_to_non_nullable
+              as List<GrnImportRecord>,
       reconciliation: freezed == reconciliation
           ? _value.reconciliation
           : reconciliation // ignore: cast_nullable_to_non_nullable
@@ -215,6 +230,8 @@ abstract class _$$GrnImportResultImplCopyWith<$Res>
       @JsonKey(name: 'upsertedRowCount') int? upsertedRowCount,
       @JsonKey(name: 'skippedCount') int? skippedCount,
       @JsonKey(name: 'skippedMessage') String? skippedMessage,
+      @JsonKey(name: 'skippedRows') List<Object?> skippedRows,
+      List<GrnImportRecord> records,
       @JsonKey(name: 'reconciliation') GrnReconciliation? reconciliation});
 
   @override
@@ -248,6 +265,8 @@ class __$$GrnImportResultImplCopyWithImpl<$Res>
     Object? upsertedRowCount = freezed,
     Object? skippedCount = freezed,
     Object? skippedMessage = freezed,
+    Object? skippedRows = null,
+    Object? records = null,
     Object? reconciliation = freezed,
   }) {
     return _then(_$GrnImportResultImpl(
@@ -299,6 +318,14 @@ class __$$GrnImportResultImplCopyWithImpl<$Res>
           ? _value.skippedMessage
           : skippedMessage // ignore: cast_nullable_to_non_nullable
               as String?,
+      skippedRows: null == skippedRows
+          ? _value._skippedRows
+          : skippedRows // ignore: cast_nullable_to_non_nullable
+              as List<Object?>,
+      records: null == records
+          ? _value._records
+          : records // ignore: cast_nullable_to_non_nullable
+              as List<GrnImportRecord>,
       reconciliation: freezed == reconciliation
           ? _value.reconciliation
           : reconciliation // ignore: cast_nullable_to_non_nullable
@@ -323,8 +350,12 @@ class _$GrnImportResultImpl implements _GrnImportResult {
       @JsonKey(name: 'upsertedRowCount') this.upsertedRowCount,
       @JsonKey(name: 'skippedCount') this.skippedCount,
       @JsonKey(name: 'skippedMessage') this.skippedMessage,
+      @JsonKey(name: 'skippedRows') final List<Object?> skippedRows = const [],
+      final List<GrnImportRecord> records = const [],
       @JsonKey(name: 'reconciliation') this.reconciliation})
-      : _results = results;
+      : _results = results,
+        _skippedRows = skippedRows,
+        _records = records;
 
   factory _$GrnImportResultImpl.fromJson(Map<String, dynamic> json) =>
       _$$GrnImportResultImplFromJson(json);
@@ -370,13 +401,31 @@ class _$GrnImportResultImpl implements _GrnImportResult {
   @override
   @JsonKey(name: 'skippedMessage')
   final String? skippedMessage;
+  final List<Object?> _skippedRows;
+  @override
+  @JsonKey(name: 'skippedRows')
+  List<Object?> get skippedRows {
+    if (_skippedRows is EqualUnmodifiableListView) return _skippedRows;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_skippedRows);
+  }
+
+  final List<GrnImportRecord> _records;
+  @override
+  @JsonKey()
+  List<GrnImportRecord> get records {
+    if (_records is EqualUnmodifiableListView) return _records;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_records);
+  }
+
   @override
   @JsonKey(name: 'reconciliation')
   final GrnReconciliation? reconciliation;
 
   @override
   String toString() {
-    return 'GrnImportResult(processed: $processed, totalRows: $totalRows, adapterMode: $adapterMode, summary: $summary, results: $results, importedCount: $importedCount, fileRowCount: $fileRowCount, validRowCount: $validRowCount, uniqueGrnCount: $uniqueGrnCount, upsertedRowCount: $upsertedRowCount, skippedCount: $skippedCount, skippedMessage: $skippedMessage, reconciliation: $reconciliation)';
+    return 'GrnImportResult(processed: $processed, totalRows: $totalRows, adapterMode: $adapterMode, summary: $summary, results: $results, importedCount: $importedCount, fileRowCount: $fileRowCount, validRowCount: $validRowCount, uniqueGrnCount: $uniqueGrnCount, upsertedRowCount: $upsertedRowCount, skippedCount: $skippedCount, skippedMessage: $skippedMessage, skippedRows: $skippedRows, records: $records, reconciliation: $reconciliation)';
   }
 
   @override
@@ -406,6 +455,9 @@ class _$GrnImportResultImpl implements _GrnImportResult {
                 other.skippedCount == skippedCount) &&
             (identical(other.skippedMessage, skippedMessage) ||
                 other.skippedMessage == skippedMessage) &&
+            const DeepCollectionEquality()
+                .equals(other._skippedRows, _skippedRows) &&
+            const DeepCollectionEquality().equals(other._records, _records) &&
             (identical(other.reconciliation, reconciliation) ||
                 other.reconciliation == reconciliation));
   }
@@ -426,6 +478,8 @@ class _$GrnImportResultImpl implements _GrnImportResult {
       upsertedRowCount,
       skippedCount,
       skippedMessage,
+      const DeepCollectionEquality().hash(_skippedRows),
+      const DeepCollectionEquality().hash(_records),
       reconciliation);
 
   /// Create a copy of GrnImportResult
@@ -459,6 +513,8 @@ abstract class _GrnImportResult implements GrnImportResult {
       @JsonKey(name: 'upsertedRowCount') final int? upsertedRowCount,
       @JsonKey(name: 'skippedCount') final int? skippedCount,
       @JsonKey(name: 'skippedMessage') final String? skippedMessage,
+      @JsonKey(name: 'skippedRows') final List<Object?> skippedRows,
+      final List<GrnImportRecord> records,
       @JsonKey(name: 'reconciliation')
       final GrnReconciliation? reconciliation}) = _$GrnImportResultImpl;
 
@@ -498,6 +554,11 @@ abstract class _GrnImportResult implements GrnImportResult {
   @override
   @JsonKey(name: 'skippedMessage')
   String? get skippedMessage;
+  @override
+  @JsonKey(name: 'skippedRows')
+  List<Object?> get skippedRows;
+  @override
+  List<GrnImportRecord> get records;
   @override
   @JsonKey(name: 'reconciliation')
   GrnReconciliation? get reconciliation;
@@ -1208,6 +1269,180 @@ abstract class _BatchReconResult implements BatchReconResult {
       throw _privateConstructorUsedError;
 }
 
+GrnImportRecord _$GrnImportRecordFromJson(Map<String, dynamic> json) {
+  return _GrnImportRecord.fromJson(json);
+}
+
+/// @nodoc
+mixin _$GrnImportRecord {
+  String get id => throw _privateConstructorUsedError;
+  @JsonKey(name: 'grn_number')
+  String get grnNumber => throw _privateConstructorUsedError;
+
+  /// Serializes this GrnImportRecord to a JSON map.
+  Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
+
+  /// Create a copy of GrnImportRecord
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  $GrnImportRecordCopyWith<GrnImportRecord> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+abstract class $GrnImportRecordCopyWith<$Res> {
+  factory $GrnImportRecordCopyWith(
+          GrnImportRecord value, $Res Function(GrnImportRecord) then) =
+      _$GrnImportRecordCopyWithImpl<$Res, GrnImportRecord>;
+  @useResult
+  $Res call({String id, @JsonKey(name: 'grn_number') String grnNumber});
+}
+
+/// @nodoc
+class _$GrnImportRecordCopyWithImpl<$Res, $Val extends GrnImportRecord>
+    implements $GrnImportRecordCopyWith<$Res> {
+  _$GrnImportRecordCopyWithImpl(this._value, this._then);
+
+  // ignore: unused_field
+  final $Val _value;
+  // ignore: unused_field
+  final $Res Function($Val) _then;
+
+  /// Create a copy of GrnImportRecord
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? id = null,
+    Object? grnNumber = null,
+  }) {
+    return _then(_value.copyWith(
+      id: null == id
+          ? _value.id
+          : id // ignore: cast_nullable_to_non_nullable
+              as String,
+      grnNumber: null == grnNumber
+          ? _value.grnNumber
+          : grnNumber // ignore: cast_nullable_to_non_nullable
+              as String,
+    ) as $Val);
+  }
+}
+
+/// @nodoc
+abstract class _$$GrnImportRecordImplCopyWith<$Res>
+    implements $GrnImportRecordCopyWith<$Res> {
+  factory _$$GrnImportRecordImplCopyWith(_$GrnImportRecordImpl value,
+          $Res Function(_$GrnImportRecordImpl) then) =
+      __$$GrnImportRecordImplCopyWithImpl<$Res>;
+  @override
+  @useResult
+  $Res call({String id, @JsonKey(name: 'grn_number') String grnNumber});
+}
+
+/// @nodoc
+class __$$GrnImportRecordImplCopyWithImpl<$Res>
+    extends _$GrnImportRecordCopyWithImpl<$Res, _$GrnImportRecordImpl>
+    implements _$$GrnImportRecordImplCopyWith<$Res> {
+  __$$GrnImportRecordImplCopyWithImpl(
+      _$GrnImportRecordImpl _value, $Res Function(_$GrnImportRecordImpl) _then)
+      : super(_value, _then);
+
+  /// Create a copy of GrnImportRecord
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? id = null,
+    Object? grnNumber = null,
+  }) {
+    return _then(_$GrnImportRecordImpl(
+      id: null == id
+          ? _value.id
+          : id // ignore: cast_nullable_to_non_nullable
+              as String,
+      grnNumber: null == grnNumber
+          ? _value.grnNumber
+          : grnNumber // ignore: cast_nullable_to_non_nullable
+              as String,
+    ));
+  }
+}
+
+/// @nodoc
+@JsonSerializable()
+class _$GrnImportRecordImpl implements _GrnImportRecord {
+  const _$GrnImportRecordImpl(
+      {required this.id, @JsonKey(name: 'grn_number') required this.grnNumber});
+
+  factory _$GrnImportRecordImpl.fromJson(Map<String, dynamic> json) =>
+      _$$GrnImportRecordImplFromJson(json);
+
+  @override
+  final String id;
+  @override
+  @JsonKey(name: 'grn_number')
+  final String grnNumber;
+
+  @override
+  String toString() {
+    return 'GrnImportRecord(id: $id, grnNumber: $grnNumber)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$GrnImportRecordImpl &&
+            (identical(other.id, id) || other.id == id) &&
+            (identical(other.grnNumber, grnNumber) ||
+                other.grnNumber == grnNumber));
+  }
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  int get hashCode => Object.hash(runtimeType, id, grnNumber);
+
+  /// Create a copy of GrnImportRecord
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  @pragma('vm:prefer-inline')
+  _$$GrnImportRecordImplCopyWith<_$GrnImportRecordImpl> get copyWith =>
+      __$$GrnImportRecordImplCopyWithImpl<_$GrnImportRecordImpl>(
+          this, _$identity);
+
+  @override
+  Map<String, dynamic> toJson() {
+    return _$$GrnImportRecordImplToJson(
+      this,
+    );
+  }
+}
+
+abstract class _GrnImportRecord implements GrnImportRecord {
+  const factory _GrnImportRecord(
+          {required final String id,
+          @JsonKey(name: 'grn_number') required final String grnNumber}) =
+      _$GrnImportRecordImpl;
+
+  factory _GrnImportRecord.fromJson(Map<String, dynamic> json) =
+      _$GrnImportRecordImpl.fromJson;
+
+  @override
+  String get id;
+  @override
+  @JsonKey(name: 'grn_number')
+  String get grnNumber;
+
+  /// Create a copy of GrnImportRecord
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  _$$GrnImportRecordImplCopyWith<_$GrnImportRecordImpl> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
 GrnReconciliation _$GrnReconciliationFromJson(Map<String, dynamic> json) {
   return _GrnReconciliation.fromJson(json);
 }
@@ -1216,6 +1451,14 @@ GrnReconciliation _$GrnReconciliationFromJson(Map<String, dynamic> json) {
 mixin _$GrnReconciliation {
   @JsonKey(name: 'processed')
   int? get processed => throw _privateConstructorUsedError;
+  @JsonKey(name: 'triggered')
+  bool? get triggered => throw _privateConstructorUsedError;
+  @JsonKey(name: 'success')
+  bool? get success => throw _privateConstructorUsedError;
+  @JsonKey(name: 'mode')
+  String? get mode => throw _privateConstructorUsedError;
+  @JsonKey(name: 'message')
+  String? get message => throw _privateConstructorUsedError;
 
   /// Serializes this GrnReconciliation to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -1233,7 +1476,12 @@ abstract class $GrnReconciliationCopyWith<$Res> {
           GrnReconciliation value, $Res Function(GrnReconciliation) then) =
       _$GrnReconciliationCopyWithImpl<$Res, GrnReconciliation>;
   @useResult
-  $Res call({@JsonKey(name: 'processed') int? processed});
+  $Res call(
+      {@JsonKey(name: 'processed') int? processed,
+      @JsonKey(name: 'triggered') bool? triggered,
+      @JsonKey(name: 'success') bool? success,
+      @JsonKey(name: 'mode') String? mode,
+      @JsonKey(name: 'message') String? message});
 }
 
 /// @nodoc
@@ -1252,12 +1500,32 @@ class _$GrnReconciliationCopyWithImpl<$Res, $Val extends GrnReconciliation>
   @override
   $Res call({
     Object? processed = freezed,
+    Object? triggered = freezed,
+    Object? success = freezed,
+    Object? mode = freezed,
+    Object? message = freezed,
   }) {
     return _then(_value.copyWith(
       processed: freezed == processed
           ? _value.processed
           : processed // ignore: cast_nullable_to_non_nullable
               as int?,
+      triggered: freezed == triggered
+          ? _value.triggered
+          : triggered // ignore: cast_nullable_to_non_nullable
+              as bool?,
+      success: freezed == success
+          ? _value.success
+          : success // ignore: cast_nullable_to_non_nullable
+              as bool?,
+      mode: freezed == mode
+          ? _value.mode
+          : mode // ignore: cast_nullable_to_non_nullable
+              as String?,
+      message: freezed == message
+          ? _value.message
+          : message // ignore: cast_nullable_to_non_nullable
+              as String?,
     ) as $Val);
   }
 }
@@ -1270,7 +1538,12 @@ abstract class _$$GrnReconciliationImplCopyWith<$Res>
       __$$GrnReconciliationImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({@JsonKey(name: 'processed') int? processed});
+  $Res call(
+      {@JsonKey(name: 'processed') int? processed,
+      @JsonKey(name: 'triggered') bool? triggered,
+      @JsonKey(name: 'success') bool? success,
+      @JsonKey(name: 'mode') String? mode,
+      @JsonKey(name: 'message') String? message});
 }
 
 /// @nodoc
@@ -1287,12 +1560,32 @@ class __$$GrnReconciliationImplCopyWithImpl<$Res>
   @override
   $Res call({
     Object? processed = freezed,
+    Object? triggered = freezed,
+    Object? success = freezed,
+    Object? mode = freezed,
+    Object? message = freezed,
   }) {
     return _then(_$GrnReconciliationImpl(
       processed: freezed == processed
           ? _value.processed
           : processed // ignore: cast_nullable_to_non_nullable
               as int?,
+      triggered: freezed == triggered
+          ? _value.triggered
+          : triggered // ignore: cast_nullable_to_non_nullable
+              as bool?,
+      success: freezed == success
+          ? _value.success
+          : success // ignore: cast_nullable_to_non_nullable
+              as bool?,
+      mode: freezed == mode
+          ? _value.mode
+          : mode // ignore: cast_nullable_to_non_nullable
+              as String?,
+      message: freezed == message
+          ? _value.message
+          : message // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }
@@ -1300,7 +1593,12 @@ class __$$GrnReconciliationImplCopyWithImpl<$Res>
 /// @nodoc
 @JsonSerializable()
 class _$GrnReconciliationImpl implements _GrnReconciliation {
-  const _$GrnReconciliationImpl({@JsonKey(name: 'processed') this.processed});
+  const _$GrnReconciliationImpl(
+      {@JsonKey(name: 'processed') this.processed,
+      @JsonKey(name: 'triggered') this.triggered,
+      @JsonKey(name: 'success') this.success,
+      @JsonKey(name: 'mode') this.mode,
+      @JsonKey(name: 'message') this.message});
 
   factory _$GrnReconciliationImpl.fromJson(Map<String, dynamic> json) =>
       _$$GrnReconciliationImplFromJson(json);
@@ -1308,10 +1606,22 @@ class _$GrnReconciliationImpl implements _GrnReconciliation {
   @override
   @JsonKey(name: 'processed')
   final int? processed;
+  @override
+  @JsonKey(name: 'triggered')
+  final bool? triggered;
+  @override
+  @JsonKey(name: 'success')
+  final bool? success;
+  @override
+  @JsonKey(name: 'mode')
+  final String? mode;
+  @override
+  @JsonKey(name: 'message')
+  final String? message;
 
   @override
   String toString() {
-    return 'GrnReconciliation(processed: $processed)';
+    return 'GrnReconciliation(processed: $processed, triggered: $triggered, success: $success, mode: $mode, message: $message)';
   }
 
   @override
@@ -1320,12 +1630,18 @@ class _$GrnReconciliationImpl implements _GrnReconciliation {
         (other.runtimeType == runtimeType &&
             other is _$GrnReconciliationImpl &&
             (identical(other.processed, processed) ||
-                other.processed == processed));
+                other.processed == processed) &&
+            (identical(other.triggered, triggered) ||
+                other.triggered == triggered) &&
+            (identical(other.success, success) || other.success == success) &&
+            (identical(other.mode, mode) || other.mode == mode) &&
+            (identical(other.message, message) || other.message == message));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(runtimeType, processed);
+  int get hashCode =>
+      Object.hash(runtimeType, processed, triggered, success, mode, message);
 
   /// Create a copy of GrnReconciliation
   /// with the given fields replaced by the non-null parameter values.
@@ -1346,7 +1662,11 @@ class _$GrnReconciliationImpl implements _GrnReconciliation {
 
 abstract class _GrnReconciliation implements GrnReconciliation {
   const factory _GrnReconciliation(
-          {@JsonKey(name: 'processed') final int? processed}) =
+          {@JsonKey(name: 'processed') final int? processed,
+          @JsonKey(name: 'triggered') final bool? triggered,
+          @JsonKey(name: 'success') final bool? success,
+          @JsonKey(name: 'mode') final String? mode,
+          @JsonKey(name: 'message') final String? message}) =
       _$GrnReconciliationImpl;
 
   factory _GrnReconciliation.fromJson(Map<String, dynamic> json) =
@@ -1355,6 +1675,18 @@ abstract class _GrnReconciliation implements GrnReconciliation {
   @override
   @JsonKey(name: 'processed')
   int? get processed;
+  @override
+  @JsonKey(name: 'triggered')
+  bool? get triggered;
+  @override
+  @JsonKey(name: 'success')
+  bool? get success;
+  @override
+  @JsonKey(name: 'mode')
+  String? get mode;
+  @override
+  @JsonKey(name: 'message')
+  String? get message;
 
   /// Create a copy of GrnReconciliation
   /// with the given fields replaced by the non-null parameter values.

@@ -27,6 +27,11 @@ _$GrnImportResultImpl _$$GrnImportResultImplFromJson(
       upsertedRowCount: (json['upsertedRowCount'] as num?)?.toInt(),
       skippedCount: (json['skippedCount'] as num?)?.toInt(),
       skippedMessage: json['skippedMessage'] as String?,
+      skippedRows: json['skippedRows'] as List<dynamic>? ?? const [],
+      records: (json['records'] as List<dynamic>?)
+              ?.map((e) => GrnImportRecord.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
       reconciliation: json['reconciliation'] == null
           ? null
           : GrnReconciliation.fromJson(
@@ -48,6 +53,8 @@ Map<String, dynamic> _$$GrnImportResultImplToJson(
       'upsertedRowCount': instance.upsertedRowCount,
       'skippedCount': instance.skippedCount,
       'skippedMessage': instance.skippedMessage,
+      'skippedRows': instance.skippedRows,
+      'records': instance.records,
       'reconciliation': instance.reconciliation,
     };
 
@@ -108,14 +115,36 @@ Map<String, dynamic> _$$BatchReconResultImplToJson(
       'qtyVariance': instance.qtyVariance,
     };
 
+_$GrnImportRecordImpl _$$GrnImportRecordImplFromJson(
+        Map<String, dynamic> json) =>
+    _$GrnImportRecordImpl(
+      id: json['id'] as String,
+      grnNumber: json['grn_number'] as String,
+    );
+
+Map<String, dynamic> _$$GrnImportRecordImplToJson(
+        _$GrnImportRecordImpl instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'grn_number': instance.grnNumber,
+    };
+
 _$GrnReconciliationImpl _$$GrnReconciliationImplFromJson(
         Map<String, dynamic> json) =>
     _$GrnReconciliationImpl(
       processed: (json['processed'] as num?)?.toInt(),
+      triggered: json['triggered'] as bool?,
+      success: json['success'] as bool?,
+      mode: json['mode'] as String?,
+      message: json['message'] as String?,
     );
 
 Map<String, dynamic> _$$GrnReconciliationImplToJson(
         _$GrnReconciliationImpl instance) =>
     <String, dynamic>{
       'processed': instance.processed,
+      'triggered': instance.triggered,
+      'success': instance.success,
+      'mode': instance.mode,
+      'message': instance.message,
     };

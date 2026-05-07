@@ -425,6 +425,23 @@ class GrnImportService {
         return _formatDate(parsed);
       }
 
+      // Handle d-MMM-yy / d-MMM-yyyy formats e.g. "2-May-26" or "2-May-2026"
+      final dmmmy = RegExp(r'^(\d{1,2})-([A-Za-z]{3})-(\d{2,4})$');
+      final dmmmyMatch = dmmmy.firstMatch(normalized);
+      if (dmmmyMatch != null) {
+        const monthNames = {
+          'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
+          'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12,
+        };
+        final day = int.tryParse(dmmmyMatch.group(1)!);
+        final month = monthNames[dmmmyMatch.group(2)!.toLowerCase()];
+        final yearRaw = int.tryParse(dmmmyMatch.group(3)!);
+        if (day != null && month != null && yearRaw != null) {
+          final year = yearRaw < 100 ? 2000 + yearRaw : yearRaw;
+          return _formatDate(DateTime(year, month, day));
+        }
+      }
+
       final parsedDate = DateTime.tryParse(normalized);
       if (parsedDate != null) {
         return _formatDate(parsedDate);

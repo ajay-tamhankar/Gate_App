@@ -175,7 +175,7 @@ class _RecoOperationsView extends ConsumerWidget {
             Text('File: ${fileResult.name}'),
             const SizedBox(height: 12),
             const Text(
-              'All GRN records will be imported and automatically reconciled against all gate entries.',
+              'GRN records will be imported immediately. Reconciliation will run in the background.',
               style: TextStyle(fontSize: 13),
             ),
           ],
@@ -187,7 +187,7 @@ class _RecoOperationsView extends ConsumerWidget {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Import & Reconcile'),
+            child: const Text('Import GRNs'),
           ),
         ],
       ),
@@ -214,16 +214,9 @@ class _RecoOperationsView extends ConsumerWidget {
       if (response.success) {
         final result = response.data;
         final imported = result?.importedCount ?? result?.processed ?? 0;
-        String msg = imported > 0
-            ? 'Imported $imported records'
-            : 'Import completed';
-
-        if (result?.summary != null) {
-          final matched = result!.summary!.gateEntries.matched;
-          final total = result.summary!.gateEntries.total;
-          msg = 'Imported $imported · Reconciled: $matched/$total matched';
-        }
-
+        final msg = imported > 0
+            ? 'Import complete, reconciliation running in background. Imported $imported GRN records.'
+            : 'Import complete, reconciliation running in background.';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(msg),
@@ -232,6 +225,13 @@ class _RecoOperationsView extends ConsumerWidget {
           ),
         );
         await ref.read(recoListControllerProvider.notifier).refresh();
+        ref.invalidate(warehouseManagerReconciliationsProvider);
+        ref.invalidate(reconciliationDashboardProvider);
+        Future<void>.delayed(const Duration(seconds: 3)).then((_) {
+          ref.invalidate(warehouseManagerReconciliationsProvider);
+          ref.invalidate(reconciliationDashboardProvider);
+          ref.read(recoListControllerProvider.notifier).refresh();
+        });
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

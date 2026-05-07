@@ -62,6 +62,8 @@ class GrnUploadNotifier extends Notifier<GrnUploadState> {
       ref.invalidate(warehouseReconciliationSummaryProvider);
       ref.invalidate(warehouseManagerReconciliationsProvider);
       ref.invalidate(warehouseManagerDashboardSummaryProvider);
+      ref.invalidate(reconciliationDashboardProvider);
+      _scheduleReconciliationRefresh();
 
       _postAuditLog();
 
@@ -80,7 +82,7 @@ class GrnUploadNotifier extends Notifier<GrnUploadState> {
   /// Provides backward compatibility for older response structures.
   String _buildSuccessMessage(GrnImportResult? result) {
     if (result == null) {
-      return 'Successfully imported records';
+      return 'Import complete, reconciliation running in background.';
     }
 
     final messageParts = <String>[];
@@ -90,12 +92,14 @@ class GrnUploadNotifier extends Notifier<GrnUploadState> {
         result.upsertedRowCount ??
         result.processed ??
         0;
-    messageParts.add('Successfully imported $importedCount records');
+    messageParts.add('Import complete, reconciliation running in background.');
+    if (importedCount > 0) {
+      messageParts.add('Imported $importedCount GRN records.');
+    }
 
-    // Secondary: Reconciliation count (new field)
-    final processedCount = result.reconciliation?.processed ?? 0;
-    if (processedCount > 0) {
-      messageParts.add('Reconciliation processed $processedCount gate entries');
+    final reconciliationMessage = result.reconciliation?.message;
+    if (reconciliationMessage != null && reconciliationMessage.isNotEmpty) {
+      messageParts.add(reconciliationMessage);
     }
 
     // Tertiary: Skipped count with message
@@ -108,14 +112,18 @@ class GrnUploadNotifier extends Notifier<GrnUploadState> {
       }
     }
 
-    // Fallback for older response structure with summary
-    if (result.summary != null && messageParts.length == 1) {
-      final matched = result.summary!.gateEntries.matched;
-      final total = result.summary!.gateEntries.total;
-      messageParts.add('Reconciled: $matched/$total matched');
-    }
-
     return messageParts.join('\n');
+  }
+
+  void _scheduleReconciliationRefresh() {
+    Future<void>.delayed(const Duration(seconds: 3)).then((_) {
+      ref.invalidate(dashboardControllerProvider);
+      ref.invalidate(warehouseDashboardProvider);
+      ref.invalidate(warehouseReconciliationSummaryProvider);
+      ref.invalidate(warehouseManagerReconciliationsProvider);
+      ref.invalidate(warehouseManagerDashboardSummaryProvider);
+      ref.invalidate(reconciliationDashboardProvider);
+    });
   }
 
   /// Resets the notifier back to idle so the card can be reused.

@@ -116,8 +116,8 @@ class _GrnImportCardState extends ConsumerState<GrnImportCard> {
                       const SizedBox(height: 2),
                       Text(
                         kIsWeb
-                            ? 'Upload a CSV or XLSX file exported from SAP. Reconciliation runs automatically against all gate entries.'
-                            : 'Upload a CSV or XLSX file exported from SAP. All gate entries will be reconciled automatically.',
+                            ? 'Upload a CSV or XLSX file exported from SAP. Reconciliation starts in the background.'
+                            : 'Upload a CSV or XLSX file exported from SAP. Reconciliation starts in the background.',
                         style: textTheme.bodySmall?.copyWith(
                           color: colorScheme.onSurfaceVariant,
                         ),
@@ -197,7 +197,7 @@ class _GrnImportCardState extends ConsumerState<GrnImportCard> {
                           ),
                         )
                       : const Icon(Icons.upload_rounded, size: 18),
-                  label: Text(isLoading ? 'Uploading...' : 'Upload & Reconcile'),
+                  label: Text(isLoading ? 'Uploading...' : 'Upload GRNs'),
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 20,
@@ -224,8 +224,8 @@ class _GrnImportCardState extends ConsumerState<GrnImportCard> {
               const SizedBox(height: 6),
               Text(
                 kIsWeb
-                    ? 'Uploading and reconciling all gate entries. This may take a moment...'
-                    : 'Uploading file and running reconciliation, please wait...',
+                    ? 'Uploading GRNs. Reconciliation will continue in the background...'
+                    : 'Uploading file. Reconciliation will continue in the background...',
                 style: textTheme.bodySmall?.copyWith(
                   color: colorScheme.onSurfaceVariant,
                 ),

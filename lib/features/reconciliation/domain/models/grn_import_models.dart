@@ -20,6 +20,8 @@ class GrnImportResult with _$GrnImportResult {
     @JsonKey(name: 'upsertedRowCount') int? upsertedRowCount,
     @JsonKey(name: 'skippedCount') int? skippedCount,
     @JsonKey(name: 'skippedMessage') String? skippedMessage,
+    @Default([]) @JsonKey(name: 'skippedRows') List<Object?> skippedRows,
+    @Default([]) List<GrnImportRecord> records,
     @JsonKey(name: 'reconciliation') GrnReconciliation? reconciliation,
   }) = _GrnImportResult;
 
@@ -67,9 +69,24 @@ class BatchReconResult with _$BatchReconResult {
 }
 
 @freezed
+class GrnImportRecord with _$GrnImportRecord {
+  const factory GrnImportRecord({
+    required String id,
+    @JsonKey(name: 'grn_number') required String grnNumber,
+  }) = _GrnImportRecord;
+
+  factory GrnImportRecord.fromJson(Map<String, dynamic> json) =>
+      _$GrnImportRecordFromJson(json);
+}
+
+@freezed
 class GrnReconciliation with _$GrnReconciliation {
   const factory GrnReconciliation({
     @JsonKey(name: 'processed') int? processed,
+    @JsonKey(name: 'triggered') bool? triggered,
+    @JsonKey(name: 'success') bool? success,
+    @JsonKey(name: 'mode') String? mode,
+    @JsonKey(name: 'message') String? message,
   }) = _GrnReconciliation;
 
   factory GrnReconciliation.fromJson(Map<String, dynamic> json) =>
