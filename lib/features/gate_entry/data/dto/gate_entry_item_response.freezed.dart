@@ -21,6 +21,7 @@ mixin _$GateEntryItemResponse {
   String get materialCode => throw _privateConstructorUsedError;
   int get challanQty => throw _privateConstructorUsedError;
   String get uom => throw _privateConstructorUsedError;
+  String? get challanNo => throw _privateConstructorUsedError;
 
   /// Create a copy of GateEntryItemResponse
   /// with the given fields replaced by the non-null parameter values.
@@ -40,7 +41,8 @@ abstract class $GateEntryItemResponseCopyWith<$Res> {
       String poNumber,
       String materialCode,
       int challanQty,
-      String uom});
+      String uom,
+      String? challanNo});
 }
 
 /// @nodoc
@@ -64,6 +66,7 @@ class _$GateEntryItemResponseCopyWithImpl<$Res,
     Object? materialCode = null,
     Object? challanQty = null,
     Object? uom = null,
+    Object? challanNo = freezed,
   }) {
     return _then(_value.copyWith(
       id: freezed == id
@@ -86,6 +89,10 @@ class _$GateEntryItemResponseCopyWithImpl<$Res,
           ? _value.uom
           : uom // ignore: cast_nullable_to_non_nullable
               as String,
+      challanNo: freezed == challanNo
+          ? _value.challanNo
+          : challanNo // ignore: cast_nullable_to_non_nullable
+              as String?,
     ) as $Val);
   }
 }
@@ -104,7 +111,8 @@ abstract class _$$GateEntryItemResponseImplCopyWith<$Res>
       String poNumber,
       String materialCode,
       int challanQty,
-      String uom});
+      String uom,
+      String? challanNo});
 }
 
 /// @nodoc
@@ -126,6 +134,7 @@ class __$$GateEntryItemResponseImplCopyWithImpl<$Res>
     Object? materialCode = null,
     Object? challanQty = null,
     Object? uom = null,
+    Object? challanNo = freezed,
   }) {
     return _then(_$GateEntryItemResponseImpl(
       id: freezed == id
@@ -148,6 +157,10 @@ class __$$GateEntryItemResponseImplCopyWithImpl<$Res>
           ? _value.uom
           : uom // ignore: cast_nullable_to_non_nullable
               as String,
+      challanNo: freezed == challanNo
+          ? _value.challanNo
+          : challanNo // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }
@@ -160,7 +173,8 @@ class _$GateEntryItemResponseImpl implements _GateEntryItemResponse {
       required this.poNumber,
       required this.materialCode,
       required this.challanQty,
-      required this.uom});
+      required this.uom,
+      this.challanNo});
 
   @override
   final String? id;
@@ -172,10 +186,12 @@ class _$GateEntryItemResponseImpl implements _GateEntryItemResponse {
   final int challanQty;
   @override
   final String uom;
+  @override
+  final String? challanNo;
 
   @override
   String toString() {
-    return 'GateEntryItemResponse(id: $id, poNumber: $poNumber, materialCode: $materialCode, challanQty: $challanQty, uom: $uom)';
+    return 'GateEntryItemResponse(id: $id, poNumber: $poNumber, materialCode: $materialCode, challanQty: $challanQty, uom: $uom, challanNo: $challanNo)';
   }
 
   @override
@@ -190,12 +206,14 @@ class _$GateEntryItemResponseImpl implements _GateEntryItemResponse {
                 other.materialCode == materialCode) &&
             (identical(other.challanQty, challanQty) ||
                 other.challanQty == challanQty) &&
-            (identical(other.uom, uom) || other.uom == uom));
+            (identical(other.uom, uom) || other.uom == uom) &&
+            (identical(other.challanNo, challanNo) ||
+                other.challanNo == challanNo));
   }
 
   @override
-  int get hashCode =>
-      Object.hash(runtimeType, id, poNumber, materialCode, challanQty, uom);
+  int get hashCode => Object.hash(
+      runtimeType, id, poNumber, materialCode, challanQty, uom, challanNo);
 
   /// Create a copy of GateEntryItemResponse
   /// with the given fields replaced by the non-null parameter values.
@@ -213,7 +231,8 @@ abstract class _GateEntryItemResponse implements GateEntryItemResponse {
       required final String poNumber,
       required final String materialCode,
       required final int challanQty,
-      required final String uom}) = _$GateEntryItemResponseImpl;
+      required final String uom,
+      final String? challanNo}) = _$GateEntryItemResponseImpl;
 
   @override
   String? get id;
@@ -225,6 +244,8 @@ abstract class _GateEntryItemResponse implements GateEntryItemResponse {
   int get challanQty;
   @override
   String get uom;
+  @override
+  String? get challanNo;
 
   /// Create a copy of GateEntryItemResponse
   /// with the given fields replaced by the non-null parameter values.

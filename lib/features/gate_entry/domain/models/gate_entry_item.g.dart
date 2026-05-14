@@ -13,6 +13,7 @@ _$GateEntryItemImpl _$$GateEntryItemImplFromJson(Map<String, dynamic> json) =>
       materialCode: json['materialCode'] as String,
       challanQty: (json['challanQty'] as num).toInt(),
       uom: json['uom'] as String,
+      challanNo: json['challanNo'] as String?,
     );
 
 Map<String, dynamic> _$$GateEntryItemImplToJson(_$GateEntryItemImpl instance) =>
@@ -22,4 +23,5 @@ Map<String, dynamic> _$$GateEntryItemImplToJson(_$GateEntryItemImpl instance) =>
       'materialCode': instance.materialCode,
       'challanQty': instance.challanQty,
       'uom': instance.uom,
+      'challanNo': instance.challanNo,
     };

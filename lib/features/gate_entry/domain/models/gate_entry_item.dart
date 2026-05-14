@@ -11,6 +11,7 @@ class GateEntryItem with _$GateEntryItem {
     required String materialCode,
     required int challanQty,
     required String uom,
+    String? challanNo,
   }) = _GateEntryItem;
 
   factory GateEntryItem.fromJson(Map<String, dynamic> json) =>

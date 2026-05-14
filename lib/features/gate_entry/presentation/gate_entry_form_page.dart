@@ -693,7 +693,48 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
 
         if (printAfter && !isEdit && createdEntry != null) {
           try {
-            await gatePassPdfService.printGatePass(createdEntry);
+            // Pull items directly from the form so every challan number is
+            // captured, even if the backend response doesn't include per-item
+            // challan numbers yet.
+            final items = <GatePassItemInfo>[];
+            for (final field in _challanFields) {
+              final challan = field.controller.text.trim();
+              if (challan.isEmpty) continue;
+              final qty =
+                  int.tryParse(field.quantityController.text.trim()) ?? 0;
+              items.add(GatePassItemInfo(
+                materialCode: field.partNumberController.text.trim(),
+                poNumber: field.poNumberController.text.trim(),
+                challanQty: qty,
+                uom: field.uomController.text.trim().isEmpty
+                    ? 'EA'
+                    : field.uomController.text.trim(),
+                challanNo: challan,
+              ));
+            }
+
+            await gatePassPdfService.printGatePassFromFields(
+              gatePassNo: (createdEntry.gateEntryNo ?? '').trim().isNotEmpty
+                  ? createdEntry.gateEntryNo!.trim()
+                  : createdEntry.id,
+              isInward: createdEntry.gateMovement == GateMovement.inMovement,
+              entryDate: createdEntry.gateTimestamp,
+              vendorName: createdEntry.vendorName,
+              challanNo: createdEntry.challanNo,
+              vehicleNo: createdEntry.vehicleNo,
+              lrNumber: createdEntry.lrNumber,
+              items: items.isNotEmpty
+                  ? items
+                  : createdEntry.items
+                      .map((it) => GatePassItemInfo(
+                            materialCode: it.materialCode,
+                            poNumber: it.poNumber,
+                            challanQty: it.challanQty,
+                            uom: it.uom,
+                            challanNo: it.challanNo,
+                          ))
+                      .toList(),
+            );
           } catch (printError) {
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -1256,19 +1297,46 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
                           TextFormField(
                             controller: _driverContactCtrl,
                             decoration: const InputDecoration(
-                                labelText: 'Driver Contact No',
-                                prefixIcon: Icon(Icons.phone_android)),
+                              labelText: 'Driver Contact No',
+                              prefixIcon: Icon(Icons.phone_android),
+                              counterText: '',
+                              helperText: '10-digit mobile number',
+                            ),
                             keyboardType: TextInputType.phone,
+                            maxLength: 10,
                             inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly
+                              FilteringTextInputFormatter.digitsOnly,
+                              LengthLimitingTextInputFormatter(10),
                             ],
+                            buildCounter: (context,
+                                {required currentLength,
+                                required isFocused,
+                                maxLength}) {
+                              return Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Text(
+                                  '$currentLength / ${maxLength ?? 10}',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: currentLength == (maxLength ?? 10)
+                                        ? Colors.green
+                                        : Theme.of(context)
+                                            .colorScheme
+                                            .onSurfaceVariant,
+                                  ),
+                                ),
+                              );
+                            },
                             validator: (value) {
                               final text = value?.trim() ?? '';
                               if (text.isEmpty) {
                                 return 'Driver contact number is required';
                               }
-                              if (text.length < 10 || text.length > 15) {
-                                return 'Enter a valid contact number';
+                              if (text.length != 10) {
+                                return 'Mobile number must be exactly 10 digits';
+                              }
+                              if (!RegExp(r'^[6-9]\d{9}$').hasMatch(text)) {
+                                return 'Enter a valid 10-digit Indian mobile number';
                               }
                               return null;
                             },
@@ -1289,11 +1357,51 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
                           TextFormField(
                             controller: _vehicleCtrl,
                             decoration: const InputDecoration(
-                                labelText: 'Vehicle Number',
-                                prefixIcon: Icon(Icons.numbers)),
-                            validator: (value) => value == null || value.isEmpty
-                                ? 'Vehicle number required'
-                                : null,
+                              labelText: 'Vehicle Number',
+                              prefixIcon: Icon(Icons.numbers),
+                              counterText: '',
+                              helperText: 'Up to 8 characters',
+                            ),
+                            maxLength: 8,
+                            textCapitalization: TextCapitalization.characters,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(
+                                  RegExp(r'[A-Za-z0-9]')),
+                              LengthLimitingTextInputFormatter(8),
+                              TextInputFormatter.withFunction(
+                                (oldValue, newValue) => newValue.copyWith(
+                                    text: newValue.text.toUpperCase()),
+                              ),
+                            ],
+                            buildCounter: (context,
+                                {required currentLength,
+                                required isFocused,
+                                maxLength}) {
+                              return Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Text(
+                                  '$currentLength / ${maxLength ?? 8}',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: currentLength == (maxLength ?? 8)
+                                        ? Colors.green
+                                        : Theme.of(context)
+                                            .colorScheme
+                                            .onSurfaceVariant,
+                                  ),
+                                ),
+                              );
+                            },
+                            validator: (value) {
+                              final text = value?.trim() ?? '';
+                              if (text.isEmpty) {
+                                return 'Vehicle number required';
+                              }
+                              if (text.length > 8) {
+                                return 'Maximum 8 characters';
+                              }
+                              return null;
+                            },
                           )),
 
                       const SizedBox(height: 16),

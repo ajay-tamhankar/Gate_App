@@ -14,6 +14,7 @@ GateEntryItemResponse _$GateEntryItemResponseFromJson(
       materialCode: json['materialCode'] as String,
       challanQty: (json['challanQty'] as num).toInt(),
       uom: json['uom'] as String,
+      challanNo: json['challanNo'] as String?,
     );
 
 Map<String, dynamic> _$GateEntryItemResponseToJson(
@@ -24,4 +25,5 @@ Map<String, dynamic> _$GateEntryItemResponseToJson(
       'materialCode': instance.materialCode,
       'challanQty': instance.challanQty,
       'uom': instance.uom,
+      'challanNo': instance.challanNo,
     };

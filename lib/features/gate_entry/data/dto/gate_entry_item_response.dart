@@ -12,6 +12,7 @@ class GateEntryItemResponse with _$GateEntryItemResponse {
     required String materialCode,
     required int challanQty,
     required String uom,
+    String? challanNo,
   }) = _GateEntryItemResponse;
 
   factory GateEntryItemResponse.fromJson(Map<String, dynamic> json) {
@@ -34,6 +35,10 @@ class GateEntryItemResponse with _$GateEntryItemResponse {
         const ['uom', 'unit'],
         fallback: 'EA',
       ),
+      'challanNo': _readNullableString(
+        json,
+        const ['challanNo', 'challan_no', 'invoiceNo', 'invoice_no'],
+      ),
     };
 
     return _$GateEntryItemResponseFromJson(normalized);
@@ -52,6 +57,16 @@ String _readString(
     if (text.isNotEmpty) return text;
   }
   return fallback;
+}
+
+String? _readNullableString(Map<String, dynamic> json, List<String> keys) {
+  for (final key in keys) {
+    final value = json[key];
+    if (value == null) continue;
+    final text = value.toString();
+    if (text.isNotEmpty) return text;
+  }
+  return null;
 }
 
 int _readInt(dynamic value, {int fallback = 0}) {

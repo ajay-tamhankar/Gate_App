@@ -51,6 +51,7 @@ class GateEntryRepositoryImpl implements GateEntryRepository {
                 materialCode: item.materialCode,
                 challanQty: item.challanQty,
                 uom: item.uom,
+                challanNo: item.challanNo,
               ))
           .toList(),
       gateOutTimestamp: dto.gateOutTimestamp != null
@@ -204,6 +205,7 @@ class GateEntryRepositoryImpl implements GateEntryRepository {
                     materialCode: entry.partNumber,
                     challanQty: entry.quantity,
                     uom: entry.uom,
+                    challanNo: entry.challanNo,
                   ),
                 )
                 .toList()
@@ -215,6 +217,7 @@ class GateEntryRepositoryImpl implements GateEntryRepository {
                     materialCode: item.materialCode,
                     challanQty: item.challanQty,
                     uom: item.uom,
+                    challanNo: item.challanNo,
                   ),
                 )
                 .toList(),

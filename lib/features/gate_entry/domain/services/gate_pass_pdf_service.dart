@@ -12,12 +12,14 @@ class GatePassItemInfo {
     required this.poNumber,
     required this.challanQty,
     required this.uom,
+    this.challanNo,
   });
 
   final String materialCode;
   final String poNumber;
   final num challanQty;
   final String uom;
+  final String? challanNo;
 }
 
 class GatePassPdfService {
@@ -117,7 +119,26 @@ class GatePassPdfService {
       poNumber: item.poNumber,
       challanQty: item.challanQty,
       uom: item.uom,
+      challanNo: item.challanNo,
     );
+  }
+
+  /// Builds the "D.C. / Inv. No." display line. If items carry per-line
+  /// challan numbers, surface every unique value (joined by ", "). Otherwise
+  /// fall back to the single [challanNo] argument.
+  String _buildChallanDisplay({
+    required String challanNo,
+    required List<GatePassItemInfo> items,
+  }) {
+    final seen = <String>{};
+    final ordered = <String>[];
+    for (final item in items) {
+      final value = (item.challanNo ?? '').trim();
+      if (value.isEmpty) continue;
+      if (seen.add(value)) ordered.add(value);
+    }
+    if (ordered.isNotEmpty) return ordered.join(', ');
+    return challanNo.trim();
   }
 
   pw.Document _buildDocument({
@@ -136,7 +157,10 @@ class GatePassPdfService {
         ? _dateFormat.format(entryDate.toLocal())
         : _dateFormat.format(DateTime.now());
     final descriptionLines = _buildDescriptionLines(items);
-    final challanLine = challanNo.trim();
+    final challanLine = _buildChallanDisplay(
+      challanNo: challanNo,
+      items: items,
+    );
     final vehicleAndLr = _buildVehicleAndLr(vehicleNo, lrNumber);
 
     doc.addPage(

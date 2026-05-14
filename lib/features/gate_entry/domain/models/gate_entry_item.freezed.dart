@@ -25,6 +25,7 @@ mixin _$GateEntryItem {
   String get materialCode => throw _privateConstructorUsedError;
   int get challanQty => throw _privateConstructorUsedError;
   String get uom => throw _privateConstructorUsedError;
+  String? get challanNo => throw _privateConstructorUsedError;
 
   /// Serializes this GateEntryItem to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -47,7 +48,8 @@ abstract class $GateEntryItemCopyWith<$Res> {
       String poNumber,
       String materialCode,
       int challanQty,
-      String uom});
+      String uom,
+      String? challanNo});
 }
 
 /// @nodoc
@@ -70,6 +72,7 @@ class _$GateEntryItemCopyWithImpl<$Res, $Val extends GateEntryItem>
     Object? materialCode = null,
     Object? challanQty = null,
     Object? uom = null,
+    Object? challanNo = freezed,
   }) {
     return _then(_value.copyWith(
       id: freezed == id
@@ -92,6 +95,10 @@ class _$GateEntryItemCopyWithImpl<$Res, $Val extends GateEntryItem>
           ? _value.uom
           : uom // ignore: cast_nullable_to_non_nullable
               as String,
+      challanNo: freezed == challanNo
+          ? _value.challanNo
+          : challanNo // ignore: cast_nullable_to_non_nullable
+              as String?,
     ) as $Val);
   }
 }
@@ -109,7 +116,8 @@ abstract class _$$GateEntryItemImplCopyWith<$Res>
       String poNumber,
       String materialCode,
       int challanQty,
-      String uom});
+      String uom,
+      String? challanNo});
 }
 
 /// @nodoc
@@ -130,6 +138,7 @@ class __$$GateEntryItemImplCopyWithImpl<$Res>
     Object? materialCode = null,
     Object? challanQty = null,
     Object? uom = null,
+    Object? challanNo = freezed,
   }) {
     return _then(_$GateEntryItemImpl(
       id: freezed == id
@@ -152,6 +161,10 @@ class __$$GateEntryItemImplCopyWithImpl<$Res>
           ? _value.uom
           : uom // ignore: cast_nullable_to_non_nullable
               as String,
+      challanNo: freezed == challanNo
+          ? _value.challanNo
+          : challanNo // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }
@@ -164,7 +177,8 @@ class _$GateEntryItemImpl implements _GateEntryItem {
       required this.poNumber,
       required this.materialCode,
       required this.challanQty,
-      required this.uom});
+      required this.uom,
+      this.challanNo});
 
   factory _$GateEntryItemImpl.fromJson(Map<String, dynamic> json) =>
       _$$GateEntryItemImplFromJson(json);
@@ -179,10 +193,12 @@ class _$GateEntryItemImpl implements _GateEntryItem {
   final int challanQty;
   @override
   final String uom;
+  @override
+  final String? challanNo;
 
   @override
   String toString() {
-    return 'GateEntryItem(id: $id, poNumber: $poNumber, materialCode: $materialCode, challanQty: $challanQty, uom: $uom)';
+    return 'GateEntryItem(id: $id, poNumber: $poNumber, materialCode: $materialCode, challanQty: $challanQty, uom: $uom, challanNo: $challanNo)';
   }
 
   @override
@@ -197,13 +213,15 @@ class _$GateEntryItemImpl implements _GateEntryItem {
                 other.materialCode == materialCode) &&
             (identical(other.challanQty, challanQty) ||
                 other.challanQty == challanQty) &&
-            (identical(other.uom, uom) || other.uom == uom));
+            (identical(other.uom, uom) || other.uom == uom) &&
+            (identical(other.challanNo, challanNo) ||
+                other.challanNo == challanNo));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode =>
-      Object.hash(runtimeType, id, poNumber, materialCode, challanQty, uom);
+  int get hashCode => Object.hash(
+      runtimeType, id, poNumber, materialCode, challanQty, uom, challanNo);
 
   /// Create a copy of GateEntryItem
   /// with the given fields replaced by the non-null parameter values.
@@ -227,7 +245,8 @@ abstract class _GateEntryItem implements GateEntryItem {
       required final String poNumber,
       required final String materialCode,
       required final int challanQty,
-      required final String uom}) = _$GateEntryItemImpl;
+      required final String uom,
+      final String? challanNo}) = _$GateEntryItemImpl;
 
   factory _GateEntryItem.fromJson(Map<String, dynamic> json) =
       _$GateEntryItemImpl.fromJson;
@@ -242,6 +261,8 @@ abstract class _GateEntryItem implements GateEntryItem {
   int get challanQty;
   @override
   String get uom;
+  @override
+  String? get challanNo;
 
   /// Create a copy of GateEntryItem
   /// with the given fields replaced by the non-null parameter values.

@@ -189,12 +189,35 @@ class _GateEntrySecurityViewState extends ConsumerState<_GateEntrySecurityView> 
     final isMob = isMobile(context);
     final isTab = isTablet(context);
     final filtered = _applyFilters(state.entries);
-    final bottomActionClearance = canCreate ? (isMob ? 112.0 : 128.0) : 24.0;
+    const bottomActionClearance = 24.0;
+
+    void openCreateForm() {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => const GateEntryFormPage(),
+        ),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Gate Entry Management'),
         actions: [
+          if (canCreate)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: isMob
+                  ? IconButton(
+                      tooltip: 'Create Gate Entry',
+                      icon: const Icon(Icons.add),
+                      onPressed: openCreateForm,
+                    )
+                  : FilledButton.icon(
+                      onPressed: openCreateForm,
+                      icon: const Icon(Icons.add, size: 18),
+                      label: const Text('Create Gate Entry'),
+                    ),
+            ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () => ref
@@ -205,19 +228,6 @@ class _GateEntrySecurityViewState extends ConsumerState<_GateEntrySecurityView> 
           const SizedBox(width: 8),
         ],
       ),
-      floatingActionButton: canCreate
-          ? FloatingActionButton.extended(
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => const GateEntryFormPage(),
-                  ),
-                );
-              },
-              icon: const Icon(Icons.add),
-              label: const Text('Create Gate Entry'),
-            )
-          : null,
       body: state.isLoading && state.entries.isEmpty
           ? _buildLoadingView(isMob, isTab)
           : Stack(
