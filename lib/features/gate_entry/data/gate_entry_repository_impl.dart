@@ -57,6 +57,8 @@ class GateEntryRepositoryImpl implements GateEntryRepository {
           ? DateTime.tryParse(dto.gateOutTimestamp!)
           : null,
       gateOutBy: dto.gateOutBy,
+      noOfLineItems: dto.noOfLineItems,
+      remark: dto.remark,
     );
   }
 
@@ -218,6 +220,8 @@ class GateEntryRepositoryImpl implements GateEntryRepository {
                 .toList(),
         status: 'Pending',
         gateTimestamp: DateTime.now(),
+        noOfLineItems: request.noOfLineItems,
+        remark: request.remark,
       );
 
       return ApiResponse<GateEntry>(

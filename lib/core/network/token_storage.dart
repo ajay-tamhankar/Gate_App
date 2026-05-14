@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -9,20 +8,29 @@ final tokenStorageProvider = Provider<TokenStorage>((ref) {
 class TokenStorage {
   static const _tokenKey = 'auth_token';
 
+  String? _cachedToken;
+  bool _loadedFromDisk = false;
+
   Future<void> saveToken(String token) async {
-    debugPrint('TokenStorage: saving token');
+    _cachedToken = token;
+    _loadedFromDisk = true;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_tokenKey, token);
   }
 
   Future<String?> getToken() async {
-    debugPrint('TokenStorage: reading token');
+    if (_loadedFromDisk) return _cachedToken;
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_tokenKey);
+    _cachedToken = prefs.getString(_tokenKey);
+    _loadedFromDisk = true;
+    return _cachedToken;
   }
 
+  String? get cachedToken => _loadedFromDisk ? _cachedToken : null;
+
   Future<void> deleteToken() async {
-    debugPrint('TokenStorage: deleting token');
+    _cachedToken = null;
+    _loadedFromDisk = true;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_tokenKey);
   }

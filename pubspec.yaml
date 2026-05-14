@@ -31,6 +31,9 @@ dependencies:
   # ---------- File Upload ----------
   file_picker: ^8.1.2
 
+  # ---------- QR / Barcode Scanning (mobile only) ----------
+  mobile_scanner: ^5.2.3
+
   # ---------- Utilities ----------
   intl: ^0.20.2
 

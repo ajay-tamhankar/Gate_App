@@ -30,6 +30,8 @@ _$GateEntryImpl _$$GateEntryImplFromJson(Map<String, dynamic> json) =>
           : DateTime.parse(json['gateOutTimestamp'] as String),
       gateOutBy: json['gateOutBy'] as String?,
       createdBy: json['createdBy'] as String?,
+      noOfLineItems: (json['noOfLineItems'] as num?)?.toInt(),
+      remark: json['remark'] as String?,
     );
 
 Map<String, dynamic> _$$GateEntryImplToJson(_$GateEntryImpl instance) =>
@@ -50,6 +52,8 @@ Map<String, dynamic> _$$GateEntryImplToJson(_$GateEntryImpl instance) =>
       'gateOutTimestamp': instance.gateOutTimestamp?.toIso8601String(),
       'gateOutBy': instance.gateOutBy,
       'createdBy': instance.createdBy,
+      'noOfLineItems': instance.noOfLineItems,
+      'remark': instance.remark,
     };
 
 const _$GateMovementEnumMap = {

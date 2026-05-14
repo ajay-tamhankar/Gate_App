@@ -9,7 +9,6 @@ import '../../domain/usecases/gate_out_usecase.dart';
 import '../../data/dto/create_gate_entry_request.dart';
 import '../../../../core/network/api_response.dart';
 import '../../../../core/network/pagination_model.dart';
-import '../../../dashboard/presentation/controllers/dashboard_controller.dart';
 
 const _queryNotProvided = Object();
 
@@ -67,7 +66,6 @@ final gateEntryControllerProvider =
 });
 
 class GateEntryController extends StateNotifier<GateEntryState> {
-  final Ref _ref;
   final GetGateEntriesUseCase _getGateEntriesUseCase;
   final CreateGateEntryUseCase _createGateEntryUseCase;
   final VerifyGateEntryUseCase _verifyGateEntryUseCase;
@@ -83,8 +81,7 @@ class GateEntryController extends StateNotifier<GateEntryState> {
     required ApproveGateEntryUseCase approveGateEntryUseCase,
     required CloseGateEntryUseCase closeGateEntryUseCase,
     required GateOutUseCase gateOutUseCase,
-  })  : _ref = ref,
-        _getGateEntriesUseCase = getGateEntriesUseCase,
+  })  : _getGateEntriesUseCase = getGateEntriesUseCase,
         _createGateEntryUseCase = createGateEntryUseCase,
         _verifyGateEntryUseCase = verifyGateEntryUseCase,
         _approveGateEntryUseCase = approveGateEntryUseCase,
@@ -147,8 +144,7 @@ class GateEntryController extends StateNotifier<GateEntryState> {
     final response = await _createGateEntryUseCase.execute(request);
 
     if (response.success && response.data != null) {
-      await fetchEntries(refresh: true);
-      _ref.invalidate(dashboardControllerProvider);
+      _scheduleBackgroundRefresh();
       return response.data!;
     } else {
       state = state.copyWith(isLoading: false, error: response.message);
@@ -175,8 +171,7 @@ class GateEntryController extends StateNotifier<GateEntryState> {
     final response = await _gateOutUseCase.execute(id, remarks: remarks);
 
     if (response.success) {
-      await fetchEntries(refresh: true);
-      _ref.invalidate(dashboardControllerProvider);
+      _scheduleBackgroundRefresh();
       return true;
     } else {
       state = state.copyWith(isLoading: false, error: response.message);
@@ -190,15 +185,23 @@ class GateEntryController extends StateNotifier<GateEntryState> {
     final response = await action;
 
     if (response.success) {
-      // Optimistically update entry status locally if needed, doing a reload is safer.
-      // Re-fetch or manually mutate the item object in the list
-      await fetchEntries(refresh: true);
-      _ref.invalidate(dashboardControllerProvider);
+      _scheduleBackgroundRefresh();
       return true;
     } else {
       state = state.copyWith(isLoading: false, error: response.message);
       return false;
     }
+  }
+
+  void _scheduleBackgroundRefresh() {
+    state = state.copyWith(isLoading: false, error: null);
+    Future.microtask(() async {
+      try {
+        await fetchEntries(refresh: true);
+      } catch (_) {
+        // background refresh is best-effort
+      }
+    });
   }
 
   int _normalizeLimit(int value) {

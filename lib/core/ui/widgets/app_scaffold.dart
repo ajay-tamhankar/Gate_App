@@ -23,7 +23,13 @@ class AppScaffold extends ConsumerWidget {
     final session = ref.watch(sessionControllerProvider);
     final role = session is Authenticated ? session.role : null;
     final showReconciliation = role != UserRole.gateSecurity;
-    final visibleIndexes = showReconciliation ? [0, 1, 2, 3] : [0, 1, 3];
+    final showReports = role != UserRole.gateSecurity;
+    final visibleIndexes = <int>[
+      0,
+      1,
+      if (showReconciliation) 2,
+      if (showReports) 3,
+    ];
     final navigationIndex = visibleIndexes.indexOf(selectedIndex).clamp(0, visibleIndexes.length - 1);
 
     if (isDesktop(context)) {
@@ -35,6 +41,7 @@ class AppScaffold extends ConsumerWidget {
                 selectedIndex: selectedIndex,
                 onSelect: onSelect,
                 showReconciliation: showReconciliation,
+                showReports: showReports,
               ),
               const VerticalDivider(width: 1, thickness: 1),
               Expanded(
@@ -73,11 +80,12 @@ class AppScaffold extends ConsumerWidget {
               selectedIcon: Icon(Icons.rule_folder),
               label: 'Reconciliation',
             ),
-          const NavigationDestination(
-            icon: Icon(Icons.bar_chart_outlined),
-            selectedIcon: Icon(Icons.bar_chart),
-            label: 'Reports',
-          ),
+          if (showReports)
+            const NavigationDestination(
+              icon: Icon(Icons.bar_chart_outlined),
+              selectedIcon: Icon(Icons.bar_chart),
+              label: 'Reports',
+            ),
         ],
       ),
     );
@@ -88,11 +96,13 @@ class _DesktopSidebar extends StatelessWidget {
   final int selectedIndex;
   final void Function(int index) onSelect;
   final bool showReconciliation;
+  final bool showReports;
 
   const _DesktopSidebar({
     required this.selectedIndex,
     required this.onSelect,
     required this.showReconciliation,
+    required this.showReports,
   });
 
   @override
@@ -175,15 +185,17 @@ class _DesktopSidebar extends StatelessWidget {
                     onTap: () => onSelect(2),
                   ),
                 ],
-                const SizedBox(height: 24),
-                const _SectionLabel(label: 'ANALYTICS'),
-                _SidebarItem(
-                  icon: Icons.bar_chart_outlined,
-                  activeIcon: Icons.bar_chart,
-                  label: 'Reports',
-                  isSelected: selectedIndex == 3,
-                  onTap: () => onSelect(3),
-                ),
+                if (showReports) ...[
+                  const SizedBox(height: 24),
+                  const _SectionLabel(label: 'ANALYTICS'),
+                  _SidebarItem(
+                    icon: Icons.bar_chart_outlined,
+                    activeIcon: Icons.bar_chart,
+                    label: 'Reports',
+                    isSelected: selectedIndex == 3,
+                    onTap: () => onSelect(3),
+                  ),
+                ],
               ],
             ),
           ),

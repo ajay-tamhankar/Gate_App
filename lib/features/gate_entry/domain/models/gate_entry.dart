@@ -25,6 +25,8 @@ class GateEntry with _$GateEntry {
     DateTime? gateOutTimestamp,
     String? gateOutBy,
     String? createdBy,
+    int? noOfLineItems,
+    String? remark,
   }) = _GateEntry;
 
   factory GateEntry.fromJson(Map<String, dynamic> json) =>

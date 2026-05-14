@@ -7,6 +7,7 @@ import '../../../core/auth/session_state.dart';
 import '../../../core/auth/user_role.dart';
 import '../../../core/ui/widgets/logout_action.dart';
 import '../domain/models/gate_entry.dart';
+import '../domain/services/gate_pass_pdf_service.dart';
 import 'controllers/gate_entry_detail_controller.dart';
 import 'controllers/gate_entry_controller.dart';
 import 'gate_entry_form_page.dart';
@@ -51,6 +52,36 @@ class _GateEntryDetailSecurityViewState extends ConsumerState<_GateEntryDetailSe
     return role == UserRole.warehouseManager ||
         role == UserRole.whMgr ||
         role == UserRole.admin;
+  }
+
+  Future<void> _printGatePass(BuildContext context, GateEntry entry) async {
+    try {
+      await gatePassPdfService.printGatePass(entry);
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Could not open gate pass print: $e'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.orangeAccent,
+        ),
+      );
+    }
+  }
+
+  Future<void> _shareGatePass(BuildContext context, GateEntry entry) async {
+    try {
+      await gatePassPdfService.shareGatePass(entry);
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Could not share gate pass: $e'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.orangeAccent,
+        ),
+      );
+    }
   }
 
   Future<void> _openEditPage(BuildContext context, GateEntry entry) async {
@@ -112,6 +143,18 @@ class _GateEntryDetailSecurityViewState extends ConsumerState<_GateEntryDetailSe
       appBar: AppBar(
         title: const Text('Gate Entry Details'),
         actions: [
+          if (state.entry != null)
+            IconButton(
+              icon: const Icon(Icons.print_outlined),
+              tooltip: 'Print Gate Pass',
+              onPressed: () => _printGatePass(context, state.entry!),
+            ),
+          if (state.entry != null)
+            IconButton(
+              icon: const Icon(Icons.share_outlined),
+              tooltip: 'Share Gate Pass',
+              onPressed: () => _shareGatePass(context, state.entry!),
+            ),
           if (state.entry != null && _canEdit(role))
             IconButton(
               icon: const Icon(Icons.edit_outlined),
@@ -302,6 +345,11 @@ class _GateEntryDetailSecurityViewState extends ConsumerState<_GateEntryDetailSe
                     context, 'Status', _statusLabel(entry.status)),
                 _detailRow(
                     context, 'Entry Time', _formatDate(entry.gateTimestamp)),
+                if (entry.noOfLineItems != null)
+                  _detailRow(context, 'No. of Line Items',
+                      entry.noOfLineItems.toString()),
+                if (entry.remark != null && entry.remark!.isNotEmpty)
+                  _detailRow(context, 'Remark', entry.remark!),
                 if (entry.createdBy != null)
                   _detailRow(context, 'Created By', entry.createdBy!),
                 if (entry.gateOutTimestamp != null)
@@ -736,6 +784,84 @@ class _WarehouseGateEntryDetailViewState
     super.dispose();
   }
 
+  ({
+    bool isInward,
+    String gatePassNo,
+    DateTime? entryDate,
+    List<GatePassItemInfo> items,
+  }) _warehouseGatePassData(WarehouseGateEntryDetail entry) {
+    final movement = entry.gateMovement.trim().toLowerCase();
+    final isInward = movement.isEmpty || movement.contains('in');
+    final gatePassNo = entry.gateEntryNo.trim().isNotEmpty
+        ? entry.gateEntryNo.trim()
+        : entry.id;
+    return (
+      isInward: isInward,
+      gatePassNo: gatePassNo,
+      entryDate: isInward ? entry.entryTime : entry.gateOutTimestamp,
+      items: entry.items
+          .map((item) => GatePassItemInfo(
+                materialCode: item.materialCode,
+                poNumber: item.poNumber,
+                challanQty: item.challanQty,
+                uom: item.uom,
+              ))
+          .toList(),
+    );
+  }
+
+  Future<void> _printWarehouseGatePass(
+      BuildContext context, WarehouseGateEntryDetail entry) async {
+    try {
+      final data = _warehouseGatePassData(entry);
+      await gatePassPdfService.printGatePassFromFields(
+        gatePassNo: data.gatePassNo,
+        isInward: data.isInward,
+        entryDate: data.entryDate,
+        vendorName: entry.vendorName,
+        challanNo: entry.challanNo,
+        vehicleNo: entry.vehicleNo,
+        lrNumber: entry.lrNumber,
+        items: data.items,
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Could not open gate pass print: $e'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.orangeAccent,
+        ),
+      );
+    }
+  }
+
+  Future<void> _shareWarehouseGatePass(
+      BuildContext context, WarehouseGateEntryDetail entry) async {
+    try {
+      final data = _warehouseGatePassData(entry);
+      await gatePassPdfService.shareGatePassFromFields(
+        gatePassNo: data.gatePassNo,
+        isInward: data.isInward,
+        entryDate: data.entryDate,
+        vendorName: entry.vendorName,
+        challanNo: entry.challanNo,
+        vehicleNo: entry.vehicleNo,
+        lrNumber: entry.lrNumber,
+        items: data.items,
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Could not share gate pass: $e'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.orangeAccent,
+        ),
+      );
+    }
+  }
+
   Future<void> _openAttachment(String attachmentId) async {
     final repo = ref.read(warehouseRepositoryProvider);
     try {
@@ -851,9 +977,25 @@ class _WarehouseGateEntryDetailViewState
     return Scaffold(
       appBar: AppBar(
         title: const Text('Gate Entry Details'),
-        actions: const [
-          LogoutAction(),
-          SizedBox(width: 8),
+        actions: [
+          detail.maybeWhen(
+            data: (entry) => IconButton(
+              icon: const Icon(Icons.print_outlined),
+              tooltip: 'Print Gate Pass',
+              onPressed: () => _printWarehouseGatePass(context, entry),
+            ),
+            orElse: () => const SizedBox.shrink(),
+          ),
+          detail.maybeWhen(
+            data: (entry) => IconButton(
+              icon: const Icon(Icons.share_outlined),
+              tooltip: 'Share Gate Pass',
+              onPressed: () => _shareWarehouseGatePass(context, entry),
+            ),
+            orElse: () => const SizedBox.shrink(),
+          ),
+          const LogoutAction(),
+          const SizedBox(width: 8),
         ],
       ),
       body: detail.when(

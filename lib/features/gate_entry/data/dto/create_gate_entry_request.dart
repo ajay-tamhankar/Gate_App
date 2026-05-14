@@ -55,6 +55,8 @@ class CreateGateEntryRequest {
     this.vehicleNo = '',
     this.transporterName = '',
     this.items = const <GateEntryItemResponse>[],
+    this.noOfLineItems,
+    this.remark,
   });
 
   final String gateMovement;
@@ -70,6 +72,8 @@ class CreateGateEntryRequest {
   final String vehicleNo;
   final String transporterName;
   final List<GateEntryItemResponse> items;
+  final int? noOfLineItems;
+  final String? remark;
 
   factory CreateGateEntryRequest.fromJson(Map<String, dynamic> json) {
     return CreateGateEntryRequest(
@@ -96,6 +100,8 @@ class CreateGateEntryRequest {
                 GateEntryItemResponse.fromJson(item as Map<String, dynamic>),
           )
           .toList(),
+      noOfLineItems: _readInt(json, const ['noOfLineItems', 'no_of_line_items']),
+      remark: _readNullableString(json, const ['remark', 'remarks']),
     );
   }
 
@@ -111,7 +117,31 @@ class CreateGateEntryRequest {
     if (driverContactNo.isNotEmpty) map['driverContactNo'] = driverContactNo;
     if (vehicleNo.isNotEmpty) map['vehicleNumber'] = vehicleNo;
     if (transporterName.isNotEmpty) map['transporterName'] = transporterName;
+    if (noOfLineItems != null) map['noOfLineItems'] = noOfLineItems;
+    if (remark != null && remark!.isNotEmpty) map['remark'] = remark;
 
     return map;
   }
+}
+
+int? _readInt(Map<String, dynamic> json, List<String> keys) {
+  for (final key in keys) {
+    final value = json[key];
+    if (value == null) continue;
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    final parsed = int.tryParse(value.toString());
+    if (parsed != null) return parsed;
+  }
+  return null;
+}
+
+String? _readNullableString(Map<String, dynamic> json, List<String> keys) {
+  for (final key in keys) {
+    final value = json[key];
+    if (value == null) continue;
+    final text = value.toString();
+    if (text.isNotEmpty) return text;
+  }
+  return null;
 }

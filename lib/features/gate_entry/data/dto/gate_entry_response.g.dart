@@ -25,6 +25,8 @@ GateEntryResponse _$GateEntryResponseFromJson(Map<String, dynamic> json) =>
           .toList(),
       gateOutTimestamp: json['gateOutTimestamp'] as String?,
       gateOutBy: json['gateOutBy'] as String?,
+      noOfLineItems: (json['noOfLineItems'] as num?)?.toInt(),
+      remark: json['remark'] as String?,
     );
 
 Map<String, dynamic> _$GateEntryResponseToJson(GateEntryResponse instance) =>
@@ -44,4 +46,6 @@ Map<String, dynamic> _$GateEntryResponseToJson(GateEntryResponse instance) =>
       'items': instance.items,
       'gateOutTimestamp': instance.gateOutTimestamp,
       'gateOutBy': instance.gateOutBy,
+      'noOfLineItems': instance.noOfLineItems,
+      'remark': instance.remark,
     };

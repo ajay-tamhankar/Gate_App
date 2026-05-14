@@ -81,7 +81,7 @@ class GateEntryFormController extends AsyncNotifier<void> {
               gateEntryId, attachmentFileName, attachmentPath, bytes);
         }
 
-        await _runNonCritical(() => ref.read(auditRepositoryProvider).logAction(
+        _fireAndForget(() => ref.read(auditRepositoryProvider).logAction(
             userId,
             role,
             'Gate Entry',
@@ -104,6 +104,8 @@ class GateEntryFormController extends AsyncNotifier<void> {
           driverContactNo: params['driver_contact_no'],
           vehicleNo: params['vehicle_no'],
           transporterName: params['transporter_name'],
+          noOfLineItems: _parseOptionalInt(params['no_of_line_items']),
+          remark: _normalizeOptionalString(params['remark']),
         );
 
         final created = await ref
@@ -123,7 +125,7 @@ class GateEntryFormController extends AsyncNotifier<void> {
               created.id, attachmentFileName, attachmentPath, bytes));
         }
 
-        await _runNonCritical(() => ref.read(auditRepositoryProvider).logAction(
+        _fireAndForget(() => ref.read(auditRepositoryProvider).logAction(
             userId,
             role,
             'Gate Entry',
@@ -131,8 +133,8 @@ class GateEntryFormController extends AsyncNotifier<void> {
             'User triggered ${params['gate_movement']} Entry for Challan ${(challanNos.isNotEmpty ? challanNos.join(', ') : primaryChallanNo)} (Vendor: ${params['vendor_name']})'));
       }
 
-      // Refresh the list after any change
-      await _runNonCritical(
+      // List refresh runs in background; the list page also re-fetches on init.
+      _fireAndForget(
         () => ref.read(gateEntryControllerProvider.notifier).fetchEntries(),
       );
       state = const AsyncData(null);
@@ -166,6 +168,16 @@ class GateEntryFormController extends AsyncNotifier<void> {
     }
   }
 
+  void _fireAndForget(Future<void> Function() action) {
+    Future.microtask(() async {
+      try {
+        await action();
+      } catch (_) {
+        // best-effort background work
+      }
+    });
+  }
+
   Future<void> _runNonCritical(Future<void> Function() action) async {
     try {
       await action();
@@ -188,7 +200,7 @@ class GateEntryFormController extends AsyncNotifier<void> {
       };
     }).toList();
 
-    return <String, dynamic>{
+    final payload = <String, dynamic>{
       'challan_no': params['challan_no'],
       'challan_nos': params['challan_nos'],
       'vendor_name': params['vendor_name'],
@@ -200,6 +212,35 @@ class GateEntryFormController extends AsyncNotifier<void> {
       'gate_movement': params['gate_movement'],
       'items': normalizedItems,
     };
+
+    // Only include the new fields if the form sent them. Omitting a field on
+    // PATCH preserves its existing server-side value.
+    final noOfLineItems = _parseOptionalInt(params['no_of_line_items']);
+    if (noOfLineItems != null) {
+      payload['noOfLineItems'] = noOfLineItems;
+    }
+    final remark = _normalizeOptionalString(params['remark']);
+    if (remark != null) {
+      payload['remark'] = remark;
+    }
+
+    return payload;
+  }
+
+  static int? _parseOptionalInt(Object? raw) {
+    if (raw == null) return null;
+    if (raw is int) return raw;
+    if (raw is num) return raw.toInt();
+    final text = raw.toString().trim();
+    if (text.isEmpty) return null;
+    return int.tryParse(text);
+  }
+
+  static String? _normalizeOptionalString(Object? raw) {
+    if (raw == null) return null;
+    final text = raw.toString().trim();
+    if (text.isEmpty) return null;
+    return text;
   }
 }
 

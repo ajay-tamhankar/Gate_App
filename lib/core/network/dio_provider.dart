@@ -14,15 +14,18 @@ final apiClientProvider = Provider<ApiClient>((ref) {
 final dioProvider = Provider<Dio>((ref) {
   final dio = Dio(BaseOptions(
     baseUrl: Env.baseUrl,
-    connectTimeout: const Duration(seconds: 15),
-    receiveTimeout: const Duration(seconds: 20),
+    connectTimeout: const Duration(seconds: 10),
+    receiveTimeout: const Duration(seconds: 10),
   ));
 
   if (Env.isDebug) {
     dio.interceptors.add(LogInterceptor(
-      requestBody: true,
-      responseBody: true,
-      requestHeader: true,
+      request: true,
+      requestBody: false,
+      responseBody: false,
+      requestHeader: false,
+      responseHeader: false,
+      error: true,
     ));
   }
 
@@ -31,7 +34,8 @@ final dioProvider = Provider<Dio>((ref) {
       final session = ref.read(sessionControllerProvider);
       final sessionController = ref.read(sessionControllerProvider.notifier);
       final tokenStorage = ref.read(tokenStorageProvider);
-      final token = await tokenStorage.getToken();
+      final token =
+          tokenStorage.cachedToken ?? await tokenStorage.getToken();
       final isAuthRequest = options.path.startsWith('/auth/');
 
       if (!isAuthRequest &&

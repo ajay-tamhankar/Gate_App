@@ -30,7 +30,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (!authed && !goingToLogin) return '/login';
       if (authed && goingToLogin) return '/app/dashboard';
       if (role == UserRole.gateSecurity &&
-          state.matchedLocation == '/app/reconciliation') {
+          (state.matchedLocation == '/app/reconciliation' ||
+              state.matchedLocation == '/app/reports')) {
         return '/app/dashboard';
       }
 

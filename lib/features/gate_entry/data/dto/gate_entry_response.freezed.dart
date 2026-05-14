@@ -31,6 +31,8 @@ mixin _$GateEntryResponse {
   List<GateEntryItemResponse> get items => throw _privateConstructorUsedError;
   String? get gateOutTimestamp => throw _privateConstructorUsedError;
   String? get gateOutBy => throw _privateConstructorUsedError;
+  int? get noOfLineItems => throw _privateConstructorUsedError;
+  String? get remark => throw _privateConstructorUsedError;
 
   /// Create a copy of GateEntryResponse
   /// with the given fields replaced by the non-null parameter values.
@@ -60,7 +62,9 @@ abstract class $GateEntryResponseCopyWith<$Res> {
       String? status,
       List<GateEntryItemResponse> items,
       String? gateOutTimestamp,
-      String? gateOutBy});
+      String? gateOutBy,
+      int? noOfLineItems,
+      String? remark});
 }
 
 /// @nodoc
@@ -93,6 +97,8 @@ class _$GateEntryResponseCopyWithImpl<$Res, $Val extends GateEntryResponse>
     Object? items = null,
     Object? gateOutTimestamp = freezed,
     Object? gateOutBy = freezed,
+    Object? noOfLineItems = freezed,
+    Object? remark = freezed,
   }) {
     return _then(_value.copyWith(
       id: null == id
@@ -155,6 +161,14 @@ class _$GateEntryResponseCopyWithImpl<$Res, $Val extends GateEntryResponse>
           ? _value.gateOutBy
           : gateOutBy // ignore: cast_nullable_to_non_nullable
               as String?,
+      noOfLineItems: freezed == noOfLineItems
+          ? _value.noOfLineItems
+          : noOfLineItems // ignore: cast_nullable_to_non_nullable
+              as int?,
+      remark: freezed == remark
+          ? _value.remark
+          : remark // ignore: cast_nullable_to_non_nullable
+              as String?,
     ) as $Val);
   }
 }
@@ -182,7 +196,9 @@ abstract class _$$GateEntryResponseImplCopyWith<$Res>
       String? status,
       List<GateEntryItemResponse> items,
       String? gateOutTimestamp,
-      String? gateOutBy});
+      String? gateOutBy,
+      int? noOfLineItems,
+      String? remark});
 }
 
 /// @nodoc
@@ -213,6 +229,8 @@ class __$$GateEntryResponseImplCopyWithImpl<$Res>
     Object? items = null,
     Object? gateOutTimestamp = freezed,
     Object? gateOutBy = freezed,
+    Object? noOfLineItems = freezed,
+    Object? remark = freezed,
   }) {
     return _then(_$GateEntryResponseImpl(
       id: null == id
@@ -275,6 +293,14 @@ class __$$GateEntryResponseImplCopyWithImpl<$Res>
           ? _value.gateOutBy
           : gateOutBy // ignore: cast_nullable_to_non_nullable
               as String?,
+      noOfLineItems: freezed == noOfLineItems
+          ? _value.noOfLineItems
+          : noOfLineItems // ignore: cast_nullable_to_non_nullable
+              as int?,
+      remark: freezed == remark
+          ? _value.remark
+          : remark // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }
@@ -297,7 +323,9 @@ class _$GateEntryResponseImpl implements _GateEntryResponse {
       this.status,
       required final List<GateEntryItemResponse> items,
       this.gateOutTimestamp,
-      this.gateOutBy})
+      this.gateOutBy,
+      this.noOfLineItems,
+      this.remark})
       : _items = items;
 
   @override
@@ -339,10 +367,14 @@ class _$GateEntryResponseImpl implements _GateEntryResponse {
   final String? gateOutTimestamp;
   @override
   final String? gateOutBy;
+  @override
+  final int? noOfLineItems;
+  @override
+  final String? remark;
 
   @override
   String toString() {
-    return 'GateEntryResponse(id: $id, gateEntryNo: $gateEntryNo, gateTimestamp: $gateTimestamp, gateMovement: $gateMovement, challanNo: $challanNo, lrNumber: $lrNumber, transporterName: $transporterName, vehicleNo: $vehicleNo, driverContactNo: $driverContactNo, vendorCode: $vendorCode, vendorName: $vendorName, status: $status, items: $items, gateOutTimestamp: $gateOutTimestamp, gateOutBy: $gateOutBy)';
+    return 'GateEntryResponse(id: $id, gateEntryNo: $gateEntryNo, gateTimestamp: $gateTimestamp, gateMovement: $gateMovement, challanNo: $challanNo, lrNumber: $lrNumber, transporterName: $transporterName, vehicleNo: $vehicleNo, driverContactNo: $driverContactNo, vendorCode: $vendorCode, vendorName: $vendorName, status: $status, items: $items, gateOutTimestamp: $gateOutTimestamp, gateOutBy: $gateOutBy, noOfLineItems: $noOfLineItems, remark: $remark)';
   }
 
   @override
@@ -376,7 +408,10 @@ class _$GateEntryResponseImpl implements _GateEntryResponse {
             (identical(other.gateOutTimestamp, gateOutTimestamp) ||
                 other.gateOutTimestamp == gateOutTimestamp) &&
             (identical(other.gateOutBy, gateOutBy) ||
-                other.gateOutBy == gateOutBy));
+                other.gateOutBy == gateOutBy) &&
+            (identical(other.noOfLineItems, noOfLineItems) ||
+                other.noOfLineItems == noOfLineItems) &&
+            (identical(other.remark, remark) || other.remark == remark));
   }
 
   @override
@@ -396,7 +431,9 @@ class _$GateEntryResponseImpl implements _GateEntryResponse {
       status,
       const DeepCollectionEquality().hash(_items),
       gateOutTimestamp,
-      gateOutBy);
+      gateOutBy,
+      noOfLineItems,
+      remark);
 
   /// Create a copy of GateEntryResponse
   /// with the given fields replaced by the non-null parameter values.
@@ -424,7 +461,9 @@ abstract class _GateEntryResponse implements GateEntryResponse {
       final String? status,
       required final List<GateEntryItemResponse> items,
       final String? gateOutTimestamp,
-      final String? gateOutBy}) = _$GateEntryResponseImpl;
+      final String? gateOutBy,
+      final int? noOfLineItems,
+      final String? remark}) = _$GateEntryResponseImpl;
 
   @override
   String get id;
@@ -456,6 +495,10 @@ abstract class _GateEntryResponse implements GateEntryResponse {
   String? get gateOutTimestamp;
   @override
   String? get gateOutBy;
+  @override
+  int? get noOfLineItems;
+  @override
+  String? get remark;
 
   /// Create a copy of GateEntryResponse
   /// with the given fields replaced by the non-null parameter values.

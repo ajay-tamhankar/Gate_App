@@ -36,6 +36,8 @@ mixin _$GateEntry {
   DateTime? get gateOutTimestamp => throw _privateConstructorUsedError;
   String? get gateOutBy => throw _privateConstructorUsedError;
   String? get createdBy => throw _privateConstructorUsedError;
+  int? get noOfLineItems => throw _privateConstructorUsedError;
+  String? get remark => throw _privateConstructorUsedError;
 
   /// Serializes this GateEntry to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -68,7 +70,9 @@ abstract class $GateEntryCopyWith<$Res> {
       DateTime? gateTimestamp,
       DateTime? gateOutTimestamp,
       String? gateOutBy,
-      String? createdBy});
+      String? createdBy,
+      int? noOfLineItems,
+      String? remark});
 }
 
 /// @nodoc
@@ -102,6 +106,8 @@ class _$GateEntryCopyWithImpl<$Res, $Val extends GateEntry>
     Object? gateOutTimestamp = freezed,
     Object? gateOutBy = freezed,
     Object? createdBy = freezed,
+    Object? noOfLineItems = freezed,
+    Object? remark = freezed,
   }) {
     return _then(_value.copyWith(
       id: null == id
@@ -168,6 +174,14 @@ class _$GateEntryCopyWithImpl<$Res, $Val extends GateEntry>
           ? _value.createdBy
           : createdBy // ignore: cast_nullable_to_non_nullable
               as String?,
+      noOfLineItems: freezed == noOfLineItems
+          ? _value.noOfLineItems
+          : noOfLineItems // ignore: cast_nullable_to_non_nullable
+              as int?,
+      remark: freezed == remark
+          ? _value.remark
+          : remark // ignore: cast_nullable_to_non_nullable
+              as String?,
     ) as $Val);
   }
 }
@@ -196,7 +210,9 @@ abstract class _$$GateEntryImplCopyWith<$Res>
       DateTime? gateTimestamp,
       DateTime? gateOutTimestamp,
       String? gateOutBy,
-      String? createdBy});
+      String? createdBy,
+      int? noOfLineItems,
+      String? remark});
 }
 
 /// @nodoc
@@ -228,6 +244,8 @@ class __$$GateEntryImplCopyWithImpl<$Res>
     Object? gateOutTimestamp = freezed,
     Object? gateOutBy = freezed,
     Object? createdBy = freezed,
+    Object? noOfLineItems = freezed,
+    Object? remark = freezed,
   }) {
     return _then(_$GateEntryImpl(
       id: null == id
@@ -294,6 +312,14 @@ class __$$GateEntryImplCopyWithImpl<$Res>
           ? _value.createdBy
           : createdBy // ignore: cast_nullable_to_non_nullable
               as String?,
+      noOfLineItems: freezed == noOfLineItems
+          ? _value.noOfLineItems
+          : noOfLineItems // ignore: cast_nullable_to_non_nullable
+              as int?,
+      remark: freezed == remark
+          ? _value.remark
+          : remark // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }
@@ -317,7 +343,9 @@ class _$GateEntryImpl implements _GateEntry {
       this.gateTimestamp,
       this.gateOutTimestamp,
       this.gateOutBy,
-      this.createdBy})
+      this.createdBy,
+      this.noOfLineItems,
+      this.remark})
       : _items = items;
 
   factory _$GateEntryImpl.fromJson(Map<String, dynamic> json) =>
@@ -365,10 +393,14 @@ class _$GateEntryImpl implements _GateEntry {
   final String? gateOutBy;
   @override
   final String? createdBy;
+  @override
+  final int? noOfLineItems;
+  @override
+  final String? remark;
 
   @override
   String toString() {
-    return 'GateEntry(id: $id, gateEntryNo: $gateEntryNo, gateMovement: $gateMovement, challanNo: $challanNo, lrNumber: $lrNumber, transporterName: $transporterName, vehicleNo: $vehicleNo, driverContactNo: $driverContactNo, vendorCode: $vendorCode, vendorName: $vendorName, items: $items, status: $status, gateTimestamp: $gateTimestamp, gateOutTimestamp: $gateOutTimestamp, gateOutBy: $gateOutBy, createdBy: $createdBy)';
+    return 'GateEntry(id: $id, gateEntryNo: $gateEntryNo, gateMovement: $gateMovement, challanNo: $challanNo, lrNumber: $lrNumber, transporterName: $transporterName, vehicleNo: $vehicleNo, driverContactNo: $driverContactNo, vendorCode: $vendorCode, vendorName: $vendorName, items: $items, status: $status, gateTimestamp: $gateTimestamp, gateOutTimestamp: $gateOutTimestamp, gateOutBy: $gateOutBy, createdBy: $createdBy, noOfLineItems: $noOfLineItems, remark: $remark)';
   }
 
   @override
@@ -404,7 +436,10 @@ class _$GateEntryImpl implements _GateEntry {
             (identical(other.gateOutBy, gateOutBy) ||
                 other.gateOutBy == gateOutBy) &&
             (identical(other.createdBy, createdBy) ||
-                other.createdBy == createdBy));
+                other.createdBy == createdBy) &&
+            (identical(other.noOfLineItems, noOfLineItems) ||
+                other.noOfLineItems == noOfLineItems) &&
+            (identical(other.remark, remark) || other.remark == remark));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -426,7 +461,9 @@ class _$GateEntryImpl implements _GateEntry {
       gateTimestamp,
       gateOutTimestamp,
       gateOutBy,
-      createdBy);
+      createdBy,
+      noOfLineItems,
+      remark);
 
   /// Create a copy of GateEntry
   /// with the given fields replaced by the non-null parameter values.
@@ -461,7 +498,9 @@ abstract class _GateEntry implements GateEntry {
       final DateTime? gateTimestamp,
       final DateTime? gateOutTimestamp,
       final String? gateOutBy,
-      final String? createdBy}) = _$GateEntryImpl;
+      final String? createdBy,
+      final int? noOfLineItems,
+      final String? remark}) = _$GateEntryImpl;
 
   factory _GateEntry.fromJson(Map<String, dynamic> json) =
       _$GateEntryImpl.fromJson;
@@ -498,6 +537,10 @@ abstract class _GateEntry implements GateEntry {
   String? get gateOutBy;
   @override
   String? get createdBy;
+  @override
+  int? get noOfLineItems;
+  @override
+  String? get remark;
 
   /// Create a copy of GateEntry
   /// with the given fields replaced by the non-null parameter values.

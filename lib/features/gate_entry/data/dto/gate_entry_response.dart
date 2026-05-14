@@ -23,6 +23,8 @@ class GateEntryResponse with _$GateEntryResponse {
     required List<GateEntryItemResponse> items,
     String? gateOutTimestamp,
     String? gateOutBy,
+    int? noOfLineItems,
+    String? remark,
   }) = _GateEntryResponse;
 
   factory GateEntryResponse.fromJson(Map<String, dynamic> json) {
@@ -81,6 +83,14 @@ class GateEntryResponse with _$GateEntryResponse {
         json,
         const ['gateOutBy'],
       ),
+      'noOfLineItems': _readNullableInt(
+        json,
+        const ['noOfLineItems', 'no_of_line_items'],
+      ),
+      'remark': _readNullableString(
+        json,
+        const ['remark', 'remarks'],
+      ),
       'items': (json['items'] as List? ?? const [])
           .whereType<Map<String, dynamic>>()
           .toList(),
@@ -88,6 +98,18 @@ class GateEntryResponse with _$GateEntryResponse {
 
     return _$GateEntryResponseFromJson(normalized);
   }
+}
+
+int? _readNullableInt(Map<String, dynamic> json, List<String> keys) {
+  for (final key in keys) {
+    final value = json[key];
+    if (value == null) continue;
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    final parsed = int.tryParse(value.toString());
+    if (parsed != null) return parsed;
+  }
+  return null;
 }
 
 String _readString(

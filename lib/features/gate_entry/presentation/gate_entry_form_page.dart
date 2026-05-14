@@ -13,8 +13,10 @@ import '../../../core/ui/widgets/logout_action.dart';
 import '../data/gate_entry_repository_impl.dart';
 import '../domain/models/gate_entry.dart';
 import '../domain/models/vendor.dart';
+import '../domain/services/e_invoice_qr_parser.dart';
 import '../domain/services/gate_pass_pdf_service.dart';
 import 'gate_entry_detail_page.dart';
+import 'widgets/e_invoice_qr_scanner_page.dart';
 
 class _ChallanFieldState {
   _ChallanFieldState({
@@ -103,6 +105,8 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
   final _poCtrl = TextEditingController();
   final _transporterCtrl = TextEditingController();
   final _quantityCtrl = TextEditingController();
+  final _noOfLineItemsCtrl = TextEditingController();
+  final _remarkCtrl = TextEditingController();
 
   GateMovement _gateDirection = GateMovement.inMovement;
   String _materialCode = 'Parts';
@@ -121,6 +125,7 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
 
   // Challan uniqueness states
   bool _allowAlphaNumericChallan = false;
+  Timer? _challanOnChangedDebounce;
 
   List<TextInputFormatter> get _challanInputFormatters {
     if (_allowAlphaNumericChallan) {
@@ -177,7 +182,14 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
             first.uom.isNotEmpty ? first.uom : 'EA';
       }
       _materialCtrl.text = _materialCode;
-      
+
+      if (entry.noOfLineItems != null) {
+        _noOfLineItemsCtrl.text = entry.noOfLineItems.toString();
+      }
+      if (entry.remark != null) {
+        _remarkCtrl.text = entry.remark!;
+      }
+
       _isVendorFound = true;
       _isVendorNameReadOnly = true;
       _lastLookedUpVendorCode = entry.vendorCode;
@@ -264,6 +276,32 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
 
   bool _hasAnyChallanChecking() {
     return _challanFields.any((f) => f.isChecking);
+  }
+
+  void _onChallanFieldChanged(int index, String value) {
+    if (index < 0 || index >= _challanFields.length) return;
+    final field = _challanFields[index];
+
+    // Most edits don't change anything the form needs to repaint immediately
+    // (the TextField paints its own text). Only clear the remote-check state
+    // once, on the first edit since the last validation, and debounce the
+    // cross-field duplicate scan so we don't rebuild the whole form per keystroke.
+    final hadRemoteState = field.isUnique != null ||
+        field.serverError != null ||
+        field.lastCheckedValue != null ||
+        field.duplicateGateEntryId != null ||
+        field.duplicateGateEntryNo != null;
+    if (hadRemoteState) {
+      field.clearRemoteState();
+    }
+
+    _challanOnChangedDebounce?.cancel();
+    _challanOnChangedDebounce =
+        Timer(const Duration(milliseconds: 200), () {
+      if (!mounted) return;
+      _refreshLocalDuplicateErrors();
+      setState(() {});
+    });
   }
 
   bool _refreshLocalDuplicateErrors() {
@@ -444,6 +482,7 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
     _vendorCodeFocusNode.dispose();
     _vendorNameFocusNode.dispose();
     _vendorSuggestionDebounce?.cancel();
+    _challanOnChangedDebounce?.cancel();
     _vendorCtrl.dispose();
     _vendorCodeCtrl.dispose();
     _lrNumberCtrl.dispose();
@@ -453,6 +492,8 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
     _poCtrl.dispose();
     _transporterCtrl.dispose();
     _quantityCtrl.dispose();
+    _noOfLineItemsCtrl.dispose();
+    _remarkCtrl.dispose();
     super.dispose();
   }
 
@@ -614,6 +655,8 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
         'gate_movement':
             _gateDirection == GateMovement.inMovement ? 'in' : 'out',
         'invoice_entries': invoiceEntries,
+        'no_of_line_items': _noOfLineItemsCtrl.text.trim(),
+        'remark': _remarkCtrl.text.trim(),
       };
 
       if (isEdit) {
@@ -700,6 +743,16 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
               suffixIcon: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  if (_canScanQr)
+                    IconButton(
+                      tooltip: 'Scan e-Invoice QR',
+                      onPressed: () => _scanEInvoiceQrInto(i),
+                      icon: Icon(
+                        Icons.qr_code_scanner,
+                        color: Theme.of(context).colorScheme.primary,
+                        size: 20,
+                      ),
+                    ),
                   if (i == 0)
                     IconButton(
                       tooltip: _allowAlphaNumericChallan
@@ -744,11 +797,8 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
                 ],
               ),
             ),
-            onChanged: (_) {
-              setState(() {
-                _challanFields[i].clearRemoteState();
-                _refreshLocalDuplicateErrors();
-              });
+            onChanged: (value) {
+              _onChallanFieldChanged(i, value);
             },
             onFieldSubmitted: (_) => _checkSingleChallan(i),
             validator: (value) {
@@ -1246,6 +1296,40 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
                                 : null,
                           )),
 
+                      const SizedBox(height: 16),
+                      _buildDesktopOrMobileRow(
+                        TextFormField(
+                          controller: _noOfLineItemsCtrl,
+                          decoration: const InputDecoration(
+                            labelText: 'No. of Line Items (optional)',
+                            prefixIcon: Icon(Icons.format_list_numbered),
+                          ),
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                          ],
+                          validator: (value) {
+                            final text = (value ?? '').trim();
+                            if (text.isEmpty) return null;
+                            return int.tryParse(text) == null
+                                ? 'Must be a whole number'
+                                : null;
+                          },
+                        ),
+                        const SizedBox.shrink(),
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _remarkCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'Remark (optional)',
+                          prefixIcon: Icon(Icons.notes_outlined),
+                          alignLabelWithHint: true,
+                        ),
+                        maxLines: 3,
+                        textInputAction: TextInputAction.newline,
+                      ),
+
                       // ── Section 3: Material Details ──────────────────────
                       if (widget.initialEntry != null) ...[
                         _buildSectionHeader(
@@ -1433,6 +1517,71 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
         const SizedBox(height: 12),
         printButton,
       ],
+    );
+  }
+
+  bool get _canScanQr {
+    if (kIsWeb) return false;
+    return defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS;
+  }
+
+  Future<void> _scanEInvoiceQrInto(int rowIndex) async {
+    if (rowIndex < 0 || rowIndex >= _challanFields.length) return;
+
+    final raw = await Navigator.of(context).push<String>(
+      MaterialPageRoute(
+        builder: (_) => const EInvoiceQrScannerPage(),
+      ),
+    );
+    if (!mounted || raw == null || raw.isEmpty) return;
+
+    final parsed = EInvoiceQrData.tryParse(raw);
+    if (parsed == null || !parsed.hasAnyData) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not read QR. Try again or enter manually.'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.orangeAccent,
+        ),
+      );
+      return;
+    }
+
+    final docNo = (parsed.docNo ?? '').trim();
+    final docDateIso = parsed.docDateIso;
+    final target = _challanFields[rowIndex];
+
+    setState(() {
+      if (docNo.isNotEmpty) {
+        target.controller.text = docNo;
+        if (!RegExp(r'^[0-9/-]+$').hasMatch(docNo)) {
+          _allowAlphaNumericChallan = true;
+        }
+        target.clearRemoteState();
+      }
+      if (docDateIso != null && docDateIso.isNotEmpty) {
+        target.documentDateController.text = docDateIso;
+      }
+      _refreshLocalDuplicateErrors();
+    });
+
+    if (docNo.isNotEmpty) {
+      // ignore: unawaited_futures
+      _checkSingleChallan(rowIndex);
+    }
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          docNo.isEmpty
+              ? 'QR scanned. Please verify and complete the row.'
+              : 'Scanned invoice $docNo into row ${rowIndex + 1}.',
+        ),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Colors.green,
+      ),
     );
   }
 

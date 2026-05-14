@@ -14,6 +14,20 @@ class ReportExportService {
   static final DateFormat _dateFormat = DateFormat('dd-MM-yyyy');
   static final DateFormat _timeFormat = DateFormat('hh:mm a');
 
+  // TODO(perf): Move Excel/PDF *construction* into a top-level function and
+  // run with `compute()` to fully offload encoding to a background isolate.
+  // Today the yield below at least lets the UI paint a loading state before
+  // the main-thread encode starts.
+  Future<List<int>> _encodeExcel(xl.Excel excel) async {
+    await Future.delayed(Duration.zero);
+    return excel.encode()!;
+  }
+
+  Future<List<int>> _savePdf(pw.Document pdf) async {
+    await Future.delayed(Duration.zero);
+    return pdf.save();
+  }
+
   String _formatDate(DateTime? value) {
     if (value == null) return '';
     return _dateFormat.format(value.toLocal());
@@ -78,7 +92,7 @@ class ReportExportService {
       ]);
     }
 
-    final fileBytes = excel.encode()!;
+    final fileBytes = await _encodeExcel(excel);
     await _fileHelper.saveAndShare(
       fileName: 'GateEntryRegister.xlsx',
       bytes: fileBytes,
@@ -151,7 +165,7 @@ class ReportExportService {
       ),
     );
 
-    final bytes = await pdf.save();
+    final bytes = await _savePdf(pdf);
     await _fileHelper.saveAndShare(
       fileName: 'GateEntryRegister.pdf',
       bytes: bytes,
@@ -263,7 +277,7 @@ class ReportExportService {
       ]);
     }
 
-    final fileBytes = excel.encode()!;
+    final fileBytes = await _encodeExcel(excel);
     await _fileHelper.saveAndShare(
       fileName: 'GRN_Reconciliation.xlsx',
       bytes: fileBytes,
@@ -310,7 +324,7 @@ class ReportExportService {
         },
       ),
     );
-    final bytes = await pdf.save();
+    final bytes = await _savePdf(pdf);
     await _fileHelper.saveAndShare(
       fileName: 'GRN_Reconciliation.pdf',
       bytes: bytes,
@@ -339,7 +353,7 @@ class ReportExportService {
         xl.TextCellValue(item.daysPending.toString())
       ]);
     }
-    final fileBytes = excel.encode()!;
+    final fileBytes = await _encodeExcel(excel);
     await _fileHelper.saveAndShare(
       fileName: 'Pending_GRN.xlsx',
       bytes: fileBytes,
@@ -375,7 +389,7 @@ class ReportExportService {
         ],
       ),
     ));
-    final bytes = await pdf.save();
+    final bytes = await _savePdf(pdf);
     await _fileHelper.saveAndShare(
       fileName: 'Pending_GRN.pdf',
       bytes: bytes,
@@ -404,7 +418,7 @@ class ReportExportService {
         xl.TextCellValue(item.changes)
       ]);
     }
-    final fileBytes = excel.encode()!;
+    final fileBytes = await _encodeExcel(excel);
     await _fileHelper.saveAndShare(
       fileName: 'Audit_Trail.xlsx',
       bytes: fileBytes,
@@ -440,7 +454,7 @@ class ReportExportService {
         ],
       ),
     ));
-    final bytes = await pdf.save();
+    final bytes = await _savePdf(pdf);
     await _fileHelper.saveAndShare(
       fileName: 'Audit_Trail.pdf',
       bytes: bytes,
@@ -471,7 +485,7 @@ class ReportExportService {
         xl.TextCellValue(item.createdAt.toIso8601String()),
       ]);
     }
-    final fileBytes = excel.encode()!;
+    final fileBytes = await _encodeExcel(excel);
     await _fileHelper.saveAndShare(
       fileName: 'Exception_Report.xlsx',
       bytes: fileBytes,
@@ -515,7 +529,7 @@ class ReportExportService {
         ],
       ),
     ));
-    final bytes = await pdf.save();
+    final bytes = await _savePdf(pdf);
     await _fileHelper.saveAndShare(
       fileName: 'Exception_Report.pdf',
       bytes: bytes,
