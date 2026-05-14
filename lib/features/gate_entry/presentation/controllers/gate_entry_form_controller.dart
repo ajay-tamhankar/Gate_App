@@ -8,6 +8,7 @@ import '../../../../core/auth/session_state.dart';
 import '../../../reports/data/audit_repository_impl.dart';
 import '../../data/gate_entry_repository_impl.dart';
 import '../../data/dto/create_gate_entry_request.dart';
+import '../../domain/models/gate_entry.dart';
 import '../../domain/usecases/upload_gate_entry_attachment_usecase.dart';
 import 'attachment_cache_controller.dart';
 
@@ -15,7 +16,7 @@ class GateEntryFormController extends AsyncNotifier<void> {
   @override
   FutureOr<void> build() {}
 
-  Future<void> submit(Map<String, dynamic> params,
+  Future<GateEntry?> submit(Map<String, dynamic> params,
       {String? gateEntryId,
       String? attachmentFileName,
       String? attachmentPath,
@@ -56,6 +57,7 @@ class GateEntryFormController extends AsyncNotifier<void> {
       final session = ref.read(sessionControllerProvider);
       final userId = session is Authenticated ? session.userId : 'Unknown';
       final role = session is Authenticated ? session.role.label : 'Unknown';
+      GateEntry? createdEntry;
 
       if (isUpdate) {
         final updatePayload = _buildUpdatePayload(params);
@@ -111,6 +113,7 @@ class GateEntryFormController extends AsyncNotifier<void> {
         if (created == null) {
           throw Exception('Failed to create gate entry');
         }
+        createdEntry = created;
 
         if (attachmentFileName != null &&
             attachmentFileName.isNotEmpty &&
@@ -133,6 +136,7 @@ class GateEntryFormController extends AsyncNotifier<void> {
         () => ref.read(gateEntryControllerProvider.notifier).fetchEntries(),
       );
       state = const AsyncData(null);
+      return isUpdate ? null : createdEntry;
     } catch (e, st) {
       state = AsyncError(e, st);
       rethrow;

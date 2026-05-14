@@ -13,6 +13,7 @@ import '../../../core/ui/widgets/logout_action.dart';
 import '../data/gate_entry_repository_impl.dart';
 import '../domain/models/gate_entry.dart';
 import '../domain/models/vendor.dart';
+import '../domain/services/gate_pass_pdf_service.dart';
 import 'gate_entry_detail_page.dart';
 
 class _ChallanFieldState {
@@ -566,7 +567,7 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
     return entries;
   }
 
-  Future<void> _submit() async {
+  Future<void> _submit({bool printAfter = false}) async {
     if (_hasAnyChallanChecking()) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please wait, checking challan...')),
@@ -627,24 +628,43 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
       }
 
       try {
-        await ref.read(gateEntryFormControllerProvider.notifier).submit(
-              params,
-              gateEntryId: widget.initialEntry?.id,
-              attachmentFileName: _attachmentFile?.name,
-              attachmentPath: kIsWeb ? null : _attachmentFile?.path,
-              bytes: _attachmentFile?.bytes,
-            );
+        final createdEntry =
+            await ref.read(gateEntryFormControllerProvider.notifier).submit(
+                  params,
+                  gateEntryId: widget.initialEntry?.id,
+                  attachmentFileName: _attachmentFile?.name,
+                  attachmentPath: kIsWeb ? null : _attachmentFile?.path,
+                  bytes: _attachmentFile?.bytes,
+                );
 
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(isEdit 
-                ? 'Gate Entry successfully updated!' 
+            content: Text(isEdit
+                ? 'Gate Entry successfully updated!'
                 : 'Gate Entry successfully created!'),
             behavior: SnackBarBehavior.floating,
             backgroundColor: Colors.green,
           ),
         );
+
+        if (printAfter && !isEdit && createdEntry != null) {
+          try {
+            await gatePassPdfService.printGatePass(createdEntry);
+          } catch (printError) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Could not open gate pass print: $printError'),
+                  behavior: SnackBarBehavior.floating,
+                  backgroundColor: Colors.orangeAccent,
+                ),
+              );
+            }
+          }
+        }
+
+        if (!mounted) return;
         Navigator.of(context).pop();
       } catch (e) {
         if (!mounted) return;
@@ -1346,25 +1366,9 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
                         ),
                       ),
                       SizedBox(height: compactLayout ? 32 : 48),
-                      SizedBox(
-                        width: double.infinity,
-                        height: compactLayout ? 52 : 56,
-                        child: FilledButton.icon(
-                          onPressed: isLoading ? null : _submit,
-                          icon: isLoading
-                              ? const SizedBox.shrink()
-                              : const Icon(Icons.save),
-                          label: isLoading
-                              ? const SizedBox(
-                                  height: 24,
-                                  width: 24,
-                                  child: CircularProgressIndicator(
-                                      color: Colors.white, strokeWidth: 2))
-                              : Text(widget.initialEntry != null 
-                                  ? 'Update Gate Entry' 
-                                  : 'Confirm Gate Entry',
-                                  style: const TextStyle(fontSize: 16)),
-                        ),
+                      _buildSubmitActions(
+                        isLoading: isLoading,
+                        compactLayout: compactLayout,
                       ),
                     ],
                   ),
@@ -1374,6 +1378,61 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildSubmitActions({
+    required bool isLoading,
+    required bool compactLayout,
+  }) {
+    final isEdit = widget.initialEntry != null;
+    final buttonHeight = compactLayout ? 52.0 : 56.0;
+
+    final confirmLabel = isLoading
+        ? const SizedBox(
+            height: 24,
+            width: 24,
+            child: CircularProgressIndicator(
+                color: Colors.white, strokeWidth: 2),
+          )
+        : Text(
+            isEdit ? 'Update Gate Entry' : 'Confirm Gate Entry',
+            style: const TextStyle(fontSize: 16),
+          );
+
+    final confirmButton = SizedBox(
+      width: double.infinity,
+      height: buttonHeight,
+      child: FilledButton.icon(
+        onPressed: isLoading ? null : () => _submit(),
+        icon: isLoading ? const SizedBox.shrink() : const Icon(Icons.save),
+        label: confirmLabel,
+      ),
+    );
+
+    if (isEdit) {
+      return confirmButton;
+    }
+
+    final printButton = SizedBox(
+      width: double.infinity,
+      height: buttonHeight,
+      child: OutlinedButton.icon(
+        onPressed: isLoading ? null : () => _submit(printAfter: true),
+        icon: const Icon(Icons.print),
+        label: const Text(
+          'Confirm & Print Gate Pass',
+          style: TextStyle(fontSize: 16),
+        ),
+      ),
+    );
+
+    return Column(
+      children: [
+        confirmButton,
+        const SizedBox(height: 12),
+        printButton,
+      ],
     );
   }
 
