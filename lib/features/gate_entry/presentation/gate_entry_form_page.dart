@@ -1360,14 +1360,14 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
                               labelText: 'Vehicle Number',
                               prefixIcon: Icon(Icons.numbers),
                               counterText: '',
-                              helperText: 'Up to 8 characters',
+                              helperText: 'Up to 10 characters',
                             ),
-                            maxLength: 8,
+                            maxLength: 10,
                             textCapitalization: TextCapitalization.characters,
                             inputFormatters: [
                               FilteringTextInputFormatter.allow(
                                   RegExp(r'[A-Za-z0-9]')),
-                              LengthLimitingTextInputFormatter(8),
+                              LengthLimitingTextInputFormatter(10),
                               TextInputFormatter.withFunction(
                                 (oldValue, newValue) => newValue.copyWith(
                                     text: newValue.text.toUpperCase()),
@@ -1380,10 +1380,10 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
                               return Padding(
                                 padding: const EdgeInsets.only(top: 4),
                                 child: Text(
-                                  '$currentLength / ${maxLength ?? 8}',
+                                  '$currentLength / ${maxLength ?? 10}',
                                   style: TextStyle(
                                     fontSize: 11,
-                                    color: currentLength == (maxLength ?? 8)
+                                    color: currentLength == (maxLength ?? 10)
                                         ? Colors.green
                                         : Theme.of(context)
                                             .colorScheme
@@ -1397,8 +1397,8 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
                               if (text.isEmpty) {
                                 return 'Vehicle number required';
                               }
-                              if (text.length > 8) {
-                                return 'Maximum 8 characters';
+                              if (text.length > 10) {
+                                return 'Maximum 10 characters';
                               }
                               return null;
                             },
