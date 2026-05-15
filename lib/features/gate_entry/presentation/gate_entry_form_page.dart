@@ -26,8 +26,7 @@ class _ChallanFieldState {
     String initialPartNumber = '',
     String initialQuantity = '',
     String initialUom = 'EA',
-  })
-      : controller = TextEditingController(text: initialValue),
+  })  : controller = TextEditingController(text: initialValue),
         documentDateController =
             TextEditingController(text: initialDocumentDate),
         poNumberController = TextEditingController(text: initialPoNumber),
@@ -52,7 +51,8 @@ class _ChallanFieldState {
   String? duplicateGateEntryId;
   String? duplicateGateEntryNo;
 
-  bool get hasDuplicateEntryLink => (duplicateGateEntryId ?? '').trim().isNotEmpty;
+  bool get hasDuplicateEntryLink =>
+      (duplicateGateEntryId ?? '').trim().isNotEmpty;
 
   bool get hasDuplicateWarning =>
       hasDuplicateEntryLink || (duplicateGateEntryNo ?? '').trim().isNotEmpty;
@@ -62,7 +62,8 @@ class _ChallanFieldState {
     return 'Challan already exists (Entry: ${duplicateGateEntryNo?.trim().isNotEmpty == true ? duplicateGateEntryNo!.trim() : '-'})';
   }
 
-  String? get blockingErrorText => localError ?? (hasDuplicateWarning ? null : serverError);
+  String? get blockingErrorText =>
+      localError ?? (hasDuplicateWarning ? null : serverError);
 
   void clearRemoteState() {
     isUnique = null;
@@ -166,13 +167,12 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
       _vehicleCtrl.text = entry.vehicleNo;
       _transporterName();
       _gateDirection = entry.gateMovement;
-      
+
       if (entry.items.isNotEmpty) {
         final first = entry.items.first;
         _poCtrl.text = first.poNumber;
-        _materialCode = first.materialCode.isNotEmpty
-            ? first.materialCode
-            : 'Parts';
+        _materialCode =
+            first.materialCode.isNotEmpty ? first.materialCode : 'Parts';
         _quantityCtrl.text = first.challanQty.toString();
         _challanFields.first.poNumberController.text = first.poNumber;
         _challanFields.first.partNumberController.text = first.materialCode;
@@ -296,8 +296,7 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
     }
 
     _challanOnChangedDebounce?.cancel();
-    _challanOnChangedDebounce =
-        Timer(const Duration(milliseconds: 200), () {
+    _challanOnChangedDebounce = Timer(const Duration(milliseconds: 200), () {
       if (!mounted) return;
       _refreshLocalDuplicateErrors();
       setState(() {});
@@ -550,7 +549,8 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
       _isLoadingVendorSuggestions = false;
       _vendorSuggestions
         ..clear()
-        ..addAll(result.success && result.data != null ? result.data! : const []);
+        ..addAll(
+            result.success && result.data != null ? result.data! : const []);
     });
   }
 
@@ -629,7 +629,8 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
       if (!mounted) return;
       if (!allValid) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please fix duplicate/invalid challans')),
+          const SnackBar(
+              content: Text('Please fix duplicate/invalid challans')),
         );
         return;
       }
@@ -638,7 +639,8 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
       final invoiceEntries = _collectInvoiceEntries();
       if (!isEdit && invoiceEntries.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('At least one invoice entry is required')),
+          const SnackBar(
+              content: Text('At least one invoice entry is required')),
         );
         return;
       }
@@ -778,7 +780,8 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
             focusNode: _challanFields[i].focusNode,
             inputFormatters: _challanInputFormatters,
             decoration: InputDecoration(
-              labelText: i == 0 ? 'Invoice/Challan Number' : 'Challan Number ${i + 1}',
+              labelText:
+                  i == 0 ? 'Invoice/Challan Number' : 'Challan Number ${i + 1}',
               prefixIcon: const Icon(Icons.receipt_long),
               errorText: _challanFields[i].blockingErrorText,
               suffixIcon: Row(
@@ -801,14 +804,17 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
                           : 'Numeric only (tap to allow alphanumeric)',
                       onPressed: () {
                         setState(() {
-                          _allowAlphaNumericChallan = !_allowAlphaNumericChallan;
+                          _allowAlphaNumericChallan =
+                              !_allowAlphaNumericChallan;
                           for (final field in _challanFields) {
                             field.clearRemoteState();
                           }
                         });
                       },
                       icon: Icon(
-                        _allowAlphaNumericChallan ? Icons.text_fields : Icons.pin,
+                        _allowAlphaNumericChallan
+                            ? Icons.text_fields
+                            : Icons.pin,
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                         size: 20,
                       ),
@@ -876,7 +882,8 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
                   padding: const EdgeInsets.symmetric(vertical: 2),
                   child: Row(
                     children: [
-                      const Icon(Icons.info_outline, size: 16, color: Colors.red),
+                      const Icon(Icons.info_outline,
+                          size: 16, color: Colors.red),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
@@ -983,8 +990,7 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
                 'LITER',
                 'ML',
                 'GRAM',
-              ].contains(
-                      _challanFields[i].uomController.text.trim())
+              ].contains(_challanFields[i].uomController.text.trim())
                   ? _challanFields[i].uomController.text.trim()
                   : 'EA',
               decoration: const InputDecoration(
@@ -1101,7 +1107,9 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.initialEntry != null ? 'Edit Gate Entry' : 'Create Gate Entry'),
+        title: Text(widget.initialEntry != null
+            ? 'Edit Gate Entry'
+            : 'Create Gate Entry'),
         actions: const [
           LogoutAction(),
           SizedBox(width: 8),
@@ -1109,7 +1117,8 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
       ),
       body: Center(
         child: SingleChildScrollView(
-          padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 12.0),
+          padding: EdgeInsets.symmetric(
+              horizontal: horizontalPadding, vertical: 12.0),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 800),
             child: Card(
@@ -1131,7 +1140,9 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        widget.initialEntry != null ? 'Update Entry Details' : 'New Entry Details',
+                        widget.initialEntry != null
+                            ? 'Update Entry Details'
+                            : 'New Entry Details',
                         style:
                             Theme.of(context).textTheme.headlineSmall?.copyWith(
                                   fontWeight: FontWeight.bold,
@@ -1184,14 +1195,16 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
                             labelText: 'Vendor Name',
                             prefixIcon: const Icon(Icons.storefront),
                             suffixIcon: _isVendorFound
-                                ? const Icon(Icons.check_circle, color: Colors.green)
+                                ? const Icon(Icons.check_circle,
+                                    color: Colors.green)
                                 : (_isLoadingVendorSuggestions
                                     ? const Padding(
                                         padding: EdgeInsets.all(12.0),
                                         child: SizedBox(
                                           width: 20,
                                           height: 20,
-                                          child: CircularProgressIndicator(strokeWidth: 2),
+                                          child: CircularProgressIndicator(
+                                              strokeWidth: 2),
                                         ),
                                       )
                                     : null),
@@ -1216,24 +1229,27 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
                             prefixIcon: Icon(Icons.badge_outlined),
                           ),
                           onChanged: (value) {
-                            // Only reset if the user is actually typing/changing the value, 
+                            // Only reset if the user is actually typing/changing the value,
                             // not if it's the same as the last selection/lookup.
-                            if (_isVendorFound && value == _lastLookedUpVendorCode) return;
+                            if (_isVendorFound &&
+                                value == _lastLookedUpVendorCode) return;
 
                             if (_isVendorFound || _isVendorNameReadOnly) {
-                              _resetVendorLookupState(clearVendorName: false); 
+                              _resetVendorLookupState(clearVendorName: false);
                             }
                           },
                           // Removed mandatory validation and lookup
                         ),
                       ),
-                      if (!_isVendorNameReadOnly && _vendorSuggestions.isNotEmpty)
+                      if (!_isVendorNameReadOnly &&
+                          _vendorSuggestions.isNotEmpty)
                         Container(
                           margin: const EdgeInsets.only(top: 8),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: Theme.of(context).colorScheme.outlineVariant,
+                              color:
+                                  Theme.of(context).colorScheme.outlineVariant,
                             ),
                             color: Theme.of(context).colorScheme.surface,
                           ),
@@ -1251,21 +1267,24 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
                                   overflow: TextOverflow.ellipsis,
                                 ),
                                 subtitle: Text(suggestion.vendorCode),
-                                trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                                trailing: const Icon(Icons.arrow_forward_ios,
+                                    size: 14),
                                 onTap: () async {
                                   // Mark as selecting to prevent focus loss from clearing suggestions
                                   _isSelectingVendor = true;
-                                  
+
                                   setState(() {
                                     // 1. Update controllers
                                     _vendorCtrl.text = suggestion.vendorName;
-                                    _vendorCodeCtrl.text = suggestion.vendorCode;
-                                    
+                                    _vendorCodeCtrl.text =
+                                        suggestion.vendorCode;
+
                                     // 2. Update lookup states
-                                    _lastLookedUpVendorCode = suggestion.vendorCode;
+                                    _lastLookedUpVendorCode =
+                                        suggestion.vendorCode;
                                     _isVendorFound = true;
                                     _isVendorNameReadOnly = true;
-                                    
+
                                     // 3. Clear suggestions
                                     _vendorSuggestions.clear();
                                     _isLoadingVendorSuggestions = false;
@@ -1273,11 +1292,11 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
 
                                   // Give a tiny frame gap for state to settle
                                   await Future.delayed(Duration.zero);
-                                  
+
                                   // 4. Clear focus
                                   _vendorNameFocusNode.unfocus();
                                   _vendorCodeFocusNode.unfocus();
-                                  
+
                                   _isSelectingVendor = false;
                                 },
                               );
@@ -1449,11 +1468,11 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
                               labelText: 'Material Name',
                               prefixIcon: Icon(Icons.category),
                             ),
-                            onChanged: (value) =>
-                                _materialCode = value.trim(),
-                            validator: (value) => value == null || value.trim().isEmpty
-                                ? 'Material name required'
-                                : null,
+                            onChanged: (value) => _materialCode = value.trim(),
+                            validator: (value) =>
+                                value == null || value.trim().isEmpty
+                                    ? 'Material name required'
+                                    : null,
                           ),
                           TextFormField(
                             controller: _poCtrl,
@@ -1503,8 +1522,7 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
                         padding: EdgeInsets.all(compactLayout ? 16 : 24),
                         decoration: BoxDecoration(
                           border: Border.all(
-                            color:
-                                Theme.of(context).colorScheme.outlineVariant,
+                            color: Theme.of(context).colorScheme.outlineVariant,
                           ),
                           borderRadius: BorderRadius.circular(12),
                           color: Theme.of(context)
@@ -1551,8 +1569,7 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
                             else
                               Text(
                                 'No file selected',
-                                style:
-                                    TextStyle(color: Colors.grey.shade600),
+                                style: TextStyle(color: Colors.grey.shade600),
                               ),
                           ],
                         ),
@@ -1584,8 +1601,8 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
         ? const SizedBox(
             height: 24,
             width: 24,
-            child: CircularProgressIndicator(
-                color: Colors.white, strokeWidth: 2),
+            child:
+                CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
           )
         : Text(
             isEdit ? 'Update Gate Entry' : 'Confirm Gate Entry',
