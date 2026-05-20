@@ -98,12 +98,7 @@ class GateEntryController extends StateNotifier<GateEntryState> {
     final baseQuery = identical(query, _queryNotProvided)
         ? state.activeQuery
         : query as GateEntryQuery?;
-    final shouldPaginate = usePagination ??
-        page != null ||
-        limit != null ||
-        state.pagination != null ||
-        baseQuery?.page != null ||
-        baseQuery?.limit != null;
+    final shouldPaginate = usePagination ?? true;
     final effectiveQuery = shouldPaginate
         ? (baseQuery ?? const GateEntryQuery()).copyWith(
             page: refresh ? 1 : (page ?? baseQuery?.page ?? state.pagination?.page ?? 1),

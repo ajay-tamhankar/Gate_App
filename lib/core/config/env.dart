@@ -6,11 +6,11 @@ class Env {
   static String get baseUrl {
     switch (current) {
       case Environment.dev:
-        return 'https://gate-app-26yt.onrender.com/api/v1';
+        return 'https://vistar-crm.onrender.com/api/v1/gate';
       case Environment.stage:
-        return 'https://gate-app-26yt.onrender.com/api/v1';
+        return 'https://vistar-crm.onrender.com/api/v1/gate';
       case Environment.prod:
-        return 'https://gate-app-26yt.onrender.com/api/v1';
+        return 'https://vistar-crm.onrender.com/api/v1/gate';
     }
   }
 

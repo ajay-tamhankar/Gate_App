@@ -1232,7 +1232,9 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
                             // Only reset if the user is actually typing/changing the value,
                             // not if it's the same as the last selection/lookup.
                             if (_isVendorFound &&
-                                value == _lastLookedUpVendorCode) return;
+                                value == _lastLookedUpVendorCode) {
+                              return;
+                            }
 
                             if (_isVendorFound || _isVendorNameReadOnly) {
                               _resetVendorLookupState(clearVendorName: false);

@@ -67,7 +67,7 @@ class AuthRepositoryImpl implements AuthRepository {
         );
       }
 
-      final parsed = _parseLoginPayload(envelope);
+      final parsed = _parseLoginPayload(envelope, request);
       if (parsed.error != null) {
         return ApiResponse<AuthResult>(
           success: false,
@@ -204,7 +204,10 @@ class _ParsedLoginPayload {
   });
 }
 
-_ParsedLoginPayload _parseLoginPayload(Map<String, dynamic> data) {
+_ParsedLoginPayload _parseLoginPayload(
+  Map<String, dynamic> data,
+  LoginRequest request,
+) {
   final user = data['user'] is Map<String, dynamic>
       ? data['user'] as Map<String, dynamic>
       : const <String, dynamic>{};
@@ -222,23 +225,19 @@ _ParsedLoginPayload _parseLoginPayload(Map<String, dynamic> data) {
       : const <String, dynamic>{};
   final organizationId =
       (organizationData['id'] ?? user['organizationId'] ?? '').toString();
-  final organizationCode = (organizationData['code'] ?? '').toString();
-  final organizationName = (organizationData['name'] ?? '').toString();
+  final organizationCode = (organizationData['code'] ?? request.organizationCode)
+      .toString();
+  final organizationName =
+      (organizationData['name'] ?? organizationCode).toString();
   final organizationIsActive = organizationData['isActive'] as bool?;
 
   if (token.isEmpty) {
     return const _ParsedLoginPayload(error: 'Login token missing in response');
   }
 
-  if (userId.isEmpty ||
-      organizationId.isEmpty ||
-      organizationCode.isEmpty ||
-      organizationName.isEmpty ||
-      role.isEmpty ||
-      fullName.isEmpty ||
-      email.isEmpty) {
+  if (userId.isEmpty || role.isEmpty) {
     return const _ParsedLoginPayload(
-      error: 'Login response is missing user or organization details',
+      error: 'Login response is missing user details',
     );
   }
 
