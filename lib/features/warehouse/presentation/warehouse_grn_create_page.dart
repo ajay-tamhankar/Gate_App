@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/ui/responsive.dart';
+import '../../../core/ui/widgets/loading_overlay.dart';
 import '../../../core/ui/widgets/section_header.dart';
 import '../../../core/ui/widgets/logout_action.dart';
 import '../domain/models/warehouse_gate_entry.dart';
@@ -121,7 +122,10 @@ class _WarehouseGrnCreatePageState
           SizedBox(width: 8),
         ],
       ),
-      body: ListView(
+      body: LoadingOverlay(
+        isLoading: state.isLoading,
+        message: 'Submitting GRN...',
+        child: ListView(
         padding: EdgeInsets.symmetric(horizontal: isMob ? 16 : 24, vertical: 16),
         children: [
           const SectionHeader(
@@ -208,6 +212,7 @@ class _WarehouseGrnCreatePageState
             ),
           ),
         ],
+      ),
       ),
     );
   }

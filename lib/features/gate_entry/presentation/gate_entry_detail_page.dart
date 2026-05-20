@@ -166,12 +166,35 @@ class _GateEntryDetailSecurityViewState extends ConsumerState<_GateEntryDetailSe
         ],
       ),
       body: state.isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? _buildDetailSkeleton()
           : state.error != null
               ? Center(child: Text('Error: ${state.error}'))
               : state.entry == null
                   ? const Center(child: Text('Entry not found'))
                   : _buildDetailView(context, state.entry!, role),
+    );
+  }
+
+  Widget _buildDetailSkeleton() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 720),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            SkeletonLoader(width: double.infinity, height: 96),
+            SizedBox(height: 16),
+            SkeletonLoader(width: double.infinity, height: 64),
+            SizedBox(height: 16),
+            SkeletonLoader(width: double.infinity, height: 180),
+            SizedBox(height: 16),
+            SkeletonLoader(width: double.infinity, height: 220),
+            SizedBox(height: 16),
+            SkeletonLoader(width: double.infinity, height: 140),
+          ],
+        ),
+      ),
     );
   }
 

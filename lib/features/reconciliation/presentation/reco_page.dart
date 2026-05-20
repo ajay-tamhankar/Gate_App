@@ -119,8 +119,30 @@ class _RecoOperationsView extends ConsumerWidget {
                                 : _buildDesktopTable(exceptions, context, ref)),
                       ])));
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => _buildListSkeleton(),
         error: (error, stack) => Center(child: Text('Error: $error')),
+      ),
+    );
+  }
+
+  Widget _buildListSkeleton() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: const [
+          SkeletonLoader(width: 240, height: 24),
+          SizedBox(height: 8),
+          SkeletonLoader(width: 320, height: 16),
+          SizedBox(height: 24),
+          SkeletonLoader(width: double.infinity, height: 72),
+          SizedBox(height: 12),
+          SkeletonLoader(width: double.infinity, height: 72),
+          SizedBox(height: 12),
+          SkeletonLoader(width: double.infinity, height: 72),
+          SizedBox(height: 12),
+          SkeletonLoader(width: double.infinity, height: 72),
+        ],
       ),
     );
   }

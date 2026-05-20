@@ -164,6 +164,8 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
   String _gateEntryCardFilter = _reportAllFilter;
   int? _gateEntryPage;
   int? _gateEntryLimit;
+  bool _isExportingExcel = false;
+  bool _isExportingPdf = false;
 
   // Filters
   DateTime? _startDate;
@@ -303,6 +305,8 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
   }
 
   void _exportExcel() async {
+    if (_isExportingExcel || _isExportingPdf) return;
+    setState(() => _isExportingExcel = true);
     final repo = ref.read(reportsRepositoryProvider);
     final filter = _buildExportFilter();
     final search = _searchController.text.trim();
@@ -372,10 +376,14 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
               content: Text('Export Failed: $e'), backgroundColor: Colors.red),
         );
       }
+    } finally {
+      if (mounted) setState(() => _isExportingExcel = false);
     }
   }
 
   void _exportPdf() async {
+    if (_isExportingExcel || _isExportingPdf) return;
+    setState(() => _isExportingPdf = true);
     final repo = ref.read(reportsRepositoryProvider);
     final filter = _buildExportFilter();
     final search = _searchController.text.trim();
@@ -445,6 +453,8 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
               content: Text('Export Failed: $e'), backgroundColor: Colors.red),
         );
       }
+    } finally {
+      if (mounted) setState(() => _isExportingPdf = false);
     }
   }
 
@@ -693,7 +703,9 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                   children: [
                     Expanded(
                       child: FilledButton(
-                        onPressed: _exportExcel,
+                        onPressed: (_isExportingExcel || _isExportingPdf)
+                            ? null
+                            : _exportExcel,
                         style: FilledButton.styleFrom(
                           backgroundColor: const Color(0xFF16A34A),
                           padding: const EdgeInsets.symmetric(vertical: 12),
@@ -703,11 +715,24 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.table_chart, size: 16),
+                              if (_isExportingExcel)
+                                const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white),
+                                  ),
+                                )
+                              else
+                                const Icon(Icons.table_chart, size: 16),
                               if (!tiny) ...[
                                 const SizedBox(width: 4),
                                 Text(
-                                  ultraCompact ? 'XLS' : 'Excel',
+                                  _isExportingExcel
+                                      ? 'Generating...'
+                                      : (ultraCompact ? 'XLS' : 'Excel'),
                                   style: const TextStyle(fontSize: 12),
                                 ),
                               ],
@@ -719,7 +744,9 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: FilledButton(
-                        onPressed: _exportPdf,
+                        onPressed: (_isExportingExcel || _isExportingPdf)
+                            ? null
+                            : _exportPdf,
                         style: FilledButton.styleFrom(
                           backgroundColor: const Color(0xFFDC2626),
                           padding: const EdgeInsets.symmetric(vertical: 12),
@@ -729,10 +756,24 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.picture_as_pdf, size: 16),
+                              if (_isExportingPdf)
+                                const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white),
+                                  ),
+                                )
+                              else
+                                const Icon(Icons.picture_as_pdf, size: 16),
                               if (!tiny) ...[
                                 const SizedBox(width: 4),
-                                const Text('PDF', style: TextStyle(fontSize: 12)),
+                                Text(
+                                  _isExportingPdf ? 'Generating...' : 'PDF',
+                                  style: const TextStyle(fontSize: 12),
+                                ),
                               ],
                             ],
                           ),

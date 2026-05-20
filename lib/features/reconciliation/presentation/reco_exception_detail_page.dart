@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/ui/widgets/loading_overlay.dart';
 import '../../../core/ui/widgets/section_header.dart';
 import '../../../core/ui/widgets/skeleton_loader.dart';
 import 'controllers/reco_exception_detail_controller.dart';
@@ -46,6 +47,7 @@ class _RecoExceptionDetailSecurityView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final detailAsync = ref.watch(recoExceptionDetailProvider(exceptionId));
+    final isResolving = ref.watch(recoListControllerProvider).isLoading;
 
     return Scaffold(
       appBar: AppBar(
@@ -55,17 +57,21 @@ class _RecoExceptionDetailSecurityView extends ConsumerWidget {
           SizedBox(width: 8),
         ],
       ),
-      body: detailAsync.when(
-        data: (exception) => _buildContent(context, ref, exception),
-        loading: () => ListView(
-          padding: const EdgeInsets.all(24),
-          children: const [
-            SkeletonLoader(width: 200, height: 28),
-            SizedBox(height: 16),
-            SkeletonLoader(width: double.infinity, height: 180),
-          ],
+      body: LoadingOverlay(
+        isLoading: isResolving,
+        message: 'Resolving exception...',
+        child: detailAsync.when(
+          data: (exception) => _buildContent(context, ref, exception),
+          loading: () => ListView(
+            padding: const EdgeInsets.all(24),
+            children: const [
+              SkeletonLoader(width: 200, height: 28),
+              SizedBox(height: 16),
+              SkeletonLoader(width: double.infinity, height: 180),
+            ],
+          ),
+          error: (err, _) => Center(child: Text('Error: $err')),
         ),
-        error: (err, _) => Center(child: Text('Error: $err')),
       ),
     );
   }

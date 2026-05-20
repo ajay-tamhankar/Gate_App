@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 
 import 'controllers/gate_entry_form_controller.dart';
 import '../../../core/ui/responsive.dart';
+import '../../../core/ui/widgets/loading_overlay.dart';
 import '../../../core/ui/widgets/logout_action.dart';
 import '../data/gate_entry_repository_impl.dart';
 import '../domain/models/gate_entry.dart';
@@ -1115,7 +1116,12 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
           SizedBox(width: 8),
         ],
       ),
-      body: Center(
+      body: LoadingOverlay(
+        isLoading: isLoading,
+        message: widget.initialEntry != null
+            ? 'Updating gate entry...'
+            : 'Saving gate entry...',
+        child: Center(
         child: SingleChildScrollView(
           padding: EdgeInsets.symmetric(
               horizontal: horizontalPadding, vertical: 12.0),
@@ -1588,6 +1594,7 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
             ),
           ),
         ),
+      ),
       ),
     );
   }
