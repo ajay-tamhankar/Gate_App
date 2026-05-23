@@ -1324,10 +1324,10 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
                           TextFormField(
                             controller: _driverContactCtrl,
                             decoration: const InputDecoration(
-                              labelText: 'Driver Contact No',
+                              labelText: 'Driver Contact No *',
                               prefixIcon: Icon(Icons.phone_android),
                               counterText: '',
-                              helperText: '10-digit mobile number',
+                              helperText: '10-digit mobile number required',
                             ),
                             keyboardType: TextInputType.phone,
                             maxLength: 10,
@@ -1335,17 +1335,27 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
                               FilteringTextInputFormatter.digitsOnly,
                               LengthLimitingTextInputFormatter(10),
                             ],
+                            onChanged: (_) => setState(() {}),
                             buildCounter: (context,
                                 {required currentLength,
                                 required isFocused,
                                 maxLength}) {
+                              final max = maxLength ?? 10;
+                              final remaining = max - currentLength;
+                              final isComplete = remaining == 0;
+                              final label = isComplete
+                                  ? 'Complete ($currentLength/$max)'
+                                  : '$remaining digit${remaining == 1 ? '' : 's'} remaining ($currentLength/$max)';
                               return Padding(
                                 padding: const EdgeInsets.only(top: 4),
                                 child: Text(
-                                  '$currentLength / ${maxLength ?? 10}',
+                                  label,
                                   style: TextStyle(
                                     fontSize: 11,
-                                    color: currentLength == (maxLength ?? 10)
+                                    fontWeight: isComplete
+                                        ? FontWeight.w600
+                                        : FontWeight.normal,
+                                    color: isComplete
                                         ? Colors.green
                                         : Theme.of(context)
                                             .colorScheme
@@ -1359,11 +1369,8 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
                               if (text.isEmpty) {
                                 return 'Driver contact number is required';
                               }
-                              if (text.length != 10) {
+                              if (!RegExp(r'^\d{10}$').hasMatch(text)) {
                                 return 'Mobile number must be exactly 10 digits';
-                              }
-                              if (!RegExp(r'^[6-9]\d{9}$').hasMatch(text)) {
-                                return 'Enter a valid 10-digit Indian mobile number';
                               }
                               return null;
                             },

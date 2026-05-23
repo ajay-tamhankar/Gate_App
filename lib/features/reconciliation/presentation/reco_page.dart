@@ -126,11 +126,11 @@ class _RecoOperationsView extends ConsumerWidget {
   }
 
   Widget _buildListSkeleton() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16),
+    return const Padding(
+      padding: EdgeInsets.symmetric(horizontal: 24.0, vertical: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: const [
+        children: [
           SkeletonLoader(width: 240, height: 24),
           SizedBox(height: 8),
           SkeletonLoader(width: 320, height: 16),

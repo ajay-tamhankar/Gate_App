@@ -180,9 +180,9 @@ class _GateEntryDetailSecurityViewState extends ConsumerState<_GateEntryDetailSe
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 720),
-        child: Column(
+        child: const Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
+          children: [
             SkeletonLoader(width: double.infinity, height: 96),
             SizedBox(height: 16),
             SkeletonLoader(width: double.infinity, height: 64),
