@@ -11,11 +11,16 @@ class TokenStorage {
   String? _cachedToken;
   bool _loadedFromDisk = false;
 
-  Future<void> saveToken(String token) async {
+  Future<void> saveToken(String token, {bool persist = true}) async {
     _cachedToken = token;
     _loadedFromDisk = true;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_tokenKey, token);
+    if (persist) {
+      await prefs.setString(_tokenKey, token);
+    } else {
+      // Memory-only session: ensure no stale persisted token survives refresh.
+      await prefs.remove(_tokenKey);
+    }
   }
 
   Future<String?> getToken() async {

@@ -76,7 +76,7 @@ class AuthRepositoryImpl implements AuthRepository {
         );
       }
 
-      await _tokenStorage.saveToken(parsed.token!);
+      await _tokenStorage.saveToken(parsed.token!, persist: parsed.rememberMe);
       return ApiResponse<AuthResult>(
         success: true,
         message: message,
@@ -85,6 +85,7 @@ class AuthRepositoryImpl implements AuthRepository {
           role: parsed.role!,
           user: parsed.user!,
           organization: parsed.organization!,
+          rememberMe: parsed.rememberMe,
         ),
       );
     } on DioException catch (e) {
@@ -193,6 +194,7 @@ class _ParsedLoginPayload {
   final String? role;
   final User? user;
   final Organization? organization;
+  final bool rememberMe;
   final String? error;
 
   const _ParsedLoginPayload({
@@ -200,6 +202,7 @@ class _ParsedLoginPayload {
     this.role,
     this.user,
     this.organization,
+    this.rememberMe = false,
     this.error,
   });
 }
@@ -212,6 +215,7 @@ _ParsedLoginPayload _parseLoginPayload(
       ? data['user'] as Map<String, dynamic>
       : const <String, dynamic>{};
   final token = (data['token'] ?? data['accessToken'] ?? '').toString();
+  final rememberMe = data['rememberMe'] as bool? ?? request.rememberMe;
   final userId = (user['id'] ?? data['userId'] ?? '').toString();
   final employeeCode = _nullableString(
     user['employeeCode'] ?? user['employee_code'] ?? data['username'],
@@ -244,6 +248,7 @@ _ParsedLoginPayload _parseLoginPayload(
   return _ParsedLoginPayload(
     token: token,
     role: role,
+    rememberMe: rememberMe,
     organization: Organization(
       id: organizationId,
       code: organizationCode,

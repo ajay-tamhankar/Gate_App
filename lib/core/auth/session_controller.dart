@@ -60,6 +60,7 @@ class SessionController extends Notifier<SessionState> {
     required String organizationCode,
     required String identifier,
     required String password,
+    bool rememberMe = false,
   }) async {
     state = const SessionLoading();
     final loginUseCase = ref.read(loginUseCaseProvider);
@@ -69,6 +70,7 @@ class SessionController extends Notifier<SessionState> {
         organizationCode: organizationCode,
         identifier: identifier,
         password: password,
+        rememberMe: rememberMe,
       ),
     );
 

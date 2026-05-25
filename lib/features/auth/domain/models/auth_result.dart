@@ -6,12 +6,14 @@ class AuthResult {
   final String role;
   final User user;
   final Organization organization;
+  final bool rememberMe;
 
   AuthResult({
     required this.accessToken,
     required this.role,
     required this.user,
     required this.organization,
+    this.rememberMe = false,
   });
 
   String get userId => user.id;

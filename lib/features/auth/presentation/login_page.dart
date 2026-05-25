@@ -17,6 +17,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final _passwordCtrl = TextEditingController();
   bool _isLoading = false;
   bool _obscurePassword = true;
+  bool _rememberMe = false;
 
   @override
   void dispose() {
@@ -79,6 +80,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             organizationCode: organizationCode,
             identifier: username,
             password: password,
+            rememberMe: _rememberMe,
           );
     } catch (e) {
       if (!mounted) return;
@@ -186,7 +188,29 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 18),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Checkbox(
+                          value: _rememberMe,
+                          onChanged: _isLoading
+                              ? null
+                              : (value) => setState(
+                                  () => _rememberMe = value ?? false),
+                        ),
+                        Expanded(
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: _isLoading
+                                ? null
+                                : () => setState(
+                                    () => _rememberMe = !_rememberMe),
+                            child: const Text('Remember me for 30 days'),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton.icon(
