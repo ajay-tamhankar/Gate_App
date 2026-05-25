@@ -27,8 +27,9 @@ class GateEntryItemResponse with _$GateEntryItemResponse {
         json,
         const ['materialCode', 'partNumber', 'part_number'],
       ),
-      'challanQty': _readInt(
-        json['challanQty'] ?? json['quantity'],
+      'challanQty': _readFirstNonZeroInt(
+        json,
+        const ['challanQty', 'challan_qty', 'quantity', 'qty'],
       ),
       'uom': _readString(
         json,
@@ -69,9 +70,23 @@ String? _readNullableString(Map<String, dynamic> json, List<String> keys) {
   return null;
 }
 
-int _readInt(dynamic value, {int fallback = 0}) {
-  if (value is int) return value;
-  if (value is num) return value.toInt();
-  if (value is String) return int.tryParse(value) ?? fallback;
+int _readFirstNonZeroInt(
+  Map<String, dynamic> json,
+  List<String> keys, {
+  int fallback = 0,
+}) {
+  for (final key in keys) {
+    final value = json[key];
+    if (value == null) continue;
+    int? parsed;
+    if (value is int) {
+      parsed = value;
+    } else if (value is num) {
+      parsed = value.toInt();
+    } else if (value is String) {
+      parsed = int.tryParse(value);
+    }
+    if (parsed != null && parsed != 0) return parsed;
+  }
   return fallback;
 }
