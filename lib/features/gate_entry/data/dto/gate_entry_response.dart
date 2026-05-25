@@ -91,13 +91,76 @@ class GateEntryResponse with _$GateEntryResponse {
         json,
         const ['remark', 'remarks'],
       ),
-      'items': (json['items'] as List? ?? const [])
-          .whereType<Map<String, dynamic>>()
-          .toList(),
+      'items': _normalizeItems(json),
     };
 
     return _$GateEntryResponseFromJson(normalized);
   }
+}
+
+List<Map<String, dynamic>> _normalizeItems(Map<String, dynamic> json) {
+  final topQuantity = json['quantity'] ?? json['qty'] ?? json['challanQty'];
+  final topMaterial =
+      json['materialCode'] ?? json['partNumber'] ?? json['part_number'];
+  final topPo = json['poNumber'] ?? json['po_number'];
+  final topUom = json['uom'] ?? json['unit'];
+  final topChallanNo = json['challanNo'] ?? json['challanNumber'];
+
+  final rawItems = (json['items'] as List? ?? const [])
+      .whereType<Map<String, dynamic>>()
+      .toList();
+
+  if (rawItems.isEmpty) {
+    if (topMaterial == null && topPo == null && topQuantity == null) {
+      return const [];
+    }
+    return [
+      {
+        if (topMaterial != null) 'materialCode': topMaterial,
+        if (topPo != null) 'poNumber': topPo,
+        if (topQuantity != null) 'quantity': topQuantity,
+        if (topUom != null) 'uom': topUom,
+        if (topChallanNo != null) 'challanNo': topChallanNo,
+      },
+    ];
+  }
+
+  return rawItems.map((item) {
+    final merged = <String, dynamic>{...item};
+    if (_isMissing(merged['challanQty']) &&
+        _isMissing(merged['quantity']) &&
+        _isMissing(merged['qty']) &&
+        topQuantity != null) {
+      merged['quantity'] = topQuantity;
+    }
+    if (_isMissing(merged['materialCode']) &&
+        _isMissing(merged['partNumber']) &&
+        _isMissing(merged['part_number']) &&
+        topMaterial != null) {
+      merged['materialCode'] = topMaterial;
+    }
+    if (_isMissing(merged['poNumber']) &&
+        _isMissing(merged['po_number']) &&
+        topPo != null) {
+      merged['poNumber'] = topPo;
+    }
+    if (_isMissing(merged['uom']) && _isMissing(merged['unit']) && topUom != null) {
+      merged['uom'] = topUom;
+    }
+    if (_isMissing(merged['challanNo']) &&
+        _isMissing(merged['challan_no']) &&
+        topChallanNo != null) {
+      merged['challanNo'] = topChallanNo;
+    }
+    return merged;
+  }).toList();
+}
+
+bool _isMissing(dynamic value) {
+  if (value == null) return true;
+  if (value is String) return value.isEmpty;
+  if (value is num) return value == 0;
+  return false;
 }
 
 int? _readNullableInt(Map<String, dynamic> json, List<String> keys) {
