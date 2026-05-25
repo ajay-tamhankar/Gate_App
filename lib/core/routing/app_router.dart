@@ -23,6 +23,11 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final session = ref.read(sessionControllerProvider);
 
+      // While the stored token is being verified on startup/refresh, do not
+      // bounce the user to /login. Once restore resolves to Authenticated or
+      // Unauthenticated the router refresh listener will re-evaluate.
+      if (session is SessionLoading) return null;
+
       final goingToLogin = state.matchedLocation == '/login';
       final authed = session is Authenticated;
       final role = session is Authenticated ? session.role : null;

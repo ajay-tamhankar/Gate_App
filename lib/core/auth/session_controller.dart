@@ -4,6 +4,7 @@ import 'session_cleanup.dart';
 import 'session_state.dart';
 import 'user_role.dart';
 import '../network/token_storage.dart';
+import '../../features/auth/domain/models/organization.dart';
 import '../../features/auth/domain/usecases/login_usecase.dart';
 import '../../features/auth/domain/usecases/get_current_user_usecase.dart';
 import '../../features/auth/data/dto/login_request.dart';
@@ -32,9 +33,16 @@ class SessionController extends Notifier<SessionState> {
         
         if (response.success && response.data != null) {
           final parsedRole = UserRole.fromApi(response.data!.role) ?? UserRole.admin;
+          final organization = response.data!.organization ??
+              Organization(
+                id: response.data!.organizationId,
+                code: '',
+                name: '',
+                isActive: true,
+              );
           state = Authenticated(
             user: response.data!,
-            organization: response.data!.organization!,
+            organization: organization,
             role: parsedRole,
           );
         } else {
