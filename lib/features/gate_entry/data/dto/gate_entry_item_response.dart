@@ -84,7 +84,7 @@ int _readFirstNonZeroInt(
     } else if (value is num) {
       parsed = value.toInt();
     } else if (value is String) {
-      parsed = int.tryParse(value);
+      parsed = int.tryParse(value) ?? double.tryParse(value)?.toInt();
     }
     if (parsed != null && parsed != 0) return parsed;
   }
