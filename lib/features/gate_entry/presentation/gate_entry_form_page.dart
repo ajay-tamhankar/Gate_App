@@ -929,17 +929,10 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
             TextFormField(
               controller: _challanFields[i].poNumberController,
               decoration: const InputDecoration(
-                labelText: 'PO Number',
+                labelText: 'PO Number (Optional)',
                 prefixIcon: Icon(Icons.request_quote),
               ),
-              validator: (value) {
-                if (isEdit) return null;
-                final required = _isInvoiceRowTouched(_challanFields[i]);
-                if (!required) return null;
-                final text = (value ?? '').trim();
-                if (text.isEmpty) return 'PO number is required';
-                return null;
-              },
+              validator: (_) => null,
             ),
           ),
           const SizedBox(height: 12),
@@ -947,32 +940,22 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
             TextFormField(
               controller: _challanFields[i].partNumberController,
               decoration: const InputDecoration(
-                labelText: 'Part Number',
+                labelText: 'Part Number (Optional)',
                 prefixIcon: Icon(Icons.category),
               ),
-              validator: (value) {
-                if (isEdit) return null;
-                final required = _isInvoiceRowTouched(_challanFields[i]);
-                if (!required) return null;
-                final text = (value ?? '').trim();
-                if (text.isEmpty) return 'Part number is required';
-                return null;
-              },
+              validator: (_) => null,
             ),
             TextFormField(
               controller: _challanFields[i].quantityController,
               keyboardType: TextInputType.number,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               decoration: const InputDecoration(
-                labelText: 'Quantity',
+                labelText: 'Quantity (Optional)',
                 prefixIcon: Icon(Icons.production_quantity_limits),
               ),
               validator: (value) {
-                if (isEdit) return null;
-                final required = _isInvoiceRowTouched(_challanFields[i]);
-                if (!required) return null;
                 final text = (value ?? '').trim();
-                if (text.isEmpty) return 'Quantity is required';
+                if (text.isEmpty) return null;
                 final qty = int.tryParse(text);
                 if (qty == null || qty <= 0) return 'Enter valid quantity';
                 return null;
@@ -1480,23 +1463,18 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
                           TextFormField(
                             controller: _materialCtrl,
                             decoration: const InputDecoration(
-                              labelText: 'Material Name',
+                              labelText: 'Material Name (Optional)',
                               prefixIcon: Icon(Icons.category),
                             ),
                             onChanged: (value) => _materialCode = value.trim(),
-                            validator: (value) =>
-                                value == null || value.trim().isEmpty
-                                    ? 'Material name required'
-                                    : null,
+                            validator: (_) => null,
                           ),
                           TextFormField(
                             controller: _poCtrl,
                             decoration: const InputDecoration(
-                                labelText: 'PO Number',
+                                labelText: 'PO Number (Optional)',
                                 prefixIcon: Icon(Icons.request_quote)),
-                            validator: (value) => value == null || value.isEmpty
-                                ? 'Purchase Order number required'
-                                : null,
+                            validator: (_) => null,
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -1504,7 +1482,7 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
                           TextFormField(
                             controller: _quantityCtrl,
                             decoration: const InputDecoration(
-                                labelText: 'Quantity',
+                                labelText: 'Quantity (Optional)',
                                 prefixIcon:
                                     Icon(Icons.production_quantity_limits),
                                 helperText: 'Enter exact numerical quantity.'),
@@ -1513,9 +1491,7 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
                               FilteringTextInputFormatter.digitsOnly
                             ],
                             validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Quantity required';
-                              }
+                              if (value == null || value.isEmpty) return null;
                               if (int.tryParse(value) == null) {
                                 return 'Must be a valid integer';
                               }
