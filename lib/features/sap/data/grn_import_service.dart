@@ -1,19 +1,20 @@
 import 'dart:convert';
 
-import 'package:excel/excel.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../reconciliation/data/sap_grn_repository_impl.dart';
 import '../../reconciliation/domain/models/grn_import_models.dart';
 
 /// Service responsible for uploading a GRN import file to the API endpoint.
+///
+/// XLSX files are uploaded as-is; the server is responsible for parsing them
+/// and applying header detection, alias resolution, and Excel-date
+/// normalization (the same rules the CSV path applies on the client below).
 class GrnImportService {
   GrnImportService(this._repository);
 
   final SapGrnRepository _repository;
-  static const int _maxWebXlsxSizeBytes = 2 * 1024 * 1024;
 
   static const List<String> _requiredHeaders = [
     'poNumber',
@@ -52,18 +53,10 @@ class GrnImportService {
     }
 
     final normalizedName = file.name.toLowerCase();
-    if (kIsWeb &&
-        normalizedName.endsWith('.xlsx') &&
-        file.size > _maxWebXlsxSizeBytes) {
-      throw GrnImportException(
-        'This XLSX file is too large to process on web. Please use CSV or a smaller XLSX file.',
-      );
-    }
 
     try {
       final fileName = file.name;
-      List<int>? bytes;
-      String? filePath;
+      final List<int> bytes;
 
       if (normalizedName.endsWith('.csv')) {
         final csvBytes = await _readFileBytes(file);
@@ -71,24 +64,13 @@ class GrnImportService {
         final normalizedCsv = _normalizeCsvContent(csvContent);
         _validateCsvHeaders(normalizedCsv);
         bytes = utf8.encode(normalizedCsv);
-        filePath = null;
       } else {
-        // XLSX handling
-        final excelBytes = await _readFileBytes(file);
-        if (kIsWeb) {
-          await Future<void>.delayed(Duration.zero);
-        }
-        final csvContent = _convertXlsxToCsv(excelBytes);
-        _validateCsvHeaders(csvContent);
-        bytes = utf8.encode(csvContent);
+        bytes = await _readFileBytes(file);
       }
 
       final response = await _repository.importGrns(
-        fileName: normalizedName.endsWith('.xlsx')
-            ? fileName.replaceAll(RegExp(r'\.xlsx$', caseSensitive: false), '.csv')
-            : fileName,
+        fileName: fileName,
         bytes: bytes,
-        filePath: filePath,
       );
 
       if (!response.success) {
@@ -120,76 +102,6 @@ class GrnImportService {
     }
 
     throw GrnImportException('Could not read file bytes.');
-  }
-
-  String _convertXlsxToCsv(List<int> bytes) {
-    try {
-      final excel = Excel.decodeBytes(bytes);
-      if (excel.tables.isEmpty) {
-        throw GrnImportException('The XLSX file does not contain any sheets.');
-      }
-
-      final sheet = excel.tables.values.first;
-      if (sheet.rows.isEmpty) {
-        throw GrnImportException('The XLSX file is empty.');
-      }
-
-      final rawRows = sheet.rows
-          .map(
-            (row) => _trimTrailingEmptyColumns(
-              row.map((cell) => _cellToString(cell?.value)).toList(),
-            ),
-          )
-          .where((row) => row.any((cell) => cell.isNotEmpty))
-          .toList();
-
-      if (rawRows.isEmpty) {
-        throw GrnImportException('The XLSX file is empty.');
-      }
-
-      final headerMatch = _findHeaderRow(rawRows);
-      final normalizedRows = <List<String>>[_requiredHeaders];
-
-      for (var rowIndex = headerMatch.rowIndex + 1;
-          rowIndex < rawRows.length;
-          rowIndex++) {
-        final row = rawRows[rowIndex];
-        if (_isDescriptiveRow(row)) {
-          continue;
-        }
-
-        final normalizedRow = _requiredHeaders
-            .map(
-              (header) => _normalizeValue(
-                header,
-                _readCell(row, headerMatch.columns[header]),
-              ),
-            )
-            .toList();
-
-        if (normalizedRow.any((value) => value.isNotEmpty)) {
-          normalizedRows.add(normalizedRow);
-        }
-      }
-
-      if (normalizedRows.length == 1) {
-        throw GrnImportException(
-          'The XLSX file does not contain any GRN rows after the header.',
-        );
-      }
-
-      return normalizedRows
-          .map((row) => row.map(_escapeCsv).join(','))
-          .join('\n');
-    } catch (e) {
-      if (e is GrnImportException) rethrow;
-      throw GrnImportException('Failed to read XLSX file.');
-    }
-  }
-
-  String _cellToString(dynamic value) {
-    if (value == null) return '';
-    return value.toString().trim();
   }
 
   String _escapeCsv(String value) {
