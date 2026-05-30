@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:data_table_2/data_table_2.dart';
@@ -562,6 +564,40 @@ class __WarehouseReconciliationViewState
   String _statusFilter = 'All';
   ReconciliationPeriodFilter _periodFilter = ReconciliationPeriodFilter.all;
   bool _hasExplicitPeriodSelection = false;
+  final TextEditingController _searchController = TextEditingController();
+  Timer? _searchDebounce;
+  bool _isSearching = false;
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged(String value) {
+    if (value != _searchController.text) {
+      _searchController.value = TextEditingValue(
+        text: value,
+        selection: TextSelection.collapsed(offset: value.length),
+      );
+    }
+    setState(() {
+      _searchQuery = value;
+      _isSearching = true;
+    });
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 400), () {
+      _runServerSearch(value.trim());
+    });
+  }
+
+  Future<void> _runServerSearch(String text) async {
+    await ref
+        .read(warehouseReconciliationListControllerProvider.notifier)
+        .refresh(search: text);
+    if (mounted) setState(() => _isSearching = false);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -649,16 +685,7 @@ class __WarehouseReconciliationViewState
   List<WarehouseReconciliationRecord> _applyFilters(
     List<WarehouseReconciliationRecord> items,
   ) {
-    final query = _searchQuery.trim().toLowerCase();
-
     return items.where((item) {
-      final matchesSearch = query.isEmpty ||
-          item.gateEntryId.toLowerCase().contains(query) ||
-          item.gateEntryNo.toLowerCase().contains(query) ||
-          item.displayReason.toLowerCase().contains(query) ||
-          item.reasonCode.toLowerCase().contains(query) ||
-          item.matchedGrnNumber.toLowerCase().contains(query) ||
-          item.displayStatus.toLowerCase().contains(query);
       final matchesStatus = switch (_statusFilter) {
         'Matched' => item.isMatched,
         'Exception' => item.isException,
@@ -666,8 +693,7 @@ class __WarehouseReconciliationViewState
         'Open' => !item.isResolved,
         _ => true,
       };
-
-      return matchesSearch && matchesStatus;
+      return matchesStatus;
     }).toList();
   }
 
@@ -848,9 +874,26 @@ class __WarehouseReconciliationViewState
         SizedBox(
           width: isMob ? double.infinity : 320,
           child: TextField(
+            controller: _searchController,
             decoration: InputDecoration(
-              labelText: 'Search gate entry no, reason, GRN, status',
+              labelText: 'Search challan, gate entry no, GRN, reason, status',
               prefixIcon: const Icon(Icons.search, size: 18),
+              suffixIcon: _isSearching
+                  ? const Padding(
+                      padding: EdgeInsets.all(10),
+                      child: SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    )
+                  : (_searchQuery.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.close, size: 18),
+                          tooltip: 'Clear search',
+                          onPressed: () => _onSearchChanged(''),
+                        )
+                      : null),
               isDense: true,
               contentPadding:
                   const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
@@ -858,7 +901,7 @@ class __WarehouseReconciliationViewState
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            onChanged: (val) => setState(() => _searchQuery = val),
+            onChanged: _onSearchChanged,
           ),
         ),
         SizedBox(

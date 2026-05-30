@@ -2,6 +2,7 @@ class WarehouseReconciliationRecord {
   final String id;
   final String gateEntryId;
   final String gateEntryNo;
+  final String challanNo;
   final String status;
   final String statusLabel;
   final String matchedGrnNumber;
@@ -31,6 +32,7 @@ class WarehouseReconciliationRecord {
     required this.id,
     required this.gateEntryId,
     required this.gateEntryNo,
+    required this.challanNo,
     required this.status,
     required this.statusLabel,
     required this.matchedGrnNumber,
@@ -67,6 +69,12 @@ class WarehouseReconciliationRecord {
       id: (json['id'] ?? '').toString(),
       gateEntryId: (json['gateEntryId'] ?? json['gate_entry_id'] ?? '').toString(),
       gateEntryNo: (json['gateEntryNo'] ?? json['gate_entry_no'] ?? '').toString(),
+      challanNo: (json['challanNo'] ??
+              json['challan_no'] ??
+              json['challanNumber'] ??
+              json['challan_number'] ??
+              '')
+          .toString(),
       status: statusCode,
       statusLabel: statusLabel,
       matchedGrnNumber: matchedGrn,
