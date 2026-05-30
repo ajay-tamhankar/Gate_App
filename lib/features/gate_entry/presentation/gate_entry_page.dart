@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:data_table_2/data_table_2.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -58,6 +60,9 @@ class _GateEntrySecurityViewState extends ConsumerState<_GateEntrySecurityView> 
 
   String _searchQuery = '';
   String _statusFilter = _allFilter;
+  final TextEditingController _searchController = TextEditingController();
+  Timer? _searchDebounce;
+  bool _isSearching = false;
 
   @override
   void initState() {
@@ -65,6 +70,43 @@ class _GateEntrySecurityViewState extends ConsumerState<_GateEntrySecurityView> 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(gateEntryControllerProvider.notifier).fetchEntries(refresh: true);
     });
+  }
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged(String value) {
+    if (value != _searchController.text) {
+      _searchController.value = TextEditingValue(
+        text: value,
+        selection: TextSelection.collapsed(offset: value.length),
+      );
+    }
+    setState(() {
+      _searchQuery = value;
+      _isSearching = true;
+    });
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 400), () {
+      _runServerSearch(value.trim());
+    });
+  }
+
+  Future<void> _runServerSearch(String text) async {
+    final state = ref.read(gateEntryControllerProvider);
+    final controller = ref.read(gateEntryControllerProvider.notifier);
+    final base = state.activeQuery ?? const GateEntryQuery();
+    final newQuery = base.copyWith(q: text.isEmpty ? null : text);
+    await controller.fetchEntries(
+      query: newQuery,
+      page: 1,
+      usePagination: state.pagination != null,
+    );
+    if (mounted) setState(() => _isSearching = false);
   }
 
   /// Returns true if the entry's gateTimestamp falls on [date]
@@ -87,7 +129,6 @@ class _GateEntrySecurityViewState extends ConsumerState<_GateEntrySecurityView> 
   }
 
   List<GateEntry> _applyFilters(List<GateEntry> entries) {
-    final query = _searchQuery.toLowerCase();
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final yesterday = today.subtract(const Duration(days: 1));
@@ -98,15 +139,6 @@ class _GateEntrySecurityViewState extends ConsumerState<_GateEntrySecurityView> 
         today.month == 12 ? DateTime(today.year + 1, 1, 1) : DateTime(today.year, today.month + 1, 1);
 
     return entries.where((e) {
-      final matchesSearch = query.isEmpty ||
-          e.challanNo.toLowerCase().contains(query) ||
-          e.vendorName.toLowerCase().contains(query) ||
-          e.vendorCode.toLowerCase().contains(query) ||
-          e.lrNumber.toLowerCase().contains(query) ||
-          e.driverContactNo.toLowerCase().contains(query) ||
-          e.transporterName.toLowerCase().contains(query) ||
-          e.vehicleNo.toLowerCase().contains(query);
-
       final bool matchesStatus;
       switch (_statusFilter) {
         case _gateInFilter:
@@ -137,7 +169,7 @@ class _GateEntrySecurityViewState extends ConsumerState<_GateEntrySecurityView> 
           matchesStatus = true;
       }
 
-      return matchesSearch && matchesStatus;
+      return matchesStatus;
     }).toList();
   }
 
@@ -148,16 +180,16 @@ class _GateEntrySecurityViewState extends ConsumerState<_GateEntrySecurityView> 
         filter == _thisMonthFilter;
   }
 
-  GateEntryQuery? _queryForFilter(String filter) {
+  String? _periodForFilter(String filter) {
     switch (filter) {
       case _todayFilter:
-        return const GateEntryQuery(period: 'today');
+        return 'today';
       case _yesterdayFilter:
-        return const GateEntryQuery(period: 'yesterday');
+        return 'yesterday';
       case _thisWeekFilter:
-        return const GateEntryQuery(period: 'this_week');
+        return 'this_week';
       case _thisMonthFilter:
-        return const GateEntryQuery(period: 'this_month');
+        return 'this_month';
       default:
         return null;
     }
@@ -169,16 +201,29 @@ class _GateEntrySecurityViewState extends ConsumerState<_GateEntrySecurityView> 
 
     final controller = ref.read(gateEntryControllerProvider.notifier);
     final gateEntryState = ref.read(gateEntryControllerProvider);
+    final trimmedSearch = _searchQuery.trim();
+    final searchValue = trimmedSearch.isEmpty ? null : trimmedSearch;
+
     if (_usesServerPeriod(filter)) {
       await controller.fetchEntries(
-        query: _queryForFilter(filter),
+        query: GateEntryQuery(
+          period: _periodForFilter(filter),
+          q: searchValue,
+        ),
         page: 1,
         usePagination: gateEntryState.pagination != null,
       );
       return;
     }
 
-    controller.showAllEntries();
+    // For "All"/"Gate In"/"Gate Out" — server returns paginated full list,
+    // status chip is applied client-side. Keep the search query in the request
+    // so we don't drop it when the user toggles between chips.
+    await controller.fetchEntries(
+      query: GateEntryQuery(q: searchValue),
+      page: 1,
+      usePagination: gateEntryState.pagination != null,
+    );
   }
 
   @override
@@ -556,6 +601,22 @@ class _GateEntrySecurityViewState extends ConsumerState<_GateEntrySecurityView> 
             decoration: InputDecoration(
               labelText: 'Search challan, LR, vendor, vehicle',
               prefixIcon: const Icon(Icons.search, size: 18),
+              suffixIcon: _isSearching
+                  ? const Padding(
+                      padding: EdgeInsets.all(10),
+                      child: SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    )
+                  : (_searchQuery.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.close, size: 18),
+                          tooltip: 'Clear search',
+                          onPressed: () => _onSearchChanged(''),
+                        )
+                      : null),
               isDense: true,
               contentPadding:
                   const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
@@ -563,7 +624,8 @@ class _GateEntrySecurityViewState extends ConsumerState<_GateEntrySecurityView> 
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            onChanged: (val) => setState(() => _searchQuery = val),
+            controller: _searchController,
+            onChanged: _onSearchChanged,
           ),
         ),
         SizedBox(

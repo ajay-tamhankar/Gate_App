@@ -494,7 +494,11 @@ class _ManagerDashboard extends ConsumerWidget {
     final kpis = ref.watch(warehouseManagerAdminKpiProvider);
     final reconciliationOverview = ref.watch(reconciliationDashboardProvider);
 
-    if (summary.isLoading && kpis.isLoading) {
+    final isInitialLoad = (summary.isLoading && !summary.hasValue) ||
+        (kpis.isLoading && !kpis.hasValue) ||
+        (reconciliationOverview.isLoading && !reconciliationOverview.hasValue);
+
+    if (isInitialLoad) {
       return ListView(
         padding:
             EdgeInsets.symmetric(horizontal: isMob ? 16 : 24, vertical: 16),
