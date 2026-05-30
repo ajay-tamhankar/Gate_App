@@ -9,6 +9,7 @@ import '../../../core/auth/user_role.dart';
 import '../../../core/ui/responsive.dart';
 import '../../../core/ui/widgets/filter_bar.dart';
 import '../../../core/ui/widgets/logout_action.dart';
+import '../../../core/ui/widgets/progress_dialog.dart';
 import '../../../core/ui/widgets/skeleton_loader.dart';
 import '../domain/models/gate_entry.dart';
 import '../domain/models/gate_entry_query.dart';
@@ -1042,7 +1043,14 @@ class _GateEntrySecurityViewState extends ConsumerState<_GateEntrySecurityView> 
     );
 
     if (proceed != true) return;
-    final success = await action();
+    if (!context.mounted) return;
+
+    final success = await runWithProgressDialog(
+      context,
+      action,
+      label: '$title...',
+    );
+
     if (!context.mounted) return;
 
     if (success) {

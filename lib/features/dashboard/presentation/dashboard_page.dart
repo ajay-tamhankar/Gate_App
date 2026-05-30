@@ -383,9 +383,17 @@ class _ExecutiveDashboard extends ConsumerWidget {
       ),
       error: (e, _) => Center(child: Text('Failed to load dashboard: $e')),
       data: (data) {
-        return ListView(
+        return RefreshIndicator(
+          onRefresh: () async {
+            await Future.wait([
+              ref.refresh(warehouseDashboardProvider.future),
+              ref.refresh(warehouseReconciliationSummaryProvider.future),
+            ]);
+          },
+          child: ListView(
           padding:
               EdgeInsets.symmetric(horizontal: isMob ? 16 : 24, vertical: 16),
+          physics: const AlwaysScrollableScrollPhysics(),
           children: [
             SectionHeader(
               title: 'Today Overview',
@@ -427,6 +435,7 @@ class _ExecutiveDashboard extends ConsumerWidget {
             const SizedBox(height: 12),
             _buildReconciliationSection(context, recSummary, isMob),
           ],
+          ),
         );
       },
     );
@@ -503,7 +512,15 @@ class _ManagerDashboard extends ConsumerWidget {
 
     final summaryData = summary.valueOrNull;
 
-    return ListView(
+    return RefreshIndicator(
+      onRefresh: () async {
+        await Future.wait([
+          ref.refresh(warehouseManagerDashboardSummaryProvider.future),
+          ref.refresh(warehouseManagerAdminKpiProvider.future),
+          ref.refresh(reconciliationDashboardProvider.future),
+        ]);
+      },
+      child: ListView(
       padding: EdgeInsets.symmetric(horizontal: isMob ? 16 : 24, vertical: 16),
       physics: const AlwaysScrollableScrollPhysics(),
       children: [
@@ -572,6 +589,7 @@ class _ManagerDashboard extends ConsumerWidget {
             ],
           ),
       ],
+      ),
     );
   }
 }

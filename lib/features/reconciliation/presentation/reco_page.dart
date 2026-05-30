@@ -22,6 +22,7 @@ import '../../warehouse/domain/models/warehouse_reconciliation.dart';
 import '../../warehouse/presentation/controllers/warehouse_providers.dart';
 import '../../warehouse/presentation/controllers/warehouse_reconciliation_list_controller.dart';
 import '../../../core/ui/widgets/filter_bar.dart';
+import '../../../core/ui/widgets/progress_dialog.dart';
 import '../../../core/ui/widgets/skeleton_loader.dart';
 
 class RecoPage extends ConsumerWidget {
@@ -216,10 +217,15 @@ class _RecoOperationsView extends ConsumerWidget {
     );
 
     if (confirmed != true) return;
+    if (!context.mounted) return;
 
-    final response = await ref
-        .read(importSapGrnsUseCaseProvider)
-        .execute(fileResult);
+    final response = await runWithProgressDialog(
+      context,
+      () => ref.read(importSapGrnsUseCaseProvider).execute(fileResult),
+      label: 'Uploading ${fileResult.name}...',
+    );
+
+    if (!context.mounted) return;
 
     ref.read(importHistoryProvider.notifier).addItem(
           ImportHistoryItem(
@@ -379,9 +385,14 @@ class _RecoOperationsView extends ConsumerWidget {
                             final notes =
                                 await _showResolveDialog(context, exc);
                             if (notes == null) return;
-                            await ref
-                                .read(recoListControllerProvider.notifier)
-                                .resolveException(exc.id, notes);
+                            if (!context.mounted) return;
+                            await runWithProgressDialog(
+                              context,
+                              () => ref
+                                  .read(recoListControllerProvider.notifier)
+                                  .resolveException(exc.id, notes),
+                              label: 'Resolving exception...',
+                            );
                           },
                           child: const Text('Resolve'),
                         ),
@@ -464,9 +475,14 @@ class _RecoOperationsView extends ConsumerWidget {
                     }
                     final notes = await _showResolveDialog(context, exc);
                     if (notes == null) return;
-                    await ref
-                        .read(recoListControllerProvider.notifier)
-                        .resolveException(exc.id, notes);
+                    if (!context.mounted) return;
+                    await runWithProgressDialog(
+                      context,
+                      () => ref
+                          .read(recoListControllerProvider.notifier)
+                          .resolveException(exc.id, notes),
+                      label: 'Resolving exception...',
+                    );
                   },
                   child: const Text('Resolve'),
                 )),

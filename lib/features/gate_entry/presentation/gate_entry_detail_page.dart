@@ -6,6 +6,7 @@ import '../../../core/auth/session_controller.dart';
 import '../../../core/auth/session_state.dart';
 import '../../../core/auth/user_role.dart';
 import '../../../core/ui/widgets/logout_action.dart';
+import '../../../core/ui/widgets/progress_dialog.dart';
 import '../domain/models/gate_entry.dart';
 import '../domain/services/gate_pass_pdf_service.dart';
 import 'controllers/gate_entry_detail_controller.dart';
@@ -714,10 +715,15 @@ class _GateEntryDetailSecurityViewState extends ConsumerState<_GateEntryDetailSe
     );
 
     if (proceed != true) return;
+    if (!context.mounted) return;
 
-    final success = await ref
-        .read(gateEntryControllerProvider.notifier)
-        .gateOutEntry(entry.id, remarks: remarksController.text.trim());
+    final success = await runWithProgressDialog(
+      context,
+      () => ref
+          .read(gateEntryControllerProvider.notifier)
+          .gateOutEntry(entry.id, remarks: remarksController.text.trim()),
+      label: 'Recording gate out...',
+    );
 
     if (!context.mounted) return;
 
@@ -757,7 +763,14 @@ class _GateEntryDetailSecurityViewState extends ConsumerState<_GateEntryDetailSe
     );
 
     if (proceed != true) return;
-    final success = await action();
+    if (!context.mounted) return;
+
+    final success = await runWithProgressDialog(
+      context,
+      action,
+      label: '$title...',
+    );
+
     if (!context.mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
