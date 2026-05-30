@@ -685,7 +685,21 @@ class __WarehouseReconciliationViewState
   List<WarehouseReconciliationRecord> _applyFilters(
     List<WarehouseReconciliationRecord> items,
   ) {
+    // Server-side q is sent in the background (forward-compat for when the
+    // backend honors it). We also filter in-memory so search responds instantly
+    // and still works correctly even if the server returns the unfiltered set.
+    final query = _searchQuery.trim().toLowerCase();
     return items.where((item) {
+      final matchesSearch = query.isEmpty ||
+          item.challanNo.toLowerCase().contains(query) ||
+          item.gateEntryId.toLowerCase().contains(query) ||
+          item.gateEntryNo.toLowerCase().contains(query) ||
+          item.displayReason.toLowerCase().contains(query) ||
+          item.reasonCode.toLowerCase().contains(query) ||
+          item.matchedGrnNumber.toLowerCase().contains(query) ||
+          item.displayStatus.toLowerCase().contains(query) ||
+          item.vendorName.toLowerCase().contains(query);
+
       final matchesStatus = switch (_statusFilter) {
         'Matched' => item.isMatched,
         'Exception' => item.isException,
@@ -693,7 +707,7 @@ class __WarehouseReconciliationViewState
         'Open' => !item.isResolved,
         _ => true,
       };
-      return matchesStatus;
+      return matchesSearch && matchesStatus;
     }).toList();
   }
 
