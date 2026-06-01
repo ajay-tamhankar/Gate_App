@@ -107,6 +107,7 @@ class WarehouseGateEntryDetail {
   final String vendorCode;
   final String vehicleNo;
   final DateTime? entryTime;
+  final DateTime? documentDate;
   final String gateMovement;
   final String challanNo;
   final String lrNumber;
@@ -121,6 +122,9 @@ class WarehouseGateEntryDetail {
   final List<WarehouseAttachment> attachments;
   final DateTime? gateOutTimestamp;
   final String? gateOutBy;
+  final String? createdBy;
+  final String? verifiedBy;
+  final String? approvedBy;
 
   const WarehouseGateEntryDetail({
     required this.id,
@@ -129,6 +133,7 @@ class WarehouseGateEntryDetail {
     required this.vendorCode,
     required this.vehicleNo,
     required this.entryTime,
+    required this.documentDate,
     required this.gateMovement,
     required this.challanNo,
     required this.lrNumber,
@@ -143,6 +148,9 @@ class WarehouseGateEntryDetail {
     required this.attachments,
     this.gateOutTimestamp,
     this.gateOutBy,
+    this.createdBy,
+    this.verifiedBy,
+    this.approvedBy,
   });
 
   factory WarehouseGateEntryDetail.fromJson(Map<String, dynamic> json) {
@@ -154,6 +162,11 @@ class WarehouseGateEntryDetail {
     }
     final itemsRaw = json['items'] as List? ?? const [];
     final attachmentsRaw = json['attachments'] as List? ?? const [];
+    final documentDateRaw =
+        json['documentDate'] ?? json['document_date'];
+    final documentDate = documentDateRaw == null
+        ? null
+        : DateTime.tryParse(documentDateRaw.toString());
     return WarehouseGateEntryDetail(
       id: (json['id'] ?? '').toString(),
       gateEntryNo: (json['gateEntryNo'] ?? '').toString(),
@@ -161,6 +174,7 @@ class WarehouseGateEntryDetail {
       vendorCode: (json['vendorCode'] ?? json['vendor_code'] ?? '').toString(),
       vehicleNo: (json['vehicleNo'] ?? json['vehicleNumber'] ?? '').toString(),
       entryTime: parsed,
+      documentDate: documentDate,
       gateMovement:
           (json['gateMovement'] ?? json['gateDirection'] ?? '').toString(),
       challanNo: (json['challanNo'] ?? json['challanNumber'] ?? '').toString(),
@@ -188,6 +202,9 @@ class WarehouseGateEntryDetail {
           ? DateTime.tryParse((json['gateOutTimestamp'] ?? json['gateOutTime']).toString())
           : null,
       gateOutBy: (json['gateOutBy'] ?? json['gate_out_by'])?.toString(),
+      createdBy: (json['createdBy'] ?? json['created_by'])?.toString(),
+      verifiedBy: (json['verifiedBy'] ?? json['verified_by'])?.toString(),
+      approvedBy: (json['approvedBy'] ?? json['approved_by'])?.toString(),
     );
   }
 

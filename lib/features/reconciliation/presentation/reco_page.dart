@@ -1537,7 +1537,13 @@ class __WarehouseReconciliationViewState
                     row('Vendor', item.vendorName),
                     row('Vendor Code', item.vendorCode),
                     row('GRN Qty', item.grnQty.toString()),
-                    row('Posting Date', item.postingDate),
+                    row(
+                      'Posting Date',
+                      item.grnPostingDate != null
+                          ? DateFormat('MMM dd, yyyy')
+                              .format(item.grnPostingDate!.toLocal())
+                          : '—',
+                    ),
                     row(
                       'Imported',
                       item.importedAt != null

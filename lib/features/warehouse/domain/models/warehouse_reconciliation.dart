@@ -1,3 +1,19 @@
+/// Stable set of `reasonCode` values returned by `GET /reconciliations`.
+/// The frontend matches on these exact strings (case-sensitive) — backend
+/// confirmed this is the complete vocabulary as of 2026-06.
+class ReasonCode {
+  ReasonCode._();
+
+  static const matched = 'MATCHED';
+  static const awaitingGrn = 'AWAITING_GRN';     // pending_grn, <24h
+  static const grnMissing = 'GRN_MISSING';       // grn_not_posted, >24h
+  static const poOrMaterialMismatch = 'PO_OR_MATERIAL_MISMATCH';
+  static const multipleGrnFound = 'MULTIPLE_GRN_FOUND'; // duplicate_grn
+  static const vendorMissing = 'VENDOR_MISSING';
+  static const vendorMismatch = 'VENDOR_MISMATCH';
+  static const qtyMismatch = 'QTY_MISMATCH';
+}
+
 /// Row in the gate-entry-centric reconciliation list.
 ///
 /// The backend returns three kinds of rows in `data[]`, distinguished by `id`:
@@ -31,14 +47,26 @@ class WarehouseReconciliationRecord {
   final String resolvedBy;
   final String resolutionNotes;
 
-  // Orphan-only extras (populated when status == "pending_gate_entry").
+  // GRN-side fields used for the comparison view on exception rows
+  // (wrong_po_material / VENDOR_MISMATCH / quantity_mismatch / ...) AND
+  // for the standalone orphan-GRN info sheet on `pending_gate_entry` rows.
+  // For orphan rows these are the SAP GRN's own values. For matched/exception
+  // rows these are the matched SAP GRN's values (gate entry's values stay in
+  // `vendorName` / `vendorCode` / `challanNo`).
   final String sapGrnId;
   final String poNumber;
   final String materialCode;
   final String grnNumber;
   final num grnQty;
-  final String postingDate;
+  final DateTime? grnPostingDate;
   final DateTime? importedAt;
+  final String grnVendorName;
+  final String grnVendorCode;
+
+  /// Populated only when `reasonCode == MULTIPLE_GRN_FOUND`. Every SAP GRN
+  /// number that matched this gate entry's challan — the duplicate set the
+  /// operator needs to disambiguate.
+  final List<String> duplicateGrnNumbers;
 
   const WarehouseReconciliationRecord({
     required this.id,
@@ -66,8 +94,11 @@ class WarehouseReconciliationRecord {
     required this.materialCode,
     required this.grnNumber,
     required this.grnQty,
-    required this.postingDate,
+    required this.grnPostingDate,
     required this.importedAt,
+    required this.grnVendorName,
+    required this.grnVendorCode,
+    required this.duplicateGrnNumbers,
   });
 
   factory WarehouseReconciliationRecord.fromJson(Map<String, dynamic> json) {
@@ -106,9 +137,26 @@ class WarehouseReconciliationRecord {
       materialCode: (json['materialCode'] ?? '').toString(),
       grnNumber: (json['grnNumber'] ?? matchedGrn).toString(),
       grnQty: _readNum(json['grnQty']),
-      postingDate: (json['postingDate'] ?? '').toString(),
+      // Backend standardised on `grnPostingDate`; orphan-only payloads from
+      // earlier versions used `postingDate`. Accept either.
+      grnPostingDate:
+          _readDate(json['grnPostingDate'] ?? json['postingDate']),
       importedAt: _readDate(json['importedAt']),
+      grnVendorName: (json['grnVendorName'] ?? '').toString(),
+      grnVendorCode: (json['grnVendorCode'] ?? '').toString(),
+      duplicateGrnNumbers: _readStringList(json['duplicateGrnNumbers']),
     );
+  }
+
+  static List<String> _readStringList(dynamic value) {
+    if (value is! List) return const [];
+    final out = <String>[];
+    for (final v in value) {
+      if (v == null) continue;
+      final s = v.toString();
+      if (s.isNotEmpty) out.add(s);
+    }
+    return out;
   }
 
   String get normalizedStatus => status.trim().toLowerCase();
