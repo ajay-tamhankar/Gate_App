@@ -30,12 +30,22 @@ class SessionController extends Notifier<SessionState> {
       try {
         final getCurrentUser = ref.read(getCurrentUserUseCaseProvider);
         final response = await getCurrentUser.execute();
-        
+
         if (response.success && response.data != null) {
+          // Refuse to restore a session whose user has no organization. A
+          // legacy/unscoped JWT will pass /auth/me but any subsequent
+          // write would land in NULL-org limbo on the backend. Force a
+          // re-login instead so the user picks an org explicitly.
+          final orgIdRaw = response.data!.organizationId;
+          final orgId = orgIdRaw.trim();
+          if (orgId.isEmpty) {
+            await _clearSession();
+            return;
+          }
           final parsedRole = UserRole.fromApi(response.data!.role) ?? UserRole.admin;
           final organization = response.data!.organization ??
               Organization(
-                id: response.data!.organizationId,
+                id: orgId,
                 code: '',
                 name: '',
                 isActive: true,
