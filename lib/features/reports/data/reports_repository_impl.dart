@@ -11,6 +11,15 @@ final reportsRepositoryProvider = Provider<ReportsRepository>((ref) {
   return ReportsRepository(apiClient: ref.read(apiClientProvider));
 });
 
+/// Tolerate qty fields the backend may return as num, decimal string
+/// ("432.0000"), or null. Bare `as num` casts crash on the string form —
+/// see warehouse_gate_entry.dart for the matching fix on the detail path.
+num _readNum(dynamic value) {
+  if (value is num) return value;
+  if (value == null) return 0;
+  return num.tryParse(value.toString()) ?? 0;
+}
+
 class ReportsRepository {
   final ApiClient _apiClient;
 
@@ -183,13 +192,11 @@ class ReportsRepository {
       final qty = itemList.isNotEmpty
           ? itemList.fold<int>(0, (sum, item) {
               final itemMap = item as Map<String, dynamic>;
-              final value = itemMap['challanQty'] ?? itemMap['challan_qty'] ?? 0;
-              return sum + ((value is num) ? value.toInt() : 0);
+              return sum +
+                  _readNum(itemMap['challanQty'] ?? itemMap['challan_qty'])
+                      .toInt();
             })
-          : ((map['qty'] ?? map['quantity'] ?? 0) is num
-              ? (map['qty'] ?? map['quantity'] ?? 0) as num
-              : 0)
-                  .toInt();
+          : _readNum(map['qty'] ?? map['quantity']).toInt();
       final transporter =
           (map['transporterName'] ?? map['transporter'] ?? '').toString();
       final status =
@@ -290,13 +297,11 @@ class ReportsRepository {
       final qty = itemList.isNotEmpty
           ? itemList.fold<int>(0, (sum, item) {
               final itemMap = item as Map<String, dynamic>;
-              final value = itemMap['challanQty'] ?? itemMap['challan_qty'] ?? 0;
-              return sum + ((value is num) ? value.toInt() : 0);
+              return sum +
+                  _readNum(itemMap['challanQty'] ?? itemMap['challan_qty'])
+                      .toInt();
             })
-          : ((map['qty'] ?? map['quantity'] ?? 0) is num
-              ? (map['qty'] ?? map['quantity'] ?? 0) as num
-              : 0)
-                  .toInt();
+          : _readNum(map['qty'] ?? map['quantity']).toInt();
       final transporter =
           (map['transporterName'] ?? map['transporter'] ?? '').toString();
       final status =

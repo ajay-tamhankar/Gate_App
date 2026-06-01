@@ -63,7 +63,6 @@ class GrnUploadNotifier extends Notifier<GrnUploadState> {
       ref.invalidate(warehouseManagerReconciliationsProvider);
       ref.invalidate(warehouseManagerDashboardSummaryProvider);
       ref.invalidate(reconciliationDashboardProvider);
-      _scheduleReconciliationRefresh();
 
       _postAuditLog();
 
@@ -113,17 +112,6 @@ class GrnUploadNotifier extends Notifier<GrnUploadState> {
     }
 
     return messageParts.join('\n');
-  }
-
-  void _scheduleReconciliationRefresh() {
-    Future<void>.delayed(const Duration(seconds: 3)).then((_) {
-      ref.invalidate(dashboardControllerProvider);
-      ref.invalidate(warehouseDashboardProvider);
-      ref.invalidate(warehouseReconciliationSummaryProvider);
-      ref.invalidate(warehouseManagerReconciliationsProvider);
-      ref.invalidate(warehouseManagerDashboardSummaryProvider);
-      ref.invalidate(reconciliationDashboardProvider);
-    });
   }
 
   /// Resets the notifier back to idle so the card can be reused.

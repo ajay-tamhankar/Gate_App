@@ -18,9 +18,17 @@ class WarehouseGateEntryItem {
       materialCode:
           (json['materialCode'] ?? json['material_code'] ?? '').toString(),
       poNumber: (json['poNumber'] ?? json['po_number'] ?? '').toString(),
-      challanQty: (json['challanQty'] ?? json['quantity'] ?? 0) as num,
+      // Backend returns decimal-string qty (e.g. "432.0000"), so a bare
+      // `as num` cast would throw. Tolerate num / String / null.
+      challanQty: _readNum(json['challanQty'] ?? json['quantity']),
       uom: (json['uom'] ?? json['unit'] ?? '').toString(),
     );
+  }
+
+  static num _readNum(dynamic value) {
+    if (value is num) return value;
+    if (value == null) return 0;
+    return num.tryParse(value.toString()) ?? 0;
   }
 }
 

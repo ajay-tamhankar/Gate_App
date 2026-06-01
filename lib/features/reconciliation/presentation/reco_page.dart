@@ -20,6 +20,7 @@ import 'controllers/import_history_controller.dart';
 import 'reco_exception_detail_page.dart';
 import 'reconciliation_security_view.dart';
 
+import '../../gate_entry/presentation/gate_entry_detail_page.dart';
 import '../../warehouse/domain/models/warehouse_reconciliation.dart';
 import '../../warehouse/presentation/controllers/warehouse_providers.dart';
 import '../../warehouse/presentation/controllers/warehouse_reconciliation_list_controller.dart';
@@ -257,11 +258,6 @@ class _RecoOperationsView extends ConsumerWidget {
         await ref.read(recoListControllerProvider.notifier).refresh();
         ref.invalidate(warehouseManagerReconciliationsProvider);
         ref.invalidate(reconciliationDashboardProvider);
-        Future<void>.delayed(const Duration(seconds: 3)).then((_) {
-          ref.invalidate(warehouseManagerReconciliationsProvider);
-          ref.invalidate(reconciliationDashboardProvider);
-          ref.read(recoListControllerProvider.notifier).refresh();
-        });
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -568,6 +564,20 @@ class __WarehouseReconciliationViewState
   Timer? _searchDebounce;
   bool _isSearching = false;
 
+  // Memoized filter result. _applyFilters walks up to ~1.4k records and is
+  // re-invoked on every parent rebuild (search keystroke, spinner toggle,
+  // status chip tap). Caching by identity-of-items + search + status avoids
+  // redoing the same work when only an unrelated bit of state flipped.
+  List<WarehouseReconciliationRecord>? _cachedFiltered;
+  Object? _cachedItemsRef;
+  String? _cachedSearch;
+  String? _cachedStatus;
+
+  // DataTable2 with hundreds of materialized DataRow widgets is the dominant
+  // render cost. Capping the visible rows keeps the page snappy; the count
+  // chip still reflects the true match total so the user knows it's truncated.
+  static const int _maxDisplayedRows = 200;
+
   @override
   void dispose() {
     _searchDebounce?.cancel();
@@ -659,7 +669,7 @@ class __WarehouseReconciliationViewState
                           vertical: isMob ? 16 : 24,
                         ),
                         children: [
-                          _buildSummarySection(context, filtered, state.items, isMob, isTab),
+                          _buildSummarySection(context, state, isMob, isTab),
                           const SizedBox(height: 16),
                           _buildFilters(context, filtered.length, isMob),
                           const SizedBox(height: 16),
@@ -667,11 +677,34 @@ class __WarehouseReconciliationViewState
                             _buildErrorBanner(context, state.error!),
                             const SizedBox(height: 16),
                           ],
-                          filtered.isEmpty
-                              ? _buildEmptyState(context)
-                              : isMob
-                                  ? _buildMobileList(context, filtered)
-                                  : _buildDesktopTable(context, filtered, isTab),
+                          // The new API embeds synthetic pending-GRN and
+                          // orphan-GRN rows directly inside `data`, so empty
+                          // filtered list = nothing to render in any case.
+                          if (filtered.isEmpty)
+                            _buildEmptyState(context)
+                          else ...[
+                            isMob
+                                ? _buildMobileList(
+                                    context,
+                                    filtered.length > _maxDisplayedRows
+                                        ? filtered.sublist(
+                                            0, _maxDisplayedRows)
+                                        : filtered,
+                                  )
+                                : _buildDesktopTable(
+                                    context,
+                                    filtered.length > _maxDisplayedRows
+                                        ? filtered.sublist(
+                                            0, _maxDisplayedRows)
+                                        : filtered,
+                                    isTab,
+                                  ),
+                            if (filtered.length > _maxDisplayedRows) ...[
+                              const SizedBox(height: 12),
+                              _buildTruncatedBanner(
+                                  context, filtered.length),
+                            ],
+                          ],
                         ],
                       ),
                     ),
@@ -685,85 +718,117 @@ class __WarehouseReconciliationViewState
   List<WarehouseReconciliationRecord> _applyFilters(
     List<WarehouseReconciliationRecord> items,
   ) {
-    // Server-side q is sent in the background (forward-compat for when the
-    // backend honors it). We also filter in-memory so search responds instantly
-    // and still works correctly even if the server returns the unfiltered set.
+    // Cheap cache: re-using the same list of items + same search + same status
+    // returns the previous result without walking the list again. Saves us
+    // from re-filtering when only the search-spinner flag flips.
+    if (identical(_cachedItemsRef, items) &&
+        _cachedSearch == _searchQuery &&
+        _cachedStatus == _statusFilter &&
+        _cachedFiltered != null) {
+      return _cachedFiltered!;
+    }
+
     final query = _searchQuery.trim().toLowerCase();
-    return items.where((item) {
+    final result = items.where((item) {
       final matchesSearch = query.isEmpty ||
           item.challanNo.toLowerCase().contains(query) ||
-          item.gateEntryId.toLowerCase().contains(query) ||
-          item.gateEntryNo.toLowerCase().contains(query) ||
+          (item.gateEntryId?.toLowerCase().contains(query) ?? false) ||
+          (item.gateEntryNo?.toLowerCase().contains(query) ?? false) ||
           item.displayReason.toLowerCase().contains(query) ||
           item.reasonCode.toLowerCase().contains(query) ||
           item.matchedGrnNumber.toLowerCase().contains(query) ||
           item.displayStatus.toLowerCase().contains(query) ||
-          item.vendorName.toLowerCase().contains(query);
+          item.vendorName.toLowerCase().contains(query) ||
+          item.grnNumber.toLowerCase().contains(query);
 
       final matchesStatus = switch (_statusFilter) {
         'Matched' => item.isMatched,
-        'Exception' => item.isException,
+        'Pending GRN' => item.normalizedStatus == 'pending_grn',
+        'GRN Not Posted' => item.normalizedStatus == 'grn_not_posted',
+        'Quantity Mismatch' => item.normalizedStatus == 'quantity_mismatch',
+        'Duplicate GRN' => item.normalizedStatus == 'duplicate_grn',
+        'Wrong PO/Material' => item.normalizedStatus == 'wrong_po_material',
+        'Pending Gate Entry' => item.isPendingGateEntry,
         'Resolved' => item.isResolved,
         'Open' => !item.isResolved,
         _ => true,
       };
       return matchesSearch && matchesStatus;
     }).toList();
+
+    _cachedItemsRef = items;
+    _cachedSearch = _searchQuery;
+    _cachedStatus = _statusFilter;
+    _cachedFiltered = result;
+    return result;
   }
 
   Widget _buildSummarySection(
     BuildContext context,
-    List<WarehouseReconciliationRecord> filtered,
-    List<WarehouseReconciliationRecord> all,
+    WarehouseReconciliationListState state,
     bool isMob,
     bool isTab,
   ) {
-    final matched = filtered.where((e) => e.isMatched).length;
-    final exceptions = filtered.where((e) => e.isException).length;
-    final resolved = filtered.where((e) => e.isResolved).length;
-    final open = all.where((e) => !e.isResolved).length;
-
+    // Counters are sourced from the server-side
+    // `reconciliation.summary.gateEntries.byStatus` breakdown (true totals for
+    // the active period, independent of the visible-row cap and any local
+    // search). Orphan count comes from `reconciliation.summary.orphanGrns`.
+    final breakdown = state.statusBreakdown;
     final cards = [
       _summaryCard(
         context,
         title: 'Matched',
-        value: '$matched',
-        subtitle: 'No issue',
+        value: '${breakdown.matched}',
+        subtitle: 'GRN posted',
         icon: Icons.check_circle,
         accent: Colors.green,
       ),
       _summaryCard(
         context,
+        title: 'Pending GRN',
+        value: '${breakdown.pendingGrn}',
+        subtitle: 'Awaiting SAP GRN',
+        icon: Icons.hourglass_top,
+        accent: Colors.amber.shade700,
+      ),
+      _summaryCard(
+        context,
         title: 'Exceptions',
-        value: '$exceptions',
+        value: '${breakdown.totalExceptions}',
         subtitle: 'Need review',
         icon: Icons.error_outline,
         accent: Colors.red,
       ),
       _summaryCard(
         context,
-        title: 'Resolved',
-        value: '$resolved',
-        subtitle: 'Issue closed',
-        icon: Icons.verified,
-        accent: Colors.blue,
-      ),
-      _summaryCard(
-        context,
-        title: 'Open',
-        value: '$open',
-        subtitle: 'Needs resolution',
-        icon: Icons.pending_actions,
-        accent: Colors.orange,
+        title: 'Pending Gate Entry',
+        value: '${state.orphanGrnCount}',
+        subtitle: 'Orphan GRN',
+        icon: Icons.upload_file,
+        accent: Colors.amber.shade700,
       ),
     ];
 
     if (isMob) {
-      return Row(
+      // Two rows of two cards each so the orphan/pending-grn counts are
+      // visible on mobile too.
+      return Column(
         children: [
-          Expanded(child: cards[0]),
-          const SizedBox(width: 10),
-          Expanded(child: cards[1]),
+          Row(
+            children: [
+              Expanded(child: cards[0]),
+              const SizedBox(width: 10),
+              Expanded(child: cards[1]),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(child: cards[2]),
+              const SizedBox(width: 10),
+              Expanded(child: cards[3]),
+            ],
+          ),
         ],
       );
     }
@@ -934,14 +999,34 @@ class __WarehouseReconciliationViewState
             items: const [
               DropdownMenuItem(value: 'All', child: Text('All')),
               DropdownMenuItem(value: 'Matched', child: Text('Matched')),
-              DropdownMenuItem(value: 'Exception', child: Text('Exception')),
+              DropdownMenuItem(
+                  value: 'Pending GRN', child: Text('Pending GRN')),
+              DropdownMenuItem(
+                  value: 'GRN Not Posted', child: Text('GRN Not Posted')),
+              DropdownMenuItem(
+                  value: 'Quantity Mismatch',
+                  child: Text('Quantity Mismatch')),
+              DropdownMenuItem(
+                  value: 'Duplicate GRN', child: Text('Duplicate GRN')),
+              DropdownMenuItem(
+                  value: 'Wrong PO/Material',
+                  child: Text('Wrong PO/Material')),
+              DropdownMenuItem(
+                  value: 'Pending Gate Entry',
+                  child: Text('Pending Gate Entry')),
               DropdownMenuItem(value: 'Resolved', child: Text('Resolved')),
               DropdownMenuItem(value: 'Open', child: Text('Open')),
             ],
-            onChanged: (val) {
-              if (val != null) {
-                setState(() => _statusFilter = val);
-              }
+            onChanged: (val) async {
+              if (val == null) return;
+              setState(() => _statusFilter = val);
+              // Mirror the chosen filter to the server when it maps to one
+              // of the seven backend status keys; Resolved/Open/All keep the
+              // server query untouched and rely on local filtering.
+              await ref
+                  .read(warehouseReconciliationListControllerProvider
+                      .notifier)
+                  .refresh(statusFilter: _serverStatusForDropdown(val));
             },
           ),
         ),
@@ -1033,7 +1118,7 @@ class __WarehouseReconciliationViewState
                     children: [
                       Expanded(
                         child: Text(
-                          item.gateEntryNo.isEmpty ? item.id : item.gateEntryNo,
+                          _rowDisplayId(item),
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
@@ -1097,7 +1182,10 @@ class __WarehouseReconciliationViewState
             showCheckboxColumn: false,
             columns: const [
               DataColumn2(label: Text('Gate Entry No'), size: ColumnSize.M),
-              DataColumn2(label: Text('Status'), size: ColumnSize.S),
+              // Bumped from S to M: the seven status labels now include
+              // "Wrong PO/Material" + "Pending Gate Entry" + the chip icon,
+              // which together don't fit in the previous narrow column.
+              DataColumn2(label: Text('Status'), size: ColumnSize.M),
               DataColumn2(label: Text('Reason'), size: ColumnSize.L),
               DataColumn2(label: Text('Qty Variance'), size: ColumnSize.S),
               DataColumn2(label: Text('Matched GRN'), size: ColumnSize.M),
@@ -1109,7 +1197,7 @@ class __WarehouseReconciliationViewState
                 onSelectChanged: (_) => _openDetail(context, item),
                 cells: [
                   DataCell(Text(
-                    item.gateEntryNo.isEmpty ? item.id : item.gateEntryNo,
+                    _rowDisplayId(item),
                     style: const TextStyle(fontWeight: FontWeight.w700),
                   )),
                   DataCell(_statusChip(item)),
@@ -1187,26 +1275,104 @@ class __WarehouseReconciliationViewState
     );
   }
 
+  /// Map the dropdown's display value to the backend `status` key the API
+  /// accepts on `GET /reconciliations?status=...`. Returns null for the
+  /// pseudo-buckets that have no direct server-side equivalent (All / Resolved
+  /// / Open) — those are filtered client-side.
+  String? _serverStatusForDropdown(String value) {
+    switch (value) {
+      case 'Matched':
+        return 'matched';
+      case 'Pending GRN':
+        return 'pending_grn';
+      case 'GRN Not Posted':
+        return 'grn_not_posted';
+      case 'Quantity Mismatch':
+        return 'quantity_mismatch';
+      case 'Duplicate GRN':
+        return 'duplicate_grn';
+      case 'Wrong PO/Material':
+        return 'wrong_po_material';
+      case 'Pending Gate Entry':
+        return 'pending_gate_entry';
+      default:
+        return null;
+    }
+  }
+
+  /// Best-effort display label for a row's id column.
+  /// - Real / pending-GRN rows: prefer `gateEntryNo`, fall back to `id`.
+  /// - Orphan GRN rows: show the GRN number so the row is identifiable.
+  String _rowDisplayId(WarehouseReconciliationRecord item) {
+    final ge = item.gateEntryNo;
+    if (ge != null && ge.isNotEmpty) return ge;
+    if (item.isPendingGateEntry) {
+      if (item.grnNumber.isNotEmpty) return 'GRN ${item.grnNumber}';
+    }
+    return item.id;
+  }
+
   Widget _statusChip(WarehouseReconciliationRecord item) {
-    final label = _statusLabel(item);
-    final color = _statusColor(item);
-    return StatusChip(label: label, color: color);
+    return StatusChip(
+      label: item.displayStatus,
+      color: _statusColor(item),
+      icon: _statusIcon(item),
+    );
   }
 
-  String _statusLabel(WarehouseReconciliationRecord item) {
-    return item.displayStatus;
-  }
-
+  /// Color mapping for each of the seven backend status keys.
+  ///   matched              → green   (good)
+  ///   pending_grn          → amber   (waiting for SAP GRN — neutral, not bad)
+  ///   pending_gate_entry   → amber   (orphan GRN — same "waiting" tone)
+  ///   grn_not_posted       → red     (past SLA, real exception)
+  ///   quantity_mismatch    → orange  (exception)
+  ///   duplicate_grn        → deep-orange (exception)
+  ///   wrong_po_material    → indigo  (exception, distinct hue)
+  /// Resolved rows show blue regardless of original status.
   Color _statusColor(WarehouseReconciliationRecord item) {
-    final key = item.normalizedStatus;
-    if (item.isMatched) return Colors.green;
-    if (key == 'quantity_mismatch') return Colors.orange;
-    if (key == 'pending_grn' || key == 'grn_not_posted') return Colors.red;
-    if (key == 'duplicate_grn') return Colors.deepOrange;
-    if (key == 'wrong_po_material') return Colors.indigo;
     if (item.isResolved) return Colors.blue;
-    if (item.isException) return Colors.red;
-    return Colors.grey;
+    switch (item.normalizedStatus) {
+      case 'matched':
+        return Colors.green;
+      case 'pending_grn':
+      case 'pending_gate_entry':
+        return Colors.amber.shade700;
+      case 'grn_not_posted':
+        return Colors.red;
+      case 'quantity_mismatch':
+        return Colors.orange;
+      case 'duplicate_grn':
+        return Colors.deepOrange;
+      case 'wrong_po_material':
+        return Colors.indigo;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  IconData _statusIcon(WarehouseReconciliationRecord item) {
+    if (item.isResolved) return Icons.verified;
+    switch (item.normalizedStatus) {
+      case 'matched':
+        return Icons.check_circle;
+      case 'pending_grn':
+        // Gate entry is waiting for its GRN to be uploaded.
+        return Icons.hourglass_top;
+      case 'pending_gate_entry':
+        // GRN is waiting for a matching gate entry — inverse-arrow icon
+        // visually distinguishes it from the pending_grn case.
+        return Icons.upload_file;
+      case 'grn_not_posted':
+        return Icons.hourglass_empty;
+      case 'quantity_mismatch':
+        return Icons.warning_amber_rounded;
+      case 'duplicate_grn':
+        return Icons.copy_all;
+      case 'wrong_po_material':
+        return Icons.swap_horiz;
+      default:
+        return Icons.error_outline;
+    }
   }
 
   Widget _buildErrorBanner(BuildContext context, String error) {
@@ -1223,11 +1389,169 @@ class __WarehouseReconciliationViewState
     );
   }
 
-  void _openDetail(BuildContext context, WarehouseReconciliationRecord item) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => RecoExceptionDetailPage(record: item),
+  Widget _buildTruncatedBanner(BuildContext context, int totalMatches) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Theme.of(context)
+            .colorScheme
+            .primary
+            .withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Theme.of(context)
+              .colorScheme
+              .primary
+              .withValues(alpha: 0.25),
+        ),
       ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.info_outline,
+            size: 18,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Showing first $_maxDisplayedRows of $totalMatches matches. '
+              'Refine your search or filter to narrow the results.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _openDetail(BuildContext context, WarehouseReconciliationRecord item) {
+    // Real reconciliation rows → the reconciliation detail screen.
+    // Pending-GRN rows (`gate_<uuid>`) → the gate entry detail screen, since
+    //   there's no reconciliation record yet but the gate entry exists.
+    // Orphan GRN rows (`orphan_<uuid>`) → an info sheet, since there's no
+    //   gate entry to navigate to.
+    if (!item.isSyntheticRow) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => RecoExceptionDetailPage(record: item),
+        ),
+      );
+      return;
+    }
+
+    if (item.isPendingGrn && item.gateEntryId != null) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => GateEntryDetailPage(entryId: item.gateEntryId!),
+        ),
+      );
+      return;
+    }
+
+    if (item.isPendingGateEntry) {
+      _showOrphanGrnSheet(context, item);
+      return;
+    }
+  }
+
+  void _showOrphanGrnSheet(
+      BuildContext context, WarehouseReconciliationRecord item) {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) {
+        TableRow row(String label, String value) => TableRow(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      color: Theme.of(sheetContext)
+                          .colorScheme
+                          .onSurfaceVariant,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Text(
+                    value.isEmpty ? '—' : value,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ],
+            );
+
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.upload_file,
+                      color: Colors.amber.shade700,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Pending Gate Entry',
+                      style: Theme.of(sheetContext)
+                          .textTheme
+                          .titleMedium
+                          ?.copyWith(fontWeight: FontWeight.w700),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'A SAP GRN was imported but no matching gate entry exists yet.',
+                  style: Theme.of(sheetContext).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(sheetContext)
+                            .colorScheme
+                            .onSurfaceVariant,
+                      ),
+                ),
+                const SizedBox(height: 16),
+                Table(
+                  columnWidths: const {
+                    0: IntrinsicColumnWidth(),
+                    1: FlexColumnWidth(),
+                  },
+                  children: [
+                    row('GRN Number', item.grnNumber),
+                    row('Challan', item.challanNo),
+                    row('PO Number', item.poNumber),
+                    row('Material', item.materialCode),
+                    row('Vendor', item.vendorName),
+                    row('Vendor Code', item.vendorCode),
+                    row('GRN Qty', item.grnQty.toString()),
+                    row('Posting Date', item.postingDate),
+                    row(
+                      'Imported',
+                      item.importedAt != null
+                          ? DateFormat('MMM dd, yyyy - hh:mm a')
+                              .format(item.importedAt!.toLocal())
+                          : '—',
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

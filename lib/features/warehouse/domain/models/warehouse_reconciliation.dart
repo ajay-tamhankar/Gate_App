@@ -1,8 +1,23 @@
+/// Row in the gate-entry-centric reconciliation list.
+///
+/// The backend returns three kinds of rows in `data[]`, distinguished by `id`:
+///   - regular UUID  → a real reconciliation record (resolvable, navigable to
+///                     the reconciliation detail screen).
+///   - "gate_<uuid>" → synthetic row for a gate entry that has no GRN yet
+///                     (`status: pending_grn`). Tap navigates to gate entry
+///                     detail; Resolve action is hidden.
+///   - "orphan_<uuid>" → synthetic row for an uploaded GRN with no matching
+///                     gate entry (`status: pending_gate_entry`). Tap shows
+///                     the GRN info; Resolve action is hidden.
 class WarehouseReconciliationRecord {
   final String id;
-  final String gateEntryId;
-  final String gateEntryNo;
+  final String? gateEntryId;
+  final String? gateEntryNo;
   final String challanNo;
+  final String vendorName;
+  final String vendorCode;
+  final DateTime? gateTimestamp;
+  final String gateStatus;
   final String status;
   final String statusLabel;
   final String matchedGrnNumber;
@@ -16,23 +31,24 @@ class WarehouseReconciliationRecord {
   final String resolvedBy;
   final String resolutionNotes;
 
-  // Legacy/compat fields retained for existing UI call sites.
-  final String vendorName;
+  // Orphan-only extras (populated when status == "pending_gate_entry").
+  final String sapGrnId;
   final String poNumber;
-  final num expectedQty;
-  final num receivedQty;
-  final num acceptedQty;
-  final num rejectedQty;
-  final num differenceQty;
-  final String remarks;
-  final String approvedBy;
-  final String closedBy;
+  final String materialCode;
+  final String grnNumber;
+  final num grnQty;
+  final String postingDate;
+  final DateTime? importedAt;
 
   const WarehouseReconciliationRecord({
     required this.id,
     required this.gateEntryId,
     required this.gateEntryNo,
     required this.challanNo,
+    required this.vendorName,
+    required this.vendorCode,
+    required this.gateTimestamp,
+    required this.gateStatus,
     required this.status,
     required this.statusLabel,
     required this.matchedGrnNumber,
@@ -45,58 +61,53 @@ class WarehouseReconciliationRecord {
     required this.resolvedAt,
     required this.resolvedBy,
     required this.resolutionNotes,
-    required this.vendorName,
+    required this.sapGrnId,
     required this.poNumber,
-    required this.expectedQty,
-    required this.receivedQty,
-    required this.acceptedQty,
-    required this.rejectedQty,
-    required this.differenceQty,
-    required this.remarks,
-    required this.approvedBy,
-    required this.closedBy,
+    required this.materialCode,
+    required this.grnNumber,
+    required this.grnQty,
+    required this.postingDate,
+    required this.importedAt,
   });
 
   factory WarehouseReconciliationRecord.fromJson(Map<String, dynamic> json) {
     final statusCode = (json['status'] ?? '').toString();
     final statusLabel = (json['statusLabel'] ?? '').toString();
-
     final qtyVariance = _readNum(json['qtyVariance']);
     final matchedGrn = (json['matchedGrnNumber'] ?? '').toString();
-    final displayReason = (json['displayReason'] ?? json['reasonCode'] ?? '').toString();
+    final displayReason =
+        (json['displayReason'] ?? json['reasonCode'] ?? '').toString();
 
     return WarehouseReconciliationRecord(
       id: (json['id'] ?? '').toString(),
-      gateEntryId: (json['gateEntryId'] ?? json['gate_entry_id'] ?? '').toString(),
-      gateEntryNo: (json['gateEntryNo'] ?? json['gate_entry_no'] ?? '').toString(),
-      challanNo: (json['challanNo'] ??
-              json['challan_no'] ??
-              json['challanNumber'] ??
-              json['challan_number'] ??
-              '')
-          .toString(),
+      gateEntryId: _readNullableString(json['gateEntryId']),
+      gateEntryNo: _readNullableString(json['gateEntryNo']),
+      // Backend now standardised on camelCase `challanNo`. Do not re-introduce
+      // snake_case / `challanNumber` fallbacks.
+      challanNo: (json['challanNo'] ?? '').toString(),
+      vendorName: (json['vendorName'] ?? '').toString(),
+      vendorCode: (json['vendorCode'] ?? '').toString(),
+      gateTimestamp: _readDate(json['gateTimestamp']),
+      gateStatus: (json['gateStatus'] ?? '').toString(),
       status: statusCode,
       statusLabel: statusLabel,
       matchedGrnNumber: matchedGrn,
       qtyVariance: qtyVariance,
       reasonCode: (json['reasonCode'] ?? '').toString(),
       displayReason: displayReason,
-      date: _readDate(json['reconciledAt'] ?? json['createdAt'] ?? json['date']),
+      date: _readDate(json['reconciledAt'] ?? json['createdAt']),
       reconciledBy: (json['reconciledBy'] ?? '').toString(),
-      isResolved: (json['isResolved'] ?? json['is_resolved'] ?? false) == true,
+      isResolved: (json['isResolved'] ?? false) == true,
       resolvedAt: _readDate(json['resolvedAt']),
       resolvedBy: (json['resolvedBy'] ?? '').toString(),
       resolutionNotes: (json['resolutionNotes'] ?? '').toString(),
-      vendorName: (json['vendorName'] ?? json['vendor_name'] ?? '').toString(),
-      poNumber: matchedGrn,
-      expectedQty: _readNum(json['expectedQty']),
-      receivedQty: _readNum(json['receivedQty']),
-      acceptedQty: _readNum(json['acceptedQty']),
-      rejectedQty: _readNum(json['rejectedQty']),
-      differenceQty: qtyVariance,
-      remarks: displayReason,
-      approvedBy: (json['approvedBy'] ?? '').toString(),
-      closedBy: (json['closedBy'] ?? '').toString(),
+      sapGrnId: (json['sapGrnId'] ?? '').toString(),
+      poNumber: (json['poNumber'] ?? '').toString(),
+      materialCode: (json['materialCode'] ?? '').toString(),
+      grnNumber: (json['grnNumber'] ?? matchedGrn).toString(),
+      grnQty: _readNum(json['grnQty']),
+      postingDate: (json['postingDate'] ?? '').toString(),
+      importedAt: _readDate(json['importedAt']),
     );
   }
 
@@ -109,24 +120,38 @@ class WarehouseReconciliationRecord {
 
   bool get isMatched => normalizedStatus == 'matched';
 
-  bool get isPending =>
-      normalizedStatus == 'pending_grn' ||
-      normalizedStatus == 'grn_not_posted' ||
-      normalizedStatus.contains('pending');
+  /// Gate entry exists but no SAP GRN posted yet. Synthetic row, id is
+  /// `gate_<uuid>`.
+  bool get isPendingGrn => normalizedStatus == 'pending_grn';
 
+  /// SAP GRN uploaded but no matching gate entry yet. Synthetic row, id is
+  /// `orphan_<uuid>`.
+  bool get isPendingGateEntry => normalizedStatus == 'pending_gate_entry';
+
+  /// Real exceptions that require operator attention.
   bool get isException =>
       !isMatched &&
       (normalizedStatus == 'quantity_mismatch' ||
           normalizedStatus == 'duplicate_grn' ||
           normalizedStatus == 'wrong_po_material' ||
-          normalizedStatus == 'grn_not_posted' ||
-          normalizedStatus == 'pending_grn' ||
-          normalizedStatus.contains('exception') ||
-          normalizedStatus.contains('mismatch'));
+          normalizedStatus == 'grn_not_posted');
 
   bool get isApproved => normalizedStatus.contains('approved');
   bool get isClosed => normalizedStatus.contains('closed');
   bool get isActive => !isClosed;
+
+  /// Only real reconciliation rows have a regular UUID — synthetic
+  /// `gate_<uuid>` / `orphan_<uuid>` rows can't be resolved server-side.
+  bool get isSyntheticRow =>
+      id.startsWith('gate_') || id.startsWith('orphan_');
+
+  bool get canResolve => !isSyntheticRow && !isResolved;
+
+  static String? _readNullableString(dynamic value) {
+    if (value == null) return null;
+    final str = value.toString();
+    return str.isEmpty ? null : str;
+  }
 
   static num _readNum(dynamic value) {
     if (value is num) return value;
@@ -147,6 +172,46 @@ class WarehouseReconciliationRecord {
         .map((part) => '${part[0].toUpperCase()}${part.substring(1).toLowerCase()}')
         .join(' ');
   }
+}
+
+/// Per-status counters returned by `reconciliation.summary.gateEntries.byStatus`.
+class WarehouseReconciliationStatusBreakdown {
+  final int matched;
+  final int pendingGrn;
+  final int grnNotPosted;
+  final int quantityMismatch;
+  final int duplicateGrn;
+  final int wrongPoMaterial;
+
+  const WarehouseReconciliationStatusBreakdown({
+    this.matched = 0,
+    this.pendingGrn = 0,
+    this.grnNotPosted = 0,
+    this.quantityMismatch = 0,
+    this.duplicateGrn = 0,
+    this.wrongPoMaterial = 0,
+  });
+
+  factory WarehouseReconciliationStatusBreakdown.fromJson(
+      Map<String, dynamic> json) {
+    int read(String key) {
+      final value = json[key];
+      if (value is num) return value.toInt();
+      return int.tryParse(value?.toString() ?? '') ?? 0;
+    }
+
+    return WarehouseReconciliationStatusBreakdown(
+      matched: read('matched'),
+      pendingGrn: read('pendingGrn'),
+      grnNotPosted: read('grnNotPosted'),
+      quantityMismatch: read('quantityMismatch'),
+      duplicateGrn: read('duplicateGrn'),
+      wrongPoMaterial: read('wrongPoMaterial'),
+    );
+  }
+
+  int get totalExceptions =>
+      grnNotPosted + quantityMismatch + duplicateGrn + wrongPoMaterial;
 }
 
 class WarehouseReconciliationSummary {

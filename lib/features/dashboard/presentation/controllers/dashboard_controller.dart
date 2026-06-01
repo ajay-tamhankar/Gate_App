@@ -89,12 +89,15 @@ class DashboardController extends AsyncNotifier<DashboardMetrics> {
       gateTat = summary.gateTat;
       dockTat = summary.dockTat;
     } else {
-      final todayString = DateFormat('yyyy-MM-dd').format(now);
-      final yesterdayString = DateFormat('yyyy-MM-dd')
-          .format(now.subtract(const Duration(days: 1)));
-      final monthStartString = DateFormat('yyyy-MM').format(now);
-      final weekStart = DateTime(now.year, now.month, now.day)
-          .subtract(Duration(days: now.weekday - 1));
+      // DateFormat instances are expensive — build once, reuse for every row.
+      final dayFmt = DateFormat('yyyy-MM-dd');
+      final monthFmt = DateFormat('yyyy-MM');
+      final today = DateTime(now.year, now.month, now.day);
+      final yesterday = today.subtract(const Duration(days: 1));
+      final weekStart = today.subtract(Duration(days: now.weekday - 1));
+      final todayString = dayFmt.format(today);
+      final yesterdayString = dayFmt.format(yesterday);
+      final monthStartString = monthFmt.format(today);
 
       for (final e in entries) {
         final isExited = e.gateOutTimestamp != null;
@@ -109,13 +112,12 @@ class DashboardController extends AsyncNotifier<DashboardMetrics> {
         if (rawTs == null) continue;
 
         final tsLocal = rawTs.toLocal();
-        final tsDateString = DateFormat('yyyy-MM-dd').format(tsLocal);
+        final tsDateString = dayFmt.format(tsLocal);
 
         if (tsDateString.startsWith(monthStartString)) {
           monthCount++;
         } else if (e.gateOutTimestamp != null) {
-          final outDateString =
-              DateFormat('yyyy-MM').format(e.gateOutTimestamp!.toLocal());
+          final outDateString = monthFmt.format(e.gateOutTimestamp!.toLocal());
           if (outDateString == monthStartString) {
             monthCount++;
           }
@@ -126,8 +128,7 @@ class DashboardController extends AsyncNotifier<DashboardMetrics> {
         } else if (tsDateString == yesterdayString) {
           yesterdayCount++;
         } else if (e.gateOutTimestamp != null) {
-          final outDateString =
-              DateFormat('yyyy-MM-dd').format(e.gateOutTimestamp!.toLocal());
+          final outDateString = dayFmt.format(e.gateOutTimestamp!.toLocal());
           if (outDateString == todayString) {
             todayCount++;
           } else if (outDateString == yesterdayString) {
@@ -185,12 +186,15 @@ class DashboardController extends AsyncNotifier<DashboardMetrics> {
         summary.dockTat > 0;
   }
 
+  static const _pendingAgingStatuses = {
+    'inward_created',
+    'verification_pending',
+    'approved',
+    'pending',
+  };
+
   bool _isPendingForAging(String status) {
-    final s = status.toLowerCase();
-    return s == 'inward_created' ||
-        s == 'verification_pending' ||
-        s == 'approved' ||
-        s == 'pending';
+    return _pendingAgingStatuses.contains(status.toLowerCase());
   }
 
   List<DailyActivity> _buildRecentActivity(

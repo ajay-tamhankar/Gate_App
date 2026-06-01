@@ -285,12 +285,13 @@ final warehouseManagerAdminKpiProvider =
     final normalized = status.toLowerCase();
 
     if (_isGrnPostedStatus(normalized)) totalGrnPosted++;
-    if (_isPendingGrnStatus(normalized) || r.isPending) pendingGrnCount++;
+    if (_isPendingGrnStatus(normalized) || r.isPendingGrn) pendingGrnCount++;
     if (_isQuantityMismatchStatus(normalized) || r.isException) qtyMismatch++;
     if (_isDuplicateGrnStatus(normalized)) duplicateGrn++;
 
     // Aging buckets apply to pending GRN only.
-    if (_isPendingGrnStatus(normalized) || (r.isPending && !_isGrnPostedStatus(normalized))) {
+    if (_isPendingGrnStatus(normalized) ||
+        (r.isPendingGrn && !_isGrnPostedStatus(normalized))) {
       final base = r.date?.toLocal();
       if (base != null) {
         final days = now.difference(base).inDays;

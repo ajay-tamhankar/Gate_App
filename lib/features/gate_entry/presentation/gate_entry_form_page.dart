@@ -1318,7 +1318,6 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
                               FilteringTextInputFormatter.digitsOnly,
                               LengthLimitingTextInputFormatter(10),
                             ],
-                            onChanged: (_) => setState(() {}),
                             buildCounter: (context,
                                 {required currentLength,
                                 required isFocused,

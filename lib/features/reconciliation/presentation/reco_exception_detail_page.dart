@@ -218,7 +218,12 @@ class _WarehouseReconciliationDetailView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final detail = ref.watch(warehouseGateEntryDetailProvider(record.gateEntryId));
+    // Orphan / pending-grn synthetic rows may not have a gateEntryId; the
+    // detail provider expects a non-null id, so fall back to an empty string
+    // and surface a friendlier error below.
+    final detail = ref.watch(
+      warehouseGateEntryDetailProvider(record.gateEntryId ?? ''),
+    );
     final isMob = isMobile(context);
 
     return Scaffold(
@@ -246,7 +251,9 @@ class _WarehouseReconciliationDetailView extends ConsumerWidget {
             padding: const EdgeInsets.all(24),
             children: [
               SectionHeader(
-                title: record.gateEntryNo.isEmpty ? entry.gateEntryNo : record.gateEntryNo,
+                title: (record.gateEntryNo?.isNotEmpty == true)
+                    ? record.gateEntryNo!
+                    : entry.gateEntryNo,
                 subtitle:
                     'Status: ${record.displayStatus} | ${record.date != null ? DateFormat('MMM dd, yyyy - hh:mm a').format(record.date!) : 'No date'}',
                 trailing: _statusChip(record),

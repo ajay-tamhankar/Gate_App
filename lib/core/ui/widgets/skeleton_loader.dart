@@ -37,6 +37,15 @@ class _SkeletonLoaderState extends State<SkeletonLoader>
 
   @override
   Widget build(BuildContext context) {
+    // Skeletons are placed both on the scaffold background and on Cards. The
+    // theme sets scaffoldBackgroundColor = surfaceContainerHighest, so we
+    // can't use that token here — it would draw invisible bars on the page
+    // background. Use onSurface-with-alpha so contrast holds on both
+    // surface (white card) and the slightly-darker scaffold background.
+    final base = Theme.of(context).colorScheme.onSurface;
+    final low = base.withValues(alpha: 0.08);
+    final high = base.withValues(alpha: 0.16);
+
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
@@ -48,17 +57,7 @@ class _SkeletonLoaderState extends State<SkeletonLoader>
             gradient: LinearGradient(
               begin: Alignment.centerLeft,
               end: Alignment.centerRight,
-              colors: [
-                Theme.of(context)
-                    .colorScheme
-                    .surfaceContainerHighest
-                    .withValues(alpha: 0.5),
-                Theme.of(context).colorScheme.surfaceContainerHighest,
-                Theme.of(context)
-                    .colorScheme
-                    .surfaceContainerHighest
-                    .withValues(alpha: 0.5),
-              ],
+              colors: [low, high, low],
               stops: [
                 _controller.value - 0.3,
                 _controller.value,
