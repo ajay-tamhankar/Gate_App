@@ -15,12 +15,16 @@ class TokenStorage {
     _cachedToken = token;
     _loadedFromDisk = true;
     final prefs = await SharedPreferences.getInstance();
-    if (persist) {
-      await prefs.setString(_tokenKey, token);
-    } else {
-      // Memory-only session: ensure no stale persisted token survives refresh.
-      await prefs.remove(_tokenKey);
-    }
+    // Always write to disk so closing/reopening the app keeps the user
+    // signed in. Previously a `persist: false` call would *delete* any
+    // token already on disk, silently logging the user out on next launch
+    // — which is what users reported as "having to log in every time".
+    //
+    // The `persist` flag is retained on the signature for API compat with
+    // future "session-only" flows (e.g. shared-kiosk login), but on this
+    // codebase we treat every successful login as persistent. Callers that
+    // truly want to end a session should call `deleteToken()` explicitly.
+    await prefs.setString(_tokenKey, token);
   }
 
   Future<String?> getToken() async {

@@ -17,7 +17,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final _passwordCtrl = TextEditingController();
   bool _isLoading = false;
   bool _obscurePassword = true;
-  bool _rememberMe = false;
+  // Default to "stay signed in" so users don't have to log in every time the
+  // app/tab is reopened. Users who want a session-only login can untick it.
+  bool _rememberMe = true;
 
   @override
   void dispose() {
