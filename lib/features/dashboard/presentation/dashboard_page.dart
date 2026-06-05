@@ -11,12 +11,15 @@ import '../domain/entities/dashboard_metrics.dart';
 import '../../auth/domain/usecases/get_current_user_usecase.dart';
 import '../../auth/domain/models/user.dart';
 import '../../auth/presentation/change_password_page.dart';
+import '../../../core/ui/auto_refresh.dart';
 import '../../../core/ui/responsive.dart';
-import '../../../core/ui/widgets/stat_card.dart';
 import '../../../core/ui/widgets/dashboard_chart.dart';
+import '../../../core/ui/widgets/logout_action.dart';
+import '../../../core/ui/widgets/ribbon.dart';
 import '../../../core/ui/widgets/section_header.dart';
 import '../../../core/ui/widgets/skeleton_loader.dart';
-import '../../../core/ui/widgets/logout_action.dart';
+import '../../../core/ui/widgets/stat_card.dart';
+import '../../../core/ui/widgets/theme_toggle_button.dart';
 import '../../sap/presentation/widgets/grn_import_card.dart';
 
 // --- Warehouse imports for Exec/Manager dashboards ---
@@ -29,8 +32,13 @@ class DashboardPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final session = ref.watch(sessionControllerProvider);
-    final role = session is Authenticated ? session.role : null;
+    // Select just the role from the session — rebuilding the whole
+    // DashboardPage every time any session field changes was burning frames
+    // on every auth heartbeat / token refresh.
+    final role = ref.watch(
+      sessionControllerProvider
+          .select((s) => s is Authenticated ? s.role : null),
+    );
 
     final isManager = role == UserRole.warehouseManager ||
         role == UserRole.whMgr ||
@@ -41,47 +49,79 @@ class DashboardPage extends ConsumerWidget {
     if (isManager) title = 'Manager Dashboard';
     if (isExecutive) title = 'Warehouse Dashboard';
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(title),
-        actions: [
-          if (role.isAdminOrWarehouseManager)
-            TextButton.icon(
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const ChangePasswordPage(),
-                  ),
-                );
-              },
-              icon: const Icon(Icons.lock_reset),
-              label: const Text('Change Password'),
-            ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () {
-              if (role == UserRole.gateSecurity) {
-                ref.invalidate(dashboardControllerProvider);
-                ref.invalidate(currentUserProvider);
-              } else {
-                ref.invalidate(warehouseDashboardProvider);
-                ref.invalidate(warehouseReconciliationSummaryProvider);
-                ref.invalidate(warehouseManagerDashboardSummaryProvider);
-                ref.invalidate(warehouseManagerReconciliationsProvider);
-                ref.invalidate(warehouseManagerAdminKpiProvider);
-                ref.invalidate(reconciliationDashboardProvider);
-              }
-            },
+    // Only auto-refresh the providers the *currently rendered* dashboard
+    // actually reads. The old list also invalidated providers consumed by
+    // sibling dashboards (and a duplicate of one that's pulled in
+    // transitively), which spawned redundant network calls and heavy
+    // main-isolate work — that's what made the page feel frozen between
+    // ticks. Manual refresh button is still available for on-demand pulls.
+    final List<ProviderOrFamily> watchedProviders;
+    if (isManager) {
+      watchedProviders = [
+        warehouseManagerDashboardSummaryProvider,
+        warehouseManagerAdminKpiProvider,
+        reconciliationDashboardProvider,
+      ];
+    } else if (isExecutive) {
+      watchedProviders = [
+        warehouseDashboardProvider,
+        warehouseReconciliationSummaryProvider,
+      ];
+    } else {
+      watchedProviders = [dashboardControllerProvider, currentUserProvider];
+    }
+
+    return AutoRefresh(
+      providers: watchedProviders,
+      interval: const Duration(minutes: 5),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          title: Row(
+            children: [
+              const RibbonAccentBar(height: 22),
+              const SizedBox(width: 10),
+              Flexible(
+                child: Text(title, overflow: TextOverflow.ellipsis),
+              ),
+            ],
           ),
-          const LogoutAction(),
-          const SizedBox(width: 8),
-        ],
+          actions: [
+            if (role.isAdminOrWarehouseManager)
+              TextButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const ChangePasswordPage(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.lock_reset),
+                label: Text(
+                  isMobile(context) ? '' : 'Change Password',
+                ),
+              ),
+            IconButton(
+              tooltip: 'Refresh now',
+              icon: const Icon(Icons.refresh_rounded),
+              onPressed: () {
+                for (final p in watchedProviders) {
+                  ref.invalidate(p);
+                }
+              },
+            ),
+            const ThemeToggleButton(),
+            const LogoutAction(),
+            const SizedBox(width: 8),
+          ],
+        ),
+        body: isManager
+            ? _ManagerDashboard(isMob: isMobile(context))
+            : isExecutive
+                ? _ExecutiveDashboard(isMob: isMobile(context))
+                : _SecurityDashboard(isMob: isMobile(context)),
       ),
-      body: isManager
-          ? _ManagerDashboard(isMob: isMobile(context))
-          : isExecutive
-              ? _ExecutiveDashboard(isMob: isMobile(context))
-              : _SecurityDashboard(isMob: isMobile(context)),
     );
   }
 }
@@ -222,7 +262,6 @@ class _SecurityDashboard extends ConsumerWidget {
       return ChartBarData(
         label: a.day,
         value: a.entriesCount.toDouble(),
-        color: Theme.of(context).colorScheme.primary,
       );
     }).toList();
     return DashboardChart(

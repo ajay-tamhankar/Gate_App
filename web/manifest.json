@@ -1,12 +1,12 @@
 {
-    "name": "GateReco",
-    "short_name": "GateReco",
+    "name": "Vistar Gate Reco",
+    "short_name": "Vistar",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#ffffff",
-    "theme_color": "#1f57c3",
-    "description": "Gate entry and reconciliation app.",
-    "orientation": "portrait-primary",
+    "background_color": "#070611",
+    "theme_color": "#E0218A",
+    "description": "Premium gate entry and reconciliation console.",
+    "orientation": "any",
     "prefer_related_applications": false,
     "icons": [
         {

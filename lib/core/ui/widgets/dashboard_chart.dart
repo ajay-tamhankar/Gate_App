@@ -65,6 +65,7 @@ class DashboardChart extends StatelessWidget {
                             : contentWidth,
                       ),
                       child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           for (int i = 0; i < data.length; i++) ...[
@@ -108,21 +109,37 @@ class DashboardChart extends StatelessWidget {
                 ),
           ),
           const SizedBox(height: 8),
-          TweenAnimationBuilder<double>(
-            tween: Tween(begin: 0.0, end: barHeight),
-            duration: Duration(milliseconds: animate ? 800 : 0),
-            curve: Curves.easeOutQuart,
-            builder: (context, val, child) {
-              return Container(
-                width: barWidth,
-                height: val.clamp(0.0, height),
-                decoration: BoxDecoration(
-                  color: item.color ?? AppTheme.primaryBlue,
-                  borderRadius:
-                      const BorderRadius.vertical(top: Radius.circular(6)),
-                ),
-              );
-            },
+          // AnimatedContainer interpolates between value changes instead of
+          // restarting the animation from 0 every time the data refreshes
+          // (which is what TweenAnimationBuilder was doing — that re-zero
+          // bounce on each refresh was a big source of "feels janky").
+          AnimatedContainer(
+            duration: Duration(milliseconds: animate ? 400 : 0),
+            curve: Curves.easeOutCubic,
+            width: barWidth,
+            height: barHeight.clamp(0.0, height),
+            decoration: BoxDecoration(
+              color: item.color,
+              gradient: item.color == null
+                  ? const LinearGradient(
+                      begin: Alignment.bottomCenter,
+                      end: Alignment.topCenter,
+                      colors: [VistarTokens.purple, VistarTokens.pink],
+                    )
+                  : null,
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(6)),
+              boxShadow: item.color == null
+                  ? [
+                      BoxShadow(
+                        color: VistarTokens.pink.withValues(alpha: 0.30),
+                        blurRadius: 14,
+                        spreadRadius: -4,
+                        offset: const Offset(0, 4),
+                      ),
+                    ]
+                  : null,
+            ),
           ),
           const SizedBox(height: 12),
           Text(

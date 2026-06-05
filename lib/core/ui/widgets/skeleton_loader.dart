@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../theme.dart';
+
+/// Rainbow "S-themed" shimmer skeleton. A subtle pink/orange sweep slides
+/// across a surface tinted to match the current theme.
 class SkeletonLoader extends StatefulWidget {
   final double width;
   final double height;
@@ -18,14 +22,14 @@ class SkeletonLoader extends StatefulWidget {
 
 class _SkeletonLoaderState extends State<SkeletonLoader>
     with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
+  late final AnimationController _controller;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 1300),
     )..repeat();
   }
 
@@ -37,36 +41,66 @@ class _SkeletonLoaderState extends State<SkeletonLoader>
 
   @override
   Widget build(BuildContext context) {
-    // Skeletons are placed both on the scaffold background and on Cards. The
-    // theme sets scaffoldBackgroundColor = surfaceContainerHighest, so we
-    // can't use that token here — it would draw invisible bars on the page
-    // background. Use onSurface-with-alpha so contrast holds on both
-    // surface (white card) and the slightly-darker scaffold background.
-    final base = Theme.of(context).colorScheme.onSurface;
-    final low = base.withValues(alpha: 0.08);
-    final high = base.withValues(alpha: 0.16);
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final base = isDark
+        ? VistarTokens.darkSurface2
+        : theme.colorScheme.onSurface.withValues(alpha: 0.05);
+    final radius = widget.borderRadius ?? BorderRadius.circular(10);
 
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return Container(
-          width: widget.width,
-          height: widget.height,
-          decoration: BoxDecoration(
-            borderRadius: widget.borderRadius ?? BorderRadius.circular(8),
-            gradient: LinearGradient(
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-              colors: [low, high, low],
-              stops: [
-                _controller.value - 0.3,
-                _controller.value,
-                _controller.value + 0.3,
-              ],
-            ),
-          ),
-        );
-      },
+    return ClipRRect(
+      borderRadius: radius,
+      child: SizedBox(
+        width: widget.width,
+        height: widget.height,
+        // LayoutBuilder gives us the resolved width even when callers pass
+        // `double.infinity` — without it, Positioned(width: infinity) and the
+        // NaN-producing `-infinity + infinity` translation spam
+        // "BoxConstraints forces an infinite width" on every animation tick
+        // and freeze the UI.
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final resolvedWidth = constraints.maxWidth.isFinite
+                ? constraints.maxWidth
+                : 0.0;
+            return ColoredBox(
+              color: base,
+              child: AnimatedBuilder(
+                animation: _controller,
+                builder: (context, _) {
+                  final t = _controller.value;
+                  return Stack(
+                    clipBehavior: Clip.hardEdge,
+                    children: [
+                      Positioned(
+                        left: -resolvedWidth + (t * (resolvedWidth * 2.4)),
+                        top: 0,
+                        bottom: 0,
+                        width: resolvedWidth,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
+                              colors: [
+                                Colors.transparent,
+                                VistarTokens.pink.withValues(alpha: 0.16),
+                                VistarTokens.orange.withValues(alpha: 0.12),
+                                Colors.transparent,
+                              ],
+                              stops: const [0.0, 0.45, 0.65, 1.0],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            );
+          },
+        ),
+      ),
     );
   }
 }

@@ -1,93 +1,208 @@
-<!DOCTYPE html><html><head>
+<!DOCTYPE html>
+<html lang="en">
+<head>
   <base href="$FLUTTER_BASE_HREF">
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="Gate entry and reconciliation app.">
+  <meta name="description" content="Vistar Gate Reco — premium gate entry and reconciliation console.">
 
+  <!-- PWA / mobile -->
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="GateReco">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Vistar Gate Reco">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#E0218A">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#070611">
+
+  <!-- Icons -->
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/Icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/Icon-512.png">
 
-  <link rel="icon" type="image/png" href="favicon.png">
-
-  <title>GateReco</title>
+  <title>Vistar Gate Reco</title>
   <link rel="manifest" href="manifest.json">
-  <style id="splash-screen-style">
-    html {
-      height: 100%
-    }
 
+  <!-- Fonts (graceful system fallback if offline) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Manrope:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
+
+  <style id="splash-screen-style">
+    html { height: 100% }
     body {
       margin: 0;
       min-height: 100%;
-      background-color: #ffffff;
-          background-size: 100% 100%;
+      background-color: #FAF8FE;
+      background-image:
+        radial-gradient(800px 600px at 12% -8%, rgba(122,31,176,.18), transparent 60%),
+        radial-gradient(700px 600px at 105% 8%, rgba(224,33,138,.14), transparent 55%),
+        radial-gradient(900px 700px at 80% 110%, rgba(240,96,0,.10), transparent 55%);
+      background-size: 100% 100%;
+      font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+    @media (prefers-color-scheme: dark) {
+      body {
+        background-color: #070611;
+        background-image:
+          radial-gradient(800px 600px at 12% -8%, rgba(122,31,176,.22), transparent 60%),
+          radial-gradient(700px 600px at 105% 8%, rgba(224,33,138,.16), transparent 55%),
+          radial-gradient(900px 700px at 80% 110%, rgba(240,96,0,.12), transparent 55%);
+      }
     }
 
-    .center {
-      margin: 0;
+    #vistar-splash {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      z-index: 9999;
+      pointer-events: none;
+    }
+    #vistar-splash .stack {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 22px;
+    }
+    #vistar-splash .orbit {
+      position: relative;
+      width: 140px;
+      height: 140px;
+      display: grid;
+      place-items: center;
+    }
+    #vistar-splash .ring {
       position: absolute;
-      top: 50%;
-      left: 50%;
-      -ms-transform: translate(-50%, -50%);
-      transform: translate(-50%, -50%);
+      inset: 0;
+      border-radius: 50%;
+      border: 1.5px solid transparent;
     }
-
-    .contain {
-      display:block;
-      width:100%; height:100%;
-      object-fit: contain;
+    #vistar-splash .ring.r1 {
+      border-top-color: rgba(224,33,138,.65);
+      border-right-color: rgba(240,96,0,.4);
+      animation: vistar-spin 1.6s linear infinite;
     }
-
-    .stretch {
-      display:block;
-      width:100%; height:100%;
+    #vistar-splash .ring.r2 {
+      inset: 18px;
+      border-bottom-color: rgba(155,48,201,.65);
+      border-left-color: rgba(240,192,0,.45);
+      animation: vistar-spin 2.2s linear infinite reverse;
     }
-
-    .cover {
-      display:block;
-      width:100%; height:100%;
-      object-fit: cover;
+    #vistar-splash .smark {
+      width: 76px;
+      height: 76px;
+      background: url("vistar-s.png") center/contain no-repeat;
+      filter: drop-shadow(0 0 26px rgba(224,33,138,.55));
+      animation: vistar-breathe 2.2s ease-in-out infinite;
     }
-
-    .bottom {
+    #vistar-splash .label {
+      font-family: 'Bricolage Grotesque', 'Manrope', sans-serif;
+      font-weight: 800;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      font-size: 11px;
+      color: #B9B2D6;
+    }
+    @media (prefers-color-scheme: light) {
+      #vistar-splash .label { color: #7E769B; }
+    }
+    #vistar-splash .bar {
+      width: 200px;
+      height: 4px;
+      border-radius: 10px;
+      background: rgba(127, 127, 127, .12);
+      overflow: hidden;
+      position: relative;
+    }
+    #vistar-splash .bar i {
       position: absolute;
-      bottom: 0;
-      left: 50%;
-      -ms-transform: translate(-50%, 0);
-      transform: translate(-50%, 0);
+      top: 0; bottom: 0;
+      width: 40%;
+      border-radius: 10px;
+      background: linear-gradient(115deg,
+        #7A1FB0 0%, #B81FB8 22%, #E0218A 40%, #D11630 56%,
+        #F0480C 70%, #F06000 80%, #F0C000 92%, #F7EE9A 100%);
+      animation: vistar-load 1.4s ease-in-out infinite;
     }
-
-    .bottomLeft {
-      position: absolute;
-      bottom: 0;
-      left: 0;
+    @keyframes vistar-spin { to { transform: rotate(360deg); } }
+    @keyframes vistar-breathe {
+      0%, 100% { transform: scale(.92) translateY(2px); }
+      50% { transform: scale(1.04) translateY(-2px); }
     }
-
-    .bottomRight {
-      position: absolute;
-      bottom: 0;
-      right: 0;
+    @keyframes vistar-load {
+      0% { transform: translateX(-110%); }
+      100% { transform: translateX(360%); }
     }
   </style>
   <script id="splash-screen-script">
-    function removeSplashFromWeb() {
-      document.getElementById("splash")?.remove();
-      document.getElementById("splash-branding")?.remove();
-      document.body.style.background = "transparent";
-    }
+    (function () {
+      var hidden = false;
+      function hideVistarSplash() {
+        if (hidden) return;
+        hidden = true;
+        var splash = document.getElementById("vistar-splash");
+        if (splash) {
+          splash.style.transition = "opacity .3s ease";
+          splash.style.opacity = "0";
+          setTimeout(function () { splash.remove(); }, 320);
+        }
+        document.body.style.background = "transparent";
+      }
+      // Exposed for flutter_native_splash compatibility.
+      window.removeSplashFromWeb = hideVistarSplash;
+
+      // Hide once Flutter mounts its scene host or glass pane.
+      function isFlutterNode(n) {
+        if (!n || n.nodeType !== 1) return false;
+        var tag = (n.tagName || "").toLowerCase();
+        if (tag === "flt-glass-pane" || tag === "flt-scene-host" ||
+            tag === "flutter-view" || tag === "flt-semantics-host") {
+          return true;
+        }
+        return !!(n.querySelector && n.querySelector(
+          "flt-glass-pane, flt-scene-host, flutter-view, flt-semantics-host"
+        ));
+      }
+      var observer = new MutationObserver(function (mutations) {
+        for (var i = 0; i < mutations.length; i++) {
+          var added = mutations[i].addedNodes;
+          for (var j = 0; j < added.length; j++) {
+            if (isFlutterNode(added[j])) {
+              hideVistarSplash();
+              observer.disconnect();
+              return;
+            }
+          }
+        }
+      });
+      observer.observe(document.documentElement, {
+        childList: true,
+        subtree: true
+      });
+
+      // Safety net: never leave the splash up longer than 8 seconds.
+      setTimeout(hideVistarSplash, 8000);
+    })();
   </script>
-  <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
+
+  <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport">
 </head>
 <body>
-  <picture id="splash">
-      <source srcset="splash/img/light-1x.png 1x, splash/img/light-2x.png 2x, splash/img/light-3x.png 3x, splash/img/light-4x.png 4x" media="(prefers-color-scheme: light)">
-      <source srcset="splash/img/dark-1x.png 1x, splash/img/dark-2x.png 2x, splash/img/dark-3x.png 3x, splash/img/dark-4x.png 4x" media="(prefers-color-scheme: dark)">
-      <img class="center" aria-hidden="true" src="splash/img/light-1x.png" alt="">
-  </picture>
-  <script src="flutter_bootstrap.js" async=""></script>
-
-
-</body></html>
+  <div id="vistar-splash" aria-hidden="true">
+    <div class="stack">
+      <div class="orbit">
+        <div class="ring r1"></div>
+        <div class="ring r2"></div>
+        <div class="smark"></div>
+      </div>
+      <div class="bar"><i></i></div>
+      <div class="label">VISTAR · GATE RECO</div>
+    </div>
+  </div>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

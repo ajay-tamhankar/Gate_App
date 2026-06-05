@@ -233,6 +233,17 @@ final warehouseManagerAdminKpiProvider =
   final recoRecords = await warehouseRepo.getReconciliations();
 
   final now = DateTime.now();
+  // Cheap integer comparisons instead of constructing/formatting
+  // DateFormat objects per entry — the old code instantiated several
+  // DateFormat objects per row, which froze the main isolate on large
+  // datasets (a few thousand entries x several formatters).
+  final todayY = now.year;
+  final todayM = now.month;
+  final todayD = now.day;
+
+  bool isSameDay(DateTime d) =>
+      d.year == todayY && d.month == todayM && d.day == todayD;
+  bool isSameMonth(DateTime d) => d.year == todayY && d.month == todayM;
 
   int todayCount = 0;
   int monthCount = 0;
@@ -247,24 +258,19 @@ final warehouseManagerAdminKpiProvider =
       gateOut++;
     }
 
-    final ts = e.gateTimestamp?.toLocal();
-    final todayString = DateFormat('yyyy-MM-dd').format(now);
-    final monthString = DateFormat('yyyy-MM').format(now);
-    
     bool isToday = false;
     bool isMonth = false;
 
+    final ts = e.gateTimestamp?.toLocal();
     if (ts != null) {
-      final dStr = DateFormat('yyyy-MM-dd').format(ts);
-      if (dStr == todayString) isToday = true;
-      if (dStr.startsWith(monthString)) isMonth = true;
+      if (isSameDay(ts)) isToday = true;
+      if (isSameMonth(ts)) isMonth = true;
     }
 
     if (e.gateOutTimestamp != null) {
       final outTs = e.gateOutTimestamp!.toLocal();
-      final dStr = DateFormat('yyyy-MM-dd').format(outTs);
-      if (dStr == todayString) isToday = true;
-      if (dStr.startsWith(monthString)) isMonth = true;
+      if (isSameDay(outTs)) isToday = true;
+      if (isSameMonth(outTs)) isMonth = true;
     }
 
     if (isToday) todayCount++;

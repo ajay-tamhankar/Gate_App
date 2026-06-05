@@ -93,6 +93,17 @@ class SessionController extends Notifier<SessionState> {
         organization: response.data!.organization,
         role: parsedRole,
       );
+
+      // Confirm the session against the server by hitting /auth/me. This
+      // fires regardless of which dashboard the user lands on and warms
+      // the provider cache so subsequent watchers don't refetch. Errors
+      // are intentionally swallowed: the login itself already succeeded,
+      // a transient /auth/me failure shouldn't tear it down.
+      ref.invalidate(currentUserProvider);
+      ref.read(currentUserProvider.future).catchError((_) {
+        return (state as Authenticated).user;
+      });
+
       return null;
     } else {
       state = const Unauthenticated();
