@@ -29,6 +29,8 @@ class ApiClient {
         return response.data as Map<String, dynamic>;
       }
       throw Exception('Unexpected response format');
+    } on DioException catch (e) {
+      throw Exception(_extractErrorMessage(e));
     } catch (e) {
       throw Exception(e.toString());
     }
@@ -46,6 +48,8 @@ class ApiClient {
         return response.data as Map<String, dynamic>;
       }
       throw Exception('Unexpected response format');
+    } on DioException catch (e) {
+      throw Exception(_extractErrorMessage(e));
     } catch (e) {
       throw Exception(e.toString());
     }
@@ -63,6 +67,8 @@ class ApiClient {
         return response.data as Map<String, dynamic>;
       }
       throw Exception('Unexpected response format');
+    } on DioException catch (e) {
+      throw Exception(_extractErrorMessage(e));
     } catch (e) {
       throw Exception(e.toString());
     }
@@ -81,6 +87,69 @@ class ApiClient {
     } catch (e) {
       return _handleError<T>(e);
     }
+  }
+
+  Future<Map<String, dynamic>> patchRaw(
+    String path, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    try {
+      final response =
+          await _dio.patch(path, data: data, queryParameters: queryParameters);
+      if (response.data is Map<String, dynamic>) {
+        return response.data as Map<String, dynamic>;
+      }
+      throw Exception('Unexpected response format');
+    } on DioException catch (e) {
+      throw Exception(_extractErrorMessage(e));
+    } catch (e) {
+      throw Exception(e.toString());
+    }
+  }
+
+  Future<Map<String, dynamic>> deleteRaw(
+    String path, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    try {
+      final response = await _dio.delete(
+        path,
+        data: data,
+        queryParameters: queryParameters,
+      );
+      if (response.data is Map<String, dynamic>) {
+        return response.data as Map<String, dynamic>;
+      }
+      throw Exception('Unexpected response format');
+    } on DioException catch (e) {
+      throw Exception(_extractErrorMessage(e));
+    } catch (e) {
+      throw Exception(e.toString());
+    }
+  }
+
+  /// Pulls the most useful, human-readable message out of a [DioException].
+  /// Servers in this app return an envelope shaped like:
+  /// `{ "success": false, "message": "...", "error": { "message": "..." } }`
+  /// even on non-2xx responses. Prefer that over Dio's stringified type.
+  String _extractErrorMessage(DioException e) {
+    final body = e.response?.data;
+    if (body is Map<String, dynamic>) {
+      final err = body['error'];
+      if (err is Map && err['message'] != null) {
+        final m = err['message'].toString().trim();
+        if (m.isNotEmpty) return m;
+      }
+      final msg = body['message'];
+      if (msg != null) {
+        final m = msg.toString().trim();
+        if (m.isNotEmpty) return m;
+      }
+    }
+    if (body is String && body.trim().isNotEmpty) return body.trim();
+    return e.message ?? 'Network error occurred';
   }
 
   Future<ApiResponse<T>> patch<T>(

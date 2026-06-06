@@ -11,6 +11,7 @@ import '../../features/warehouse/presentation/controllers/warehouse_providers.da
 import '../../features/gate_entry/presentation/gate_entry_page.dart';
 import '../../features/reconciliation/presentation/reco_page.dart';
 import '../../features/reports/presentation/reports_page.dart';
+import '../../features/vendor/presentation/vendor_master_page.dart';
 import '../auth/session_controller.dart';
 import '../auth/user_role.dart';
 import '../auth/session_state.dart';
@@ -37,6 +38,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (role == UserRole.gateSecurity &&
           (state.matchedLocation == '/app/reconciliation' ||
               state.matchedLocation == '/app/reports')) {
+        return '/app/dashboard';
+      }
+      // Vendor master is admin/manager only.
+      if (state.matchedLocation == '/app/vendor-master' &&
+          !role.isAdminOrWarehouseManager) {
         return '/app/dashboard';
       }
 
@@ -67,6 +73,9 @@ final routerProvider = Provider<GoRouter>((ref) {
                 case 3:
                   context.go('/app/reports');
                   break;
+                case 4:
+                  context.go('/app/vendor-master');
+                  break;
               }
             },
             child: child,
@@ -89,6 +98,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/app/reports',
             builder: (context, state) => const ReportsPage(),
           ),
+          GoRoute(
+            path: '/app/vendor-master',
+            builder: (context, state) => const VendorMasterPage(),
+          ),
         ],
       ),
     ],
@@ -99,6 +112,7 @@ int _indexFromLocation(String location) {
   if (location.startsWith('/app/gate-entry')) return 1;
   if (location.startsWith('/app/reconciliation')) return 2;
   if (location.startsWith('/app/reports')) return 3;
+  if (location.startsWith('/app/vendor-master')) return 4;
   return 0;
 }
 

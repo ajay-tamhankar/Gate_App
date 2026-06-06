@@ -31,11 +31,13 @@ class AppScaffold extends ConsumerWidget {
     final role = session is Authenticated ? session.role : null;
     final showReconciliation = role != UserRole.gateSecurity;
     final showReports = role != UserRole.gateSecurity;
+    final showVendorMaster = role.isAdminOrWarehouseManager;
     final visibleIndexes = <int>[
       0,
       1,
       if (showReconciliation) 2,
       if (showReports) 3,
+      if (showVendorMaster) 4,
     ];
     final navigationIndex =
         visibleIndexes.indexOf(selectedIndex).clamp(0, visibleIndexes.length - 1);
@@ -54,6 +56,7 @@ class AppScaffold extends ConsumerWidget {
                   onSelect: onSelect,
                   showReconciliation: showReconciliation,
                   showReports: showReports,
+                  showVendorMaster: showVendorMaster,
                   authed: session is Authenticated ? session : null,
                 ),
                 // Wrap the routed child in a fresh transparent Material so
@@ -83,6 +86,7 @@ class AppScaffold extends ConsumerWidget {
         selectedIndex: navigationIndex,
         showReconciliation: showReconciliation,
         showReports: showReports,
+        showVendorMaster: showVendorMaster,
         onSelected: (i) => onSelect(visibleIndexes[i]),
       ),
     );
@@ -93,12 +97,14 @@ class _MobileNavBar extends StatelessWidget {
   final int selectedIndex;
   final bool showReconciliation;
   final bool showReports;
+  final bool showVendorMaster;
   final ValueChanged<int> onSelected;
 
   const _MobileNavBar({
     required this.selectedIndex,
     required this.showReconciliation,
     required this.showReports,
+    required this.showVendorMaster,
     required this.onSelected,
   });
 
@@ -151,6 +157,12 @@ class _MobileNavBar extends StatelessWidget {
                 selectedIcon: Icon(Icons.bar_chart_rounded),
                 label: 'Reports',
               ),
+            if (showVendorMaster)
+              const NavigationDestination(
+                icon: Icon(Icons.store_outlined),
+                selectedIcon: Icon(Icons.store_rounded),
+                label: 'Vendors',
+              ),
           ],
         ),
       ),
@@ -163,6 +175,7 @@ class _DesktopSidebar extends StatelessWidget {
   final void Function(int index) onSelect;
   final bool showReconciliation;
   final bool showReports;
+  final bool showVendorMaster;
   final Authenticated? authed;
 
   const _DesktopSidebar({
@@ -170,6 +183,7 @@ class _DesktopSidebar extends StatelessWidget {
     required this.onSelect,
     required this.showReconciliation,
     required this.showReports,
+    required this.showVendorMaster,
     required this.authed,
   });
 
@@ -281,6 +295,17 @@ class _DesktopSidebar extends StatelessWidget {
                     label: 'Reports',
                     isSelected: selectedIndex == 3,
                     onTap: () => onSelect(3),
+                  ),
+                ],
+                if (showVendorMaster) ...[
+                  const SizedBox(height: 22),
+                  const _SectionLabel(label: 'ADMIN'),
+                  _SidebarItem(
+                    icon: Icons.store_outlined,
+                    activeIcon: Icons.store_rounded,
+                    label: 'Vendor Master',
+                    isSelected: selectedIndex == 4,
+                    onTap: () => onSelect(4),
                   ),
                 ],
               ],

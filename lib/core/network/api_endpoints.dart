@@ -28,4 +28,8 @@ class ApiEndpoints {
   // Users
   static const String users = '/users';
   static String userDetails(String id) => '/users/$id';
+
+  // Vendor Master
+  static const String vendorMaster = '/vendor-master';
+  static String vendorMasterDetails(String id) => '/vendor-master/$id';
 }

@@ -90,6 +90,14 @@ class DashboardPage extends ConsumerWidget {
           actions: [
             if (role.isAdminOrWarehouseManager)
               TextButton.icon(
+                onPressed: () => context.go('/app/vendor-master'),
+                icon: const Icon(Icons.store_rounded),
+                label: Text(
+                  isMobile(context) ? '' : 'Vendors',
+                ),
+              ),
+            if (role.isAdminOrWarehouseManager)
+              TextButton.icon(
                 onPressed: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
