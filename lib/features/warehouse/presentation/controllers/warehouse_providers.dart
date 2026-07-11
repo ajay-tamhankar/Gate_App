@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 import '../../../../core/auth/session_state.dart';
 import '../../../../core/auth/session_controller.dart';
@@ -26,10 +25,15 @@ final warehouseDashboardProvider =
     FutureProvider.autoDispose<WarehouseDashboardMetrics>((ref) async {
   final entries = await ref.watch(warehouseGateEntriesProvider.future);
   final now = DateTime.now();
-  final today = DateFormat('yyyy-MM-dd').format(now);
+  // Cheap integer compare instead of constructing two DateFormat instances
+  // per row — DateFormat is expensive (pattern parse + intl symbol alloc).
+  final todayY = now.year;
+  final todayM = now.month;
+  final todayD = now.day;
   final todayCount = entries.where((e) {
-    if (e.entryTime == null) return false;
-    return DateFormat('yyyy-MM-dd').format(e.entryTime!) == today;
+    final t = e.entryTime;
+    if (t == null) return false;
+    return t.year == todayY && t.month == todayM && t.day == todayD;
   }).length;
   // Filter out those that have already gated out for the executive overview
   final pendingEntries = entries.where((e) => e.gateOutTimestamp == null).toList();
@@ -171,15 +175,18 @@ final warehouseManagerDashboardSummaryProvider =
     FutureProvider.autoDispose<WarehouseManagerDashboardSummary>((ref) async {
   final records = await ref.watch(warehouseManagerReconciliationsProvider.future);
   final now = DateTime.now();
-  final today = DateFormat('yyyy-MM-dd').format(now);
+  final todayY = now.year;
+  final todayM = now.month;
+  final todayD = now.day;
 
   final pendingApproval = records
       .where((item) => item.isMatched || item.isException)
       .length;
   final exceptions = records.where((item) => item.isException).length;
   final approvedToday = records.where((item) {
-    if (!item.isApproved || item.date == null) return false;
-    return DateFormat('yyyy-MM-dd').format(item.date!) == today;
+    final d = item.date;
+    if (!item.isApproved || d == null) return false;
+    return d.year == todayY && d.month == todayM && d.day == todayD;
   }).length;
 
   return WarehouseManagerDashboardSummary(

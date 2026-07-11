@@ -16,13 +16,17 @@ class RecoRepositoryImpl implements RecoRepository {
 
   RecoRepositoryImpl({required ApiClient apiClient}) : _apiClient = apiClient;
 
+  // Hard client-side cap so a misbehaving server or huge backlog can never
+  // pull the entire history of reconciliations into the app.
+  static const int _maxRecords = 500;
+
   @override
   Future<List<ReconciliationItem>> getReconciliations({
     DateTime? dateFrom,
     DateTime? dateTo,
     ReconciliationPeriodFilter? filter,
   }) async {
-    final query = <String, dynamic>{};
+    final query = <String, dynamic>{'limit': _maxRecords};
     final hasExplicitRange = dateFrom != null || dateTo != null;
     if (dateFrom != null) {
       query['dateFrom'] = dateFrom.toIso8601String();
@@ -38,7 +42,7 @@ class RecoRepositoryImpl implements RecoRepository {
 
     final response = await _apiClient.getRaw(
       '/reconciliations',
-      queryParameters: query.isEmpty ? null : query,
+      queryParameters: query,
     );
 
     final success = response['success'] as bool? ?? false;
@@ -55,7 +59,10 @@ class RecoRepositoryImpl implements RecoRepository {
 
   @override
   Future<List<RecoException>> getExceptions() async {
-    final response = await _apiClient.getRaw('/reconciliation/exceptions');
+    final response = await _apiClient.getRaw(
+      '/reconciliation/exceptions',
+      queryParameters: const {'limit': _maxRecords},
+    );
 
     final success = response['success'] as bool? ?? false;
     if (!success) {

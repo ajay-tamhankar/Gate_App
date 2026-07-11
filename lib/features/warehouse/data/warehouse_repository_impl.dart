@@ -18,9 +18,16 @@ class WarehouseRepositoryImpl implements WarehouseRepository {
   WarehouseRepositoryImpl({required ApiClient apiClient})
       : _apiClient = apiClient;
 
+  // Hard client-side cap so the warehouse screens never pull the entire
+  // history into the app. The screens already cap rendering at ~200 rows.
+  static const int _maxRecords = 500;
+
   @override
   Future<List<WarehouseGateEntrySummary>> getGateEntries() async {
-    final response = await _apiClient.getRaw('/gate-entries');
+    final response = await _apiClient.getRaw(
+      '/gate-entries',
+      queryParameters: const {'limit': _maxRecords},
+    );
     final success = response['success'] as bool? ?? false;
     if (!success) {
       throw Exception(response['message'] ?? 'Failed to load gate entries');
@@ -120,7 +127,7 @@ class WarehouseRepositoryImpl implements WarehouseRepository {
     DateTime? dateTo,
     ReconciliationPeriodFilter? filter,
   }) async {
-    final params = <String, dynamic>{};
+    final params = <String, dynamic>{'limit': _maxRecords};
     final hasExplicitRange = dateFrom != null || dateTo != null;
     if (dateFrom != null) {
       params['dateFrom'] = dateFrom.toIso8601String();
@@ -134,7 +141,7 @@ class WarehouseRepositoryImpl implements WarehouseRepository {
 
     final response = await _apiClient.getRaw(
       '/reconciliations',
-      queryParameters: params.isEmpty ? null : params,
+      queryParameters: params,
     );
     final success = response['success'] as bool? ?? false;
     if (!success) {

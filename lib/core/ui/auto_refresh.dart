@@ -11,6 +11,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// - Re-invalidates on a fixed interval (default 60s).
 /// - Re-invalidates when the app resumes from background.
 /// - Cancels its timer while the app is backgrounded (no wasted requests).
+/// - Cancels its timer while the host route is **covered** by another route
+///   (e.g., user navigates to a detail page). Previously the timer kept
+///   firing on hidden routes and the heavy JSON-parsing-on-main-thread it
+///   triggered would freeze whatever screen the user *was* on.
 class AutoRefresh extends ConsumerStatefulWidget {
   final List<ProviderOrFamily> providers;
   final Duration interval;
@@ -32,9 +36,11 @@ class AutoRefresh extends ConsumerStatefulWidget {
 }
 
 class _AutoRefreshState extends ConsumerState<AutoRefresh>
-    with WidgetsBindingObserver {
+    with WidgetsBindingObserver, RouteAware {
   Timer? _timer;
   bool _appActive = true;
+  bool _routeVisible = true;
+  ModalRoute<dynamic>? _route;
 
   @override
   void initState() {
@@ -46,6 +52,17 @@ class _AutoRefreshState extends ConsumerState<AutoRefresh>
       });
     }
     _startTimer();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Track the current route so we know whether we're the visible screen.
+    final route = ModalRoute.of(context);
+    if (route != _route) {
+      _route = route;
+      _routeVisible = route?.isCurrent ?? true;
+    }
   }
 
   @override
@@ -68,8 +85,17 @@ class _AutoRefreshState extends ConsumerState<AutoRefresh>
     _timer?.cancel();
     if (widget.interval == Duration.zero) return;
     _timer = Timer.periodic(widget.interval, (_) {
-      if (mounted && _appActive) _invalidate();
+      // Be strict about when we fire: mounted, app foregrounded, AND the
+      // host route is current (not pushed-under by a detail screen).
+      if (mounted && _appActive && _isRouteCurrent()) _invalidate();
     });
+  }
+
+  bool _isRouteCurrent() {
+    if (!_routeVisible) return false;
+    // If we had a stale ModalRoute reference, recheck on the fly.
+    final route = _route ?? ModalRoute.of(context);
+    return route?.isCurrent ?? true;
   }
 
   void _invalidate() {
@@ -82,7 +108,7 @@ class _AutoRefreshState extends ConsumerState<AutoRefresh>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     final wasActive = _appActive;
     _appActive = state == AppLifecycleState.resumed;
-    if (!wasActive && _appActive && widget.refreshOnResume) {
+    if (!wasActive && _appActive && widget.refreshOnResume && _isRouteCurrent()) {
       _invalidate();
     }
     if (_appActive) {
@@ -93,5 +119,13 @@ class _AutoRefreshState extends ConsumerState<AutoRefresh>
   }
 
   @override
-  Widget build(BuildContext context) => widget.child;
+  Widget build(BuildContext context) {
+    // Update route visibility each rebuild — cheap and avoids needing a
+    // RouteObserver wired up in the router config. A route is "current"
+    // when nothing is on top of it; this flips back automatically when the
+    // user pops back to the host screen.
+    final route = ModalRoute.of(context);
+    _routeVisible = route?.isCurrent ?? true;
+    return widget.child;
+  }
 }

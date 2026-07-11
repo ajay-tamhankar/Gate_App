@@ -17,6 +17,10 @@ import '../domain/entities/reconciliation_item.dart';
 import '../domain/reconciliation_period_filter.dart';
 import 'controllers/reconciliation_security_controller.dart';
 
+// Shared once-allocated DateFormat — constructing this is expensive and was
+// happening per row inside the desktop table's .map().
+final DateFormat _kListDateFormat = DateFormat('MMM dd, yyyy - hh:mm a');
+
 class ReconciliationSecurityView extends ConsumerStatefulWidget {
   const ReconciliationSecurityView({super.key});
 
@@ -405,7 +409,7 @@ class _ReconciliationSecurityViewState
 
   String _formatDate(DateTime? value) {
     if (value == null) return '-';
-    return DateFormat('MMM dd, yyyy - hh:mm a').format(value.toLocal());
+    return _kListDateFormat.format(value.toLocal());
   }
 
   Widget _buildErrorBanner(BuildContext context, String error) {

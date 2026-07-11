@@ -40,8 +40,12 @@ class ReportsRepository {
     String? po,
   }) {
     final query = <String, dynamic>{};
+    // The previous default of 100,000 caused the server to return — and the
+    // client to JSON-parse — every row in the table on every report load,
+    // freezing the UI for seconds on busy sites. 500 covers the visible page
+    // comfortably and keeps payloads under ~1 MB.
     if (includeLimit) {
-      query['limit'] = limit ?? 100000;
+      query['limit'] = limit ?? 500;
     } else if (limit != null) {
       query['limit'] = limit;
     }

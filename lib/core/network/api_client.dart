@@ -10,9 +10,14 @@ class ApiClient {
     String path, {
     Map<String, dynamic>? queryParameters,
     T Function(dynamic)? fromJsonT,
+    CancelToken? cancelToken,
   }) async {
     try {
-      final response = await _dio.get(path, queryParameters: queryParameters);
+      final response = await _dio.get(
+        path,
+        queryParameters: queryParameters,
+        cancelToken: cancelToken,
+      );
       return ApiResponse.fromJson(response.data, fromJsonT);
     } catch (e) {
       return _handleError<T>(e);
@@ -22,9 +27,14 @@ class ApiClient {
   Future<Map<String, dynamic>> getRaw(
     String path, {
     Map<String, dynamic>? queryParameters,
+    CancelToken? cancelToken,
   }) async {
     try {
-      final response = await _dio.get(path, queryParameters: queryParameters);
+      final response = await _dio.get(
+        path,
+        queryParameters: queryParameters,
+        cancelToken: cancelToken,
+      );
       if (response.data is Map<String, dynamic>) {
         return response.data as Map<String, dynamic>;
       }
@@ -40,10 +50,15 @@ class ApiClient {
     String path, {
     dynamic data,
     Map<String, dynamic>? queryParameters,
+    CancelToken? cancelToken,
   }) async {
     try {
-      final response =
-          await _dio.post(path, data: data, queryParameters: queryParameters);
+      final response = await _dio.post(
+        path,
+        data: data,
+        queryParameters: queryParameters,
+        cancelToken: cancelToken,
+      );
       if (response.data is Map<String, dynamic>) {
         return response.data as Map<String, dynamic>;
       }
@@ -59,10 +74,15 @@ class ApiClient {
     String path, {
     dynamic data,
     Map<String, dynamic>? queryParameters,
+    CancelToken? cancelToken,
   }) async {
     try {
-      final response =
-          await _dio.put(path, data: data, queryParameters: queryParameters);
+      final response = await _dio.put(
+        path,
+        data: data,
+        queryParameters: queryParameters,
+        cancelToken: cancelToken,
+      );
       if (response.data is Map<String, dynamic>) {
         return response.data as Map<String, dynamic>;
       }
@@ -79,10 +99,15 @@ class ApiClient {
     dynamic data,
     Map<String, dynamic>? queryParameters,
     T Function(dynamic)? fromJsonT,
+    CancelToken? cancelToken,
   }) async {
     try {
-      final response =
-          await _dio.post(path, data: data, queryParameters: queryParameters);
+      final response = await _dio.post(
+        path,
+        data: data,
+        queryParameters: queryParameters,
+        cancelToken: cancelToken,
+      );
       return ApiResponse.fromJson(response.data, fromJsonT);
     } catch (e) {
       return _handleError<T>(e);
@@ -93,10 +118,15 @@ class ApiClient {
     String path, {
     dynamic data,
     Map<String, dynamic>? queryParameters,
+    CancelToken? cancelToken,
   }) async {
     try {
-      final response =
-          await _dio.patch(path, data: data, queryParameters: queryParameters);
+      final response = await _dio.patch(
+        path,
+        data: data,
+        queryParameters: queryParameters,
+        cancelToken: cancelToken,
+      );
       if (response.data is Map<String, dynamic>) {
         return response.data as Map<String, dynamic>;
       }
@@ -112,12 +142,14 @@ class ApiClient {
     String path, {
     dynamic data,
     Map<String, dynamic>? queryParameters,
+    CancelToken? cancelToken,
   }) async {
     try {
       final response = await _dio.delete(
         path,
         data: data,
         queryParameters: queryParameters,
+        cancelToken: cancelToken,
       );
       if (response.data is Map<String, dynamic>) {
         return response.data as Map<String, dynamic>;
@@ -156,9 +188,14 @@ class ApiClient {
     String path, {
     dynamic data,
     T Function(dynamic)? fromJsonT,
+    CancelToken? cancelToken,
   }) async {
     try {
-      final response = await _dio.patch(path, data: data);
+      final response = await _dio.patch(
+        path,
+        data: data,
+        cancelToken: cancelToken,
+      );
       return ApiResponse.fromJson(response.data, fromJsonT);
     } catch (e) {
       return _handleError<T>(e);

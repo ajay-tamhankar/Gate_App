@@ -504,6 +504,8 @@ class _GateEntryDetailSecurityViewState extends ConsumerState<_GateEntryDetailSe
   }
 
   Widget _itemRow(BuildContext context, dynamic item) {
+    final materialCode = (item.materialCode as String? ?? '').trim();
+    final poNumber = (item.poNumber as String? ?? '').trim();
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
@@ -529,12 +531,12 @@ class _GateEntryDetailSecurityViewState extends ConsumerState<_GateEntryDetailSe
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  item.materialCode ?? 'N/A',
+                  materialCode.isEmpty ? 'N/A' : materialCode,
                   style: const TextStyle(
                       fontSize: 13, fontWeight: FontWeight.w600),
                 ),
                 Text(
-                  'PO: ${item.poNumber}',
+                  poNumber.isEmpty ? 'PO: N/A' : 'PO: $poNumber',
                   style: TextStyle(
                     fontSize: 11,
                     color: Theme.of(context).colorScheme.onSurfaceVariant,

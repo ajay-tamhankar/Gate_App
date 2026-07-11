@@ -21,15 +21,13 @@ class App extends ConsumerWidget {
       themeMode: themeMode,
       routerConfig: router,
       builder: (context, child) {
-        final mq = MediaQuery.of(context);
-        // Clamp text scaling so users with very large system text don't
-        // break our dense dashboards / tables.
-        final clamped = mq.textScaler.clamp(
+        // `MediaQuery.withClampedTextScaling` subscribes only to text-scale
+        // changes, not the whole MediaQuery. Previously `MediaQuery.of(context)`
+        // rebuilt the entire app on every keyboard show/hide and orientation
+        // flip — a visible 1-frame stall on lower-end Android.
+        return MediaQuery.withClampedTextScaling(
           minScaleFactor: 0.9,
           maxScaleFactor: 1.2,
-        );
-        return MediaQuery(
-          data: mq.copyWith(textScaler: clamped),
           child: child ?? const SizedBox.shrink(),
         );
       },

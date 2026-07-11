@@ -68,9 +68,13 @@ class GateEntryRepositoryImpl implements GateEntryRepository {
     GateEntryQuery? query,
   }) async {
     try {
+      // Apply a safe default limit when no query is provided. Without it the
+      // server returns its full default page and large sites stalled the UI
+      // for seconds parsing the response on the main isolate.
+      final params = query?.toQueryParameters() ?? const {'limit': 100};
       final response = await _apiClient.getRaw(
         '/gate-entries',
-        queryParameters: query?.toQueryParameters(),
+        queryParameters: params,
       );
 
       final success = response['success'] as bool? ?? false;

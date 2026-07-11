@@ -218,14 +218,22 @@ class _VendorMasterPageState extends ConsumerState<VendorMasterPage> {
                   return const _EmptyState();
                 }
                 return mob
-                    ? Column(
-                        children: result.vendors
-                            .map((v) => _VendorCard(
-                                  vendor: v,
-                                  onEdit: () => _openEdit(v),
-                                  onDelete: () => _confirmDelete(v),
-                                ))
-                            .toList(),
+                    // Virtualised: ListView.builder only materialises cards
+                    // visible on screen. The old Column.map.toList() built
+                    // every card at once, which froze the page when the
+                    // vendor list was large.
+                    ? ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: result.vendors.length,
+                        itemBuilder: (context, index) {
+                          final v = result.vendors[index];
+                          return _VendorCard(
+                            vendor: v,
+                            onEdit: () => _openEdit(v),
+                            onDelete: () => _confirmDelete(v),
+                          );
+                        },
                       )
                     : _VendorTable(
                         vendors: result.vendors,

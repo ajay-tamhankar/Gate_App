@@ -89,6 +89,12 @@ class GateEntryController extends StateNotifier<GateEntryState> {
         _gateOutUseCase = gateOutUseCase,
         super(GateEntryState());
 
+  /// Per-request page size when a search is fanned across `q` + `vendor`.
+  static const int searchResultLimit = 100;
+
+  /// Monotonic token so a slow in-flight request can't clobber a newer one.
+  int _requestSeq = 0;
+
   Future<void> fetchEntries(
       {Object? query = _queryNotProvided,
       int? page,
@@ -109,9 +115,13 @@ class GateEntryController extends StateNotifier<GateEntryState> {
             limit: null,
           );
 
+    final seq = ++_requestSeq;
     state = state.copyWith(isLoading: true, error: null);
 
     final response = await _getGateEntriesUseCase.execute(query: effectiveQuery);
+
+    // Discard if a newer request superseded this one while it was in flight.
+    if (seq != _requestSeq) return;
 
     if (response.success && response.data != null) {
       state = state.copyWith(
@@ -128,6 +138,109 @@ class GateEntryController extends StateNotifier<GateEntryState> {
       );
     }
   }
+
+  /// Searches gate entries by a free-text [term].
+  ///
+  /// The backend's `q` parameter matches challan / LR / vehicle but NOT the
+  /// vendor, so a single `q` request silently drops vendor matches. To make
+  /// "search by vendor" work without loading the entire (paginated) dataset
+  /// client-side, this fans the term out to two parallel requests — one using
+  /// `q`, one using the dedicated `vendor` filter the API already supports —
+  /// and merges the results, de-duplicating by entry id. Passing them as a
+  /// single request is unsafe because the server ANDs the two filters.
+  Future<void> searchEntries(String term, {String? period}) async {
+    final trimmed = term.trim();
+    if (trimmed.isEmpty) {
+      // Nothing to search — restore the normal paginated list for the filter.
+      await fetchEntries(
+        query: period != null
+            ? GateEntryQuery(period: period)
+            : const GateEntryQuery(),
+        page: 1,
+      );
+      return;
+    }
+
+    final seq = ++_requestSeq;
+    state = state.copyWith(isLoading: true, error: null);
+
+    try {
+      final responses = await Future.wait([
+        _getGateEntriesUseCase.execute(
+          query: GateEntryQuery(
+              q: trimmed, period: period, page: 1, limit: searchResultLimit),
+        ),
+        _getGateEntriesUseCase.execute(
+          query: GateEntryQuery(
+              vendor: trimmed,
+              period: period,
+              page: 1,
+              limit: searchResultLimit),
+        ),
+      ]);
+
+      // A newer request was dispatched while these were in flight — discard
+      // this stale result so it can't clobber the newer state / null pagination.
+      if (seq != _requestSeq) return;
+
+      final qResponse = responses[0];
+      final vendorResponse = responses[1];
+
+      if (!qResponse.success && !vendorResponse.success) {
+        state = state.copyWith(
+          isLoading: false,
+          error: qResponse.message.isNotEmpty
+              ? qResponse.message
+              : (vendorResponse.message.isNotEmpty
+                  ? vendorResponse.message
+                  : 'Search failed'),
+        );
+        return;
+      }
+
+      final merged = <String, GateEntry>{};
+
+      // `q` results matched challan / LR / vehicle server-side — keep all,
+      // preserving server order (inserted first; putIfAbsent keeps the first).
+      final qData = qResponse.data;
+      if (qResponse.success && qData != null) {
+        for (final entry in qData.items) {
+          merged.putIfAbsent(_entryKey(entry), () => entry);
+        }
+      }
+
+      // `vendor` results: guard against a backend that exact-matches or ignores
+      // an unrecognized value (and returns unfiltered rows) by keeping only
+      // genuine vendor matches. If the backend already filtered, this is a
+      // no-op.
+      final vendorData = vendorResponse.data;
+      if (vendorResponse.success && vendorData != null) {
+        final lowerTerm = trimmed.toLowerCase();
+        for (final entry in vendorData.items) {
+          if (entry.vendorName.toLowerCase().contains(lowerTerm) ||
+              entry.vendorCode.toLowerCase().contains(lowerTerm)) {
+            merged.putIfAbsent(_entryKey(entry), () => entry);
+          }
+        }
+      }
+
+      state = state.copyWith(
+        isLoading: false,
+        entries: merged.values.toList(),
+        // Results span two requests, so server pagination no longer applies.
+        pagination: null,
+        activeQuery: GateEntryQuery(q: trimmed, period: period),
+        error: null,
+      );
+    } catch (_) {
+      if (seq != _requestSeq) return;
+      state = state.copyWith(isLoading: false, error: 'Search failed');
+    }
+  }
+
+  String _entryKey(GateEntry entry) => entry.id.isNotEmpty
+      ? entry.id
+      : '${entry.gateEntryNo}|${entry.challanNo}';
 
   void showAllEntries() {
     fetchEntries(query: null, usePagination: false);

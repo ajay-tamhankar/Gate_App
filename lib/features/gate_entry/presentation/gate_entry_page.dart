@@ -25,6 +25,11 @@ import '../../warehouse/presentation/controllers/warehouse_providers.dart';
 import '../../../core/ui/widgets/section_header.dart';
 import '../../../core/ui/widgets/status_chip.dart';
 
+// Shared DateFormat instances — constructing DateFormat per row in
+// itemBuilders and inside .where() loops was costing ~10-40µs/row.
+final DateFormat _kCompactTimestamp = DateFormat('dd MMM yy • hh:mm a');
+final DateFormat _kBulletTimestamp = DateFormat('MMM dd, yyyy • hh:mm a');
+
 class GateEntryPage extends ConsumerWidget {
   const GateEntryPage({super.key});
 
@@ -64,6 +69,15 @@ class _GateEntrySecurityViewState extends ConsumerState<_GateEntrySecurityView> 
   Timer? _searchDebounce;
   bool _isSearching = false;
 
+  // Memoized output of _applyFilters. _applyFilters was being called on every
+  // parent rebuild (search-debounce ticks, spinner toggles, etc.) and was
+  // re-iterating the whole entries list each time. Cache by the identity of
+  // the input list + the filter value — both are immutable while in scope.
+  List<GateEntry>? _filteredCache;
+  List<GateEntry>? _filteredCacheKey;
+  String? _filteredCacheFilter;
+  DateTime? _filteredCacheDay;
+
   @override
   void initState() {
     super.initState();
@@ -97,40 +111,67 @@ class _GateEntrySecurityViewState extends ConsumerState<_GateEntrySecurityView> 
   }
 
   Future<void> _runServerSearch(String text) async {
-    final state = ref.read(gateEntryControllerProvider);
     final controller = ref.read(gateEntryControllerProvider.notifier);
-    final base = state.activeQuery ?? const GateEntryQuery();
-    final newQuery = base.copyWith(q: text.isEmpty ? null : text);
-    await controller.fetchEntries(
-      query: newQuery,
-      page: 1,
-      usePagination: state.pagination != null,
-    );
-    if (mounted) setState(() => _isSearching = false);
+    final trimmed = text.trim();
+    final period =
+        _usesServerPeriod(_statusFilter) ? _periodForFilter(_statusFilter) : null;
+
+    try {
+      if (trimmed.isEmpty) {
+        // Search cleared — restore the normal paginated list for the filter.
+        await controller.fetchEntries(
+          query: period != null
+              ? GateEntryQuery(period: period)
+              : const GateEntryQuery(),
+          page: 1,
+        );
+      } else {
+        // Vendor isn't covered by the backend's `q` search, so searchEntries
+        // fans the term out across `q` + `vendor` and merges the results.
+        await controller.searchEntries(trimmed, period: period);
+      }
+    } finally {
+      // Always clear the spinner, even if the request throws unexpectedly.
+      if (mounted) setState(() => _isSearching = false);
+    }
   }
 
-  /// Returns true if the entry's gateTimestamp falls on [date]
+  /// Returns true if the entry's gateTimestamp falls on [date]. Uses cheap
+  /// integer y/m/d comparison instead of formatting both sides to "yyyy-MM-dd"
+  /// strings — at hundreds of rows the formatter alloc dominated frame time.
   bool _isOnDate(GateEntry e, DateTime date, {bool includeExit = false}) {
+    final y = date.year;
+    final m = date.month;
+    final d = date.day;
+
     final t = e.gateTimestamp?.toLocal();
-    final todayStr = DateFormat('yyyy-MM-dd').format(date);
-    
-    if (t != null && DateFormat('yyyy-MM-dd').format(t) == todayStr) {
+    if (t != null && t.year == y && t.month == m && t.day == d) {
       return true;
     }
-    
+
     if (includeExit && e.gateOutTimestamp != null) {
-      final outT = e.gateOutTimestamp!.toLocal();
-      if (DateFormat('yyyy-MM-dd').format(outT) == todayStr) {
-        return true;
-      }
+      final o = e.gateOutTimestamp!.toLocal();
+      if (o.year == y && o.month == m && o.day == d) return true;
     }
-    
+
     return false;
   }
 
   List<GateEntry> _applyFilters(List<GateEntry> entries) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
+
+    // Return cached result if inputs are unchanged. `identical(entries, key)`
+    // is cheap and the controller hands the same list instance back until
+    // it refetches, so most rebuilds (text-field input, spinner toggles)
+    // skip the filter pass entirely.
+    if (identical(entries, _filteredCacheKey) &&
+        _statusFilter == _filteredCacheFilter &&
+        _filteredCacheDay == today &&
+        _filteredCache != null) {
+      return _filteredCache!;
+    }
+
     final yesterday = today.subtract(const Duration(days: 1));
     final weekStart = today.subtract(Duration(days: today.weekday - 1));
     final monthStart = DateTime(today.year, today.month, 1);
@@ -138,39 +179,34 @@ class _GateEntrySecurityViewState extends ConsumerState<_GateEntrySecurityView> 
     final nextMonth =
         today.month == 12 ? DateTime(today.year + 1, 1, 1) : DateTime(today.year, today.month + 1, 1);
 
-    return entries.where((e) {
-      final bool matchesStatus;
+    final result = entries.where((e) {
       switch (_statusFilter) {
         case _gateInFilter:
           // Only show those that are "In" and HAVEN'T gone out yet
-          matchesStatus = e.gateMovement == GateMovement.inMovement && e.gateOutTimestamp == null;
-          break;
+          return e.gateMovement == GateMovement.inMovement && e.gateOutTimestamp == null;
         case _gateOutFilter:
           // Show those that are "Out" entries OR "In" entries that HAVE gone out
-          matchesStatus = e.gateMovement == GateMovement.outMovement || e.gateOutTimestamp != null;
-          break;
+          return e.gateMovement == GateMovement.outMovement || e.gateOutTimestamp != null;
         case _todayFilter:
-          matchesStatus = _isOnDate(e, today);
-          break;
+          return _isOnDate(e, today);
         case _yesterdayFilter:
-          matchesStatus = _isOnDate(e, yesterday);
-          break;
+          return _isOnDate(e, yesterday);
         case _thisWeekFilter:
           final t = e.gateTimestamp?.toLocal();
-          matchesStatus =
-              t != null && !t.isBefore(weekStart) && t.isBefore(tomorrow);
-          break;
+          return t != null && !t.isBefore(weekStart) && t.isBefore(tomorrow);
         case _thisMonthFilter:
           final t = e.gateTimestamp?.toLocal();
-          matchesStatus =
-              t != null && !t.isBefore(monthStart) && t.isBefore(nextMonth);
-          break;
+          return t != null && !t.isBefore(monthStart) && t.isBefore(nextMonth);
         default:
-          matchesStatus = true;
+          return true;
       }
-
-      return matchesStatus;
     }).toList();
+
+    _filteredCache = result;
+    _filteredCacheKey = entries;
+    _filteredCacheFilter = _statusFilter;
+    _filteredCacheDay = today;
+    return result;
   }
 
   bool _usesServerPeriod(String filter) {
@@ -203,13 +239,19 @@ class _GateEntrySecurityViewState extends ConsumerState<_GateEntrySecurityView> 
     final gateEntryState = ref.read(gateEntryControllerProvider);
     final trimmedSearch = _searchQuery.trim();
     final searchValue = trimmedSearch.isEmpty ? null : trimmedSearch;
+    final period =
+        _usesServerPeriod(filter) ? _periodForFilter(filter) : null;
 
-    if (_usesServerPeriod(filter)) {
+    // With an active search term, fan out across `q` + `vendor` (searchEntries)
+    // so vendor matches aren't dropped when a chip is toggled.
+    if (searchValue != null) {
+      await controller.searchEntries(searchValue, period: period);
+      return;
+    }
+
+    if (period != null) {
       await controller.fetchEntries(
-        query: GateEntryQuery(
-          period: _periodForFilter(filter),
-          q: searchValue,
-        ),
+        query: GateEntryQuery(period: period),
         page: 1,
         usePagination: gateEntryState.pagination != null,
       );
@@ -217,10 +259,9 @@ class _GateEntrySecurityViewState extends ConsumerState<_GateEntrySecurityView> 
     }
 
     // For "All"/"Gate In"/"Gate Out" — server returns paginated full list,
-    // status chip is applied client-side. Keep the search query in the request
-    // so we don't drop it when the user toggles between chips.
+    // status chip is applied client-side.
     await controller.fetchEntries(
-      query: GateEntryQuery(q: searchValue),
+      query: const GateEntryQuery(),
       page: 1,
       usePagination: gateEntryState.pagination != null,
     );
@@ -702,7 +743,7 @@ class _GateEntrySecurityViewState extends ConsumerState<_GateEntrySecurityView> 
 
   String _formatTimestamp(DateTime? timestamp) {
     if (timestamp == null) return 'N/A';
-    return DateFormat('dd MMM yy • hh:mm a').format(timestamp.toLocal());
+    return _kCompactTimestamp.format(timestamp.toLocal());
   }
 
   // ─── Mobile List ──────────────────────────────────────────────────────────
@@ -802,8 +843,10 @@ class _GateEntrySecurityViewState extends ConsumerState<_GateEntrySecurityView> 
               final effectiveDirectionIcon = (isExited || !isGateIn) ? Icons.logout : Icons.login;
               final effectiveDirectionColor = (isExited || !isGateIn) ? Colors.deepOrange : Colors.indigo;
               final effectiveDirectionLabel = (isExited || !isGateIn) ? 'Gate Out' : 'Gate In';
-              final materialCode =
-                  entry.items.isNotEmpty ? entry.items.first.materialCode : '-';
+              final firstMaterial = entry.items.isNotEmpty
+                  ? entry.items.first.materialCode.trim()
+                  : '';
+              final materialCode = firstMaterial.isEmpty ? '-' : firstMaterial;
               final qty = entry.items.isNotEmpty
                   ? entry.items.fold(0, (sum, i) => sum + i.challanQty)
                   : 0;
@@ -932,11 +975,20 @@ class _GateEntrySecurityViewState extends ConsumerState<_GateEntrySecurityView> 
             : (((pagination.page - 1) * pagination.limit) + visibleCount)
                 .clamp(0, pagination.total));
 
-    final statusText = pagination == null
-        ? 'Showing all $visibleCount of $total'
-        : (visibleCount == pagination.limit || visibleCount == 0
-            ? 'Showing $from-$to of ${pagination.total}'
-            : 'Showing $visibleCount filtered items on page ${pagination.page} of ${pagination.totalPages}');
+    // A search fans out to two requests and drops server pagination, so during
+    // search show a search-specific label instead of the (stale) global total.
+    final isSearchMode = pagination == null && _searchQuery.trim().isNotEmpty;
+    final searchTruncated =
+        isSearchMode && state.entries.length >= GateEntryController.searchResultLimit;
+    final statusText = isSearchMode
+        ? (searchTruncated
+            ? 'Showing first $visibleCount matches — refine to narrow'
+            : 'Showing $visibleCount ${visibleCount == 1 ? 'result' : 'results'}')
+        : pagination == null
+            ? 'Showing all $visibleCount of $total'
+            : (visibleCount == pagination.limit || visibleCount == 0
+                ? 'Showing $from-$to of ${pagination.total}'
+                : 'Showing $visibleCount filtered items on page ${pagination.page} of ${pagination.totalPages}');
 
     final pageSizeValue = _pageSizeOptions.contains(pagination?.limit)
         ? pagination!.limit
@@ -1218,8 +1270,10 @@ class _MobileEntryCard extends StatelessWidget {
     final qty = entry.items.isNotEmpty
         ? entry.items.fold(0, (sum, i) => sum + i.challanQty)
         : 0;
-    final materialCode =
-        entry.items.isNotEmpty ? entry.items.first.materialCode : 'N/A';
+    final firstMaterial = entry.items.isNotEmpty
+        ? entry.items.first.materialCode.trim()
+        : '';
+    final materialCode = firstMaterial.isEmpty ? 'N/A' : firstMaterial;
 
     return InkWell(
       onTap: onTap,
@@ -1646,7 +1700,7 @@ class _WarehouseGateEntryView extends ConsumerWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Date: ${entry.entryTime != null ? DateFormat('MMM dd, yyyy • hh:mm a').format(entry.entryTime!) : 'N/A'}',
+                    'Date: ${entry.entryTime != null ? _kBulletTimestamp.format(entry.entryTime!) : 'N/A'}',
                   ),
                 ],
               ),
@@ -1702,8 +1756,7 @@ class _WarehouseGateEntryView extends ConsumerWidget {
                 DataCell(Text(entry.vehicleNo)),
                 DataCell(Text(
                   entry.entryTime != null
-                      ? DateFormat('MMM dd, yyyy • hh:mm a')
-                          .format(entry.entryTime!)
+                      ? _kBulletTimestamp.format(entry.entryTime!)
                       : 'N/A',
                 )),
                 DataCell(

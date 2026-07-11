@@ -14,10 +14,16 @@ final apiClientProvider = Provider<ApiClient>((ref) {
 final dioProvider = Provider<Dio>((ref) {
   final dio = Dio(BaseOptions(
     baseUrl: Env.baseUrl,
-    connectTimeout: const Duration(seconds: 30),
-    receiveTimeout: const Duration(seconds: 30),
-    sendTimeout: const Duration(seconds: 30),
+    // 30s was way too long — a flaky network kept spinners up for half a
+    // minute, which users perceived as the app hanging. 15s is enough for
+    // the slowest endpoints and surfaces failures fast.
+    connectTimeout: const Duration(seconds: 15),
+    receiveTimeout: const Duration(seconds: 15),
+    sendTimeout: const Duration(seconds: 15),
   ));
+  // BackgroundTransformer decodes JSON responses on a background isolate so
+  // megabyte-sized payloads don't stall the UI thread.
+  dio.transformer = BackgroundTransformer();
 
   if (Env.isDebug) {
     dio.interceptors.add(LogInterceptor(

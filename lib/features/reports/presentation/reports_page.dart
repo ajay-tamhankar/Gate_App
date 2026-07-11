@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -11,6 +13,13 @@ import '../data/reports_repository_impl.dart';
 import '../domain/models/report_models.dart';
 import '../domain/models/exception_report_item.dart';
 import '../domain/services/report_export_service.dart';
+
+// Shared once-allocated DateFormat instances. Constructing DateFormat is
+// expensive (pattern parse + intl symbol alloc) — doing it once per row
+// in itemBuilders was the biggest jank source on this screen.
+final DateFormat _kListDateFormat = DateFormat('MMM dd, yyyy - hh:mm a');
+final DateFormat _kShortDateFormat = DateFormat('MMM dd');
+final DateFormat _kDayDateFormat = DateFormat('MMM dd, yyyy');
 
 class _ReportQuery {
   final String reportType;
@@ -171,6 +180,9 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
   DateTime? _startDate;
   DateTime? _endDate;
   final _searchController = TextEditingController();
+  // Debounced search keeps each keystroke from refetching the API.
+  String _searchQuery = '';
+  Timer? _searchDebounce;
 
   final List<String> _reportTypes = [
     'Gate Entry Register',
@@ -180,8 +192,31 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _onSearchChanged(String value) {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 350), () {
+      if (!mounted) return;
+      final trimmed = value.trim();
+      if (trimmed == _searchQuery) return;
+      setState(() {
+        _searchQuery = trimmed;
+        _resetGateEntryPaging();
+      });
+    });
+  }
+
+  void _clearSearch() {
+    _searchDebounce?.cancel();
+    _searchController.clear();
+    setState(() {
+      _searchQuery = '';
+      _resetGateEntryPaging();
+    });
   }
 
   DateTime _dateOnly(DateTime value) =>
@@ -309,7 +344,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
     setState(() => _isExportingExcel = true);
     final repo = ref.read(reportsRepositoryProvider);
     final filter = _buildExportFilter();
-    final search = _searchController.text.trim();
+    final search = _searchQuery;
 
     try {
       if (_selectedReport == 'Gate Entry Register') {
@@ -386,7 +421,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
     setState(() => _isExportingPdf = true);
     final repo = ref.read(reportsRepositoryProvider);
     final filter = _buildExportFilter();
-    final search = _searchController.text.trim();
+    final search = _searchQuery;
 
     try {
       if (_selectedReport == 'Gate Entry Register') {
@@ -479,14 +514,12 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
   @override
   Widget build(BuildContext context) {
     final isMob = isMobile(context);
-    final df = DateFormat('MMM dd, yyyy - hh:mm a');
-    final dfShort = DateFormat('MMM dd');
     final dateText = _startDate != null && _endDate != null
         ? (isMob
-            ? '${dfShort.format(_startDate!)} - ${dfShort.format(_endDate!)}'
-            : '${df.format(_startDate!)} - ${df.format(_endDate!)}')
+            ? '${_kShortDateFormat.format(_startDate!)} - ${_kShortDateFormat.format(_endDate!)}'
+            : '${_kListDateFormat.format(_startDate!)} - ${_kListDateFormat.format(_endDate!)}')
         : 'Select Date Range';
-    final search = _searchController.text.trim();
+    final search = _searchQuery;
     final query = _ReportQuery(
       reportType: _selectedReport,
       startDate: _startDate,
@@ -606,7 +639,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
             final tiny = width < 500;
 
             final shortDate = _startDate != null && _endDate != null
-                ? '${DateFormat('MMM dd').format(_startDate!)} - ${DateFormat('MMM dd').format(_endDate!)}'
+                ? '${_kShortDateFormat.format(_startDate!)} - ${_kShortDateFormat.format(_endDate!)}'
                 : 'Date';
 
             return Column(
@@ -621,17 +654,14 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                           'Search vendor / PO / challan / gate no',
                           Icons.search,
                         ),
-                        onChanged: (_) => setState(_resetGateEntryPaging),
+                        onChanged: _onSearchChanged,
                       ),
                     ),
                     const SizedBox(width: 8),
                     SizedBox(
                       width: tiny ? 46 : 86,
                       child: OutlinedButton(
-                        onPressed: () => setState(() {
-                          _searchController.clear();
-                          _resetGateEntryPaging();
-                        }),
+                        onPressed: _clearSearch,
                         style: OutlinedButton.styleFrom(
                           padding: EdgeInsets.symmetric(
                             horizontal: tiny ? 8 : 10,
@@ -796,7 +826,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
       chips.add(
         InputChip(
           label: Text(
-            'Date: ${DateFormat('MMM dd').format(_startDate!)} - ${DateFormat('MMM dd').format(_endDate!)}',
+            'Date: ${_kShortDateFormat.format(_startDate!)} - ${_kShortDateFormat.format(_endDate!)}',
           ),
           onDeleted: () => setState(() {
             _startDate = null;
@@ -806,14 +836,11 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
         ),
       );
     }
-    if (_searchController.text.trim().isNotEmpty) {
+    if (_searchQuery.isNotEmpty) {
       chips.add(
         InputChip(
-          label: Text('Search: ${_searchController.text.trim()}'),
-          onDeleted: () => setState(() {
-            _searchController.clear();
-            _resetGateEntryPaging();
-          }),
+          label: Text('Search: $_searchQuery'),
+          onDeleted: _clearSearch,
         ),
       );
     }
@@ -1412,8 +1439,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                   DataCell(Text(e.challanNo)),
                   DataCell(Text(e.poNumber)),
                   DataCell(Text(e.lrNo.isEmpty ? '-' : e.lrNo)),
-                  DataCell(Text(
-                      DateFormat('MMM dd, yyyy - hh:mm a').format(e.date))),
+                  DataCell(Text(_kListDateFormat.format(e.date))),
                   DataCell(Text(e.material)),
                   DataCell(Text(e.qty.toString())),
                   DataCell(Text(e.vendor)),
@@ -1554,7 +1580,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
-                      DateFormat('MMM dd, yyyy - hh:mm a').format(e.date),
+                      _kListDateFormat.format(e.date),
                       style: TextStyle(
                         fontSize: 11,
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -1671,7 +1697,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
     if (raw.trim().isEmpty || raw == '-') return '-';
     final parsed = DateTime.tryParse(raw);
     if (parsed == null) return raw;
-    return DateFormat('MMM dd, yyyy - hh:mm a').format(parsed.toLocal());
+    return _kListDateFormat.format(parsed.toLocal());
   }
 
   String _reportTypeShort(String reportType) {
@@ -2021,8 +2047,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                     label: e.status,
                     color: _statusColor(e.status),
                   )),
-                  DataCell(Text(DateFormat('MMM dd, yyyy - hh:mm a')
-                      .format(e.createdAt))),
+                  DataCell(Text(_kListDateFormat.format(e.createdAt))),
                 ]),
               )
               .toList(),
@@ -2106,7 +2131,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                       context,
                       icon: Icons.calendar_today_outlined,
                       label: 'Created',
-                      value: DateFormat('MMM dd, yyyy').format(e.createdAt),
+                      value: _kDayDateFormat.format(e.createdAt),
                     ),
                   ),
                 ],
