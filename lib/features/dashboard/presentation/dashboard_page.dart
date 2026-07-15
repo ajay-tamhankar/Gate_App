@@ -167,6 +167,11 @@ class _SecurityDashboard extends ConsumerWidget {
                 subtitle:
                     'Role: ${_displayRole(userAsync, sessionState)} - ${_displayLogin(userAsync, sessionState)}',
               ),
+              if (metrics.overdueGateOut.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                _OverdueGateOutAlert(metrics: metrics),
+                const SizedBox(height: 8),
+              ],
               Builder(
                 builder: (context) {
                   final cards = <Widget>[
@@ -986,6 +991,126 @@ class _KpiSection extends StatelessWidget {
             ],
           ),
       ],
+    );
+  }
+}
+
+/// Prominent red alert listing vehicles that were gated in but not gated out
+/// past the threshold (default 2h). Shown at the top of the security
+/// dashboard so security can chase them down.
+class _OverdueGateOutAlert extends StatelessWidget {
+  const _OverdueGateOutAlert({required this.metrics});
+
+  final DashboardMetrics metrics;
+
+  @override
+  Widget build(BuildContext context) {
+    final items = metrics.overdueGateOut;
+    if (items.isEmpty) return const SizedBox.shrink();
+
+    final thresholdHours =
+        (metrics.overdueGateOutThresholdMinutes / 60).toStringAsFixed(
+      metrics.overdueGateOutThresholdMinutes % 60 == 0 ? 0 : 1,
+    );
+    const errorColor = Color(0xFFD32F2F);
+    // Show at most a handful inline; summarise the rest.
+    const maxVisible = 6;
+    final visible = items.take(maxVisible).toList();
+    final remaining = items.length - visible.length;
+
+    return Card(
+      elevation: 0,
+      color: errorColor.withValues(alpha: 0.06),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: errorColor.withValues(alpha: 0.4)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.warning_amber_rounded,
+                    color: errorColor, size: 24),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    '${items.length} vehicle${items.length == 1 ? '' : 's'} '
+                    'not gated out within ${thresholdHours}h',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: errorColor,
+                        ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            ...visible.map((v) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.local_shipping_outlined,
+                          size: 18, color: errorColor),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              v.vehicleNo.isEmpty ? '(no vehicle no)' : v.vehicleNo,
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w600),
+                            ),
+                            if (v.gateEntryNo.isNotEmpty || v.vendorName.isNotEmpty)
+                              Text(
+                                [
+                                  if (v.gateEntryNo.isNotEmpty) v.gateEntryNo,
+                                  if (v.vendorName.isNotEmpty) v.vendorName,
+                                ].join(' · '),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(color: Colors.grey.shade600),
+                              ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: errorColor.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          'Inside ${v.durationLabel}',
+                          style: const TextStyle(
+                            color: errorColor,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                )),
+            if (remaining > 0) ...[
+              const SizedBox(height: 6),
+              Text(
+                '+ $remaining more',
+                style: Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.copyWith(color: errorColor, fontWeight: FontWeight.w600),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }

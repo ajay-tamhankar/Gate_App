@@ -19,6 +19,8 @@ class DashboardMetrics {
     required this.pendingGrnAging2To3,
     required this.pendingGrnAgingMoreThan3,
     required this.recentActivity,
+    this.overdueGateOut = const [],
+    this.overdueGateOutThresholdMinutes = 120,
   });
 
   final int totalGateEntriesOverall;
@@ -46,6 +48,12 @@ class DashboardMetrics {
   final int pendingGrnAging2To3;
   final int pendingGrnAgingMoreThan3;
   final List<DailyActivity> recentActivity;
+
+  /// Vehicles gated in but not gated out past the alert threshold.
+  final List<OverdueGateOut> overdueGateOut;
+
+  /// Minutes after gate-in at which a vehicle is flagged overdue (default 120).
+  final int overdueGateOutThresholdMinutes;
 
   factory DashboardMetrics.fromJson(Map<String, dynamic> json) {
     // The security-dashboard endpoint nests today's counters under `today`
@@ -101,6 +109,13 @@ class DashboardMetrics {
           .whereType<Map<String, dynamic>>()
           .map(DailyActivity.fromJson)
           .toList(),
+      overdueGateOut: (json['overdueGateOut'] as List<dynamic>?)
+              ?.whereType<Map<String, dynamic>>()
+              .map(OverdueGateOut.fromJson)
+              .toList() ??
+          const [],
+      overdueGateOutThresholdMinutes:
+          (json['overdueGateOutThresholdMinutes'] as num?)?.toInt() ?? 120,
     );
   }
 
@@ -155,5 +170,43 @@ class DailyActivity {
       'day': day,
       'entriesCount': entriesCount,
     };
+  }
+}
+
+class OverdueGateOut {
+  const OverdueGateOut({
+    required this.gateEntryNo,
+    required this.vehicleNo,
+    required this.vendorName,
+    required this.challanNo,
+    required this.minutesInside,
+    this.gateTimestamp,
+  });
+
+  final String gateEntryNo;
+  final String vehicleNo;
+  final String vendorName;
+  final String challanNo;
+  final int minutesInside;
+  final String? gateTimestamp;
+
+  /// Human-friendly time inside, e.g. "3h 12m".
+  String get durationLabel {
+    final h = minutesInside ~/ 60;
+    final m = minutesInside % 60;
+    if (h <= 0) return '${m}m';
+    return '${h}h ${m}m';
+  }
+
+  factory OverdueGateOut.fromJson(Map<String, dynamic> json) {
+    String str(dynamic v) => v == null ? '' : v.toString();
+    return OverdueGateOut(
+      gateEntryNo: str(json['gateEntryNo']),
+      vehicleNo: str(json['vehicleNo']),
+      vendorName: str(json['vendorName']),
+      challanNo: str(json['challanNo']),
+      minutesInside: (json['minutesInside'] as num?)?.toInt() ?? 0,
+      gateTimestamp: json['gateTimestamp'] as String?,
+    );
   }
 }
