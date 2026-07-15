@@ -4,7 +4,7 @@ class ApiEndpoints {
   static const String me = '/auth/me';
 
   // Dashboard
-  static const String dashboardSummary = '/dashboard/summary';
+  static const String dashboardSecurity = '/dashboard/security';
 
   // Gate Entries
   static const String gateEntries = '/gate-entries';

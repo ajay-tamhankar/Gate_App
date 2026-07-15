@@ -183,33 +183,21 @@ class _SecurityDashboard extends ConsumerWidget {
                       color: Colors.deepOrange,
                     ),
                     StatCard(
-                      title: 'Total',
-                      value: metrics.totalGateEntriesOverall.toString(),
-                      icon: Icons.dashboard_customize,
-                      color: Colors.blueGrey,
-                    ),
-                    StatCard(
-                      title: 'Today',
+                      title: "Today's Entries",
                       value: metrics.totalGateEntriesToday.toString(),
                       icon: Icons.today,
                       color: Colors.teal,
                     ),
                     StatCard(
-                      title: 'Yesterday',
-                      value: metrics.totalGateEntriesYesterday.toString(),
-                      icon: Icons.history,
+                      title: 'My Entries',
+                      value: metrics.myCreatedToday.toString(),
+                      icon: Icons.person,
                       color: Colors.purple,
                     ),
                     StatCard(
-                      title: 'This Week',
-                      value: metrics.totalGateEntriesThisWeek.toString(),
-                      icon: Icons.view_week,
-                      color: Colors.cyan,
-                    ),
-                    StatCard(
-                      title: 'This Month',
-                      value: metrics.totalGateEntriesMonth.toString(),
-                      icon: Icons.calendar_month,
+                      title: 'Pending Gate Out',
+                      value: metrics.pendingGateOut.toString(),
+                      icon: Icons.local_shipping,
                       color: Colors.amber.shade800,
                     ),
                   ];
@@ -229,14 +217,7 @@ class _SecurityDashboard extends ConsumerWidget {
                 },
               ),
               const SizedBox(height: 32),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _buildActivityChart(context, metrics, isMob),
-                  const SizedBox(height: 20),
-                  _buildTatCard(context, metrics),
-                ],
-              ),
+              _buildActivityChart(context, metrics, isMob),
               const SizedBox(height: 32),
             ],
           ),
@@ -276,89 +257,6 @@ class _SecurityDashboard extends ConsumerWidget {
       title: 'Gate Entry Activity (Last 7 Days)',
       data: chartData,
       height: isMob ? 260 : 350,
-    );
-  }
-
-  Widget _buildTatCard(BuildContext context, DashboardMetrics metrics) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-            color: Theme.of(context).colorScheme.outlineVariant.withAlpha(128)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Turnaround Time (TAT)',
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
-                    ?.copyWith(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withAlpha(25),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(Icons.timer, color: Colors.blue, size: 20),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'GATE TAT',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                  ),
-                ),
-                Text(
-                  '${metrics.gateTat.toStringAsFixed(0)} mins',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.blueGrey.withAlpha(25),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child:
-                      const Icon(Icons.dock, color: Colors.blueGrey, size: 20),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'DOCK TAT',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                  ),
-                ),
-                Text(
-                  '${metrics.dockTat.toStringAsFixed(0)} mins',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
     );
   }
 
