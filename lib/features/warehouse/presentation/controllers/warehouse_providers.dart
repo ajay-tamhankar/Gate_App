@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/auth/session_state.dart';
 import '../../../../core/auth/session_controller.dart';
 import '../../../../core/network/dio_provider.dart';
+import '../../../dashboard/data/dashboard_api.dart';
 import '../../../dashboard/domain/entities/dashboard_metrics.dart';
 import '../../../gate_entry/data/gate_entry_repository_impl.dart';
 import '../../../gate_entry/domain/models/gate_entry.dart';
@@ -319,9 +320,22 @@ final warehouseManagerAdminKpiProvider =
     }
   }
 
-  // TAT requires backend workflow timestamps; keep 0 until available.
-  const gateTat = 0.0;
-  const dockTat = 0.0;
+  // TAT (gate/dock turnaround) is computed on the backend from workflow
+  // timestamps in v_dashboard_summary — the client-side KPI aggregation
+  // above can't derive it. Fetch it from the dashboard endpoint and fall
+  // back to 0 (renders as N/A) if the call fails, so a TAT hiccup never
+  // breaks the rest of the KPI card.
+  double gateTat = 0.0;
+  double dockTat = 0.0;
+  try {
+    final metricsResp = await ref.read(dashboardApiProvider).fetchMetrics();
+    if (metricsResp.success && metricsResp.data != null) {
+      gateTat = metricsResp.data!.gateTat;
+      dockTat = metricsResp.data!.dockTat;
+    }
+  } catch (_) {
+    // Non-fatal: leave TAT at 0 if the metrics call fails.
+  }
 
   return DashboardMetrics(
     totalGateEntriesOverall: todayCount + gateOut,
