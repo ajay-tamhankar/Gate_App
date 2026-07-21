@@ -228,6 +228,20 @@ final warehouseManagerAdminKpiProvider =
   final gateRepo = ref.read(gateEntryRepositoryProvider);
   final warehouseRepo = ref.read(warehouseRepositoryProvider);
 
+  // Kick off the TAT metrics call up-front so it overlaps the gate-entry and
+  // reconciliation round-trips below instead of adding a third *serial* one
+  // that delays first paint of the whole manager dashboard. Errors collapse
+  // to null (TAT falls back to 0) so a hiccup never breaks the KPI card — and
+  // so a rejection can't surface as an unhandled async error if an earlier
+  // await throws before this future is consumed.
+  final metricsFuture = ref
+      .read(dashboardApiProvider)
+      .fetchMetrics()
+      .then<DashboardMetrics?>(
+        (r) => (r.success && r.data != null) ? r.data : null,
+      )
+      .catchError((_) => null);
+
   final resp = await gateRepo.getGateEntries();
   if (!resp.success || resp.data == null) {
     final msg = resp.error?.message.isNotEmpty == true
@@ -321,21 +335,12 @@ final warehouseManagerAdminKpiProvider =
   }
 
   // TAT (gate/dock turnaround) is computed on the backend from workflow
-  // timestamps in v_dashboard_summary — the client-side KPI aggregation
-  // above can't derive it. Fetch it from the dashboard endpoint and fall
-  // back to 0 (renders as N/A) if the call fails, so a TAT hiccup never
-  // breaks the rest of the KPI card.
-  double gateTat = 0.0;
-  double dockTat = 0.0;
-  try {
-    final metricsResp = await ref.read(dashboardApiProvider).fetchMetrics();
-    if (metricsResp.success && metricsResp.data != null) {
-      gateTat = metricsResp.data!.gateTat;
-      dockTat = metricsResp.data!.dockTat;
-    }
-  } catch (_) {
-    // Non-fatal: leave TAT at 0 if the metrics call fails.
-  }
+  // timestamps in v_dashboard_summary — the client-side KPI aggregation above
+  // can't derive it. Await the metrics fetch started up-front so it overlaps
+  // the round-trips above; it renders as N/A (0) if the call failed.
+  final metrics = await metricsFuture;
+  final gateTat = metrics?.gateTat ?? 0.0;
+  final dockTat = metrics?.dockTat ?? 0.0;
 
   return DashboardMetrics(
     totalGateEntriesOverall: todayCount + gateOut,

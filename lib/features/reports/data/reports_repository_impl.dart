@@ -134,12 +134,14 @@ class ReportsRepository {
     String? challan,
     String? vendor,
     String? po,
+    int? limit,
   }) async {
     final response = await _apiClient.getRaw(
       '/gate-entries',
       queryParameters: _buildQuery(
         filter,
         includeLimit: false,
+        limit: limit,
         q: q,
         period: period,
         sortBy: sortBy,
@@ -398,13 +400,15 @@ class ReportsRepository {
     // lookup (enrichment columns just render blank).
     Map<String, GateEntryReportItem> gateEntryByNo = const {};
     try {
-      // Drop the date bounds for the join: an exception is filtered by its
-      // reconciliation date, but the gate entry it references was created
-      // earlier and can fall outside that window — matching on dates would
-      // leave the vendor/invoice/part/qty columns blank at the boundary.
-      // Vendor/PO filters are preserved so the payload stays scoped.
-      final entryFilter = filter.copyWith(startDate: null, endDate: null);
-      final entries = await getGateEntryRegister(entryFilter);
+      // Scope the join to the SAME date window as the exceptions and hard-cap
+      // it at 1000 rows. Previously this dropped the date bounds and sent no
+      // limit, so it pulled the ENTIRE gate-entries table on every report load
+      // — the exact unbounded fetch the 500-row cap in _buildQuery was added
+      // to prevent ("freezing the UI for seconds on busy sites"). 1000 rows
+      // comfortably covers the <=500 exceptions in the window; any gate entry
+      // beyond that (or created just outside the window) simply renders blank
+      // enrichment instead of hanging the report.
+      final entries = await getGateEntryRegister(filter, limit: 1000);
       gateEntryByNo = {
         for (final entry in entries)
           if (entry.gateEntryNo.trim().isNotEmpty)

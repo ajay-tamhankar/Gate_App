@@ -289,14 +289,58 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
   }
 
   _ReportPreviewData _previewWithCardFilter(_ReportPreviewData data) {
-    if (_selectedReport != 'Gate Entry Register') {
-      return data;
+    if (_selectedReport == 'Gate Entry Register') {
+      return _ReportPreviewData(
+        gateEntries: _applyGateEntryLocalFilter(data.gateEntries),
+        gateEntrySummary: data.gateEntrySummary,
+        gateEntryPagination: data.gateEntryPagination,
+      );
     }
-    return _ReportPreviewData(
-      gateEntries: _applyGateEntryLocalFilter(data.gateEntries),
-      gateEntrySummary: data.gateEntrySummary,
-      gateEntryPagination: data.gateEntryPagination,
-    );
+
+    // Exception & GRN reports are fetched search-agnostic (search is kept out
+    // of the provider key) and filtered here in-memory, so refining the search
+    // never triggers a refetch.
+    final search = _searchQuery;
+    if (search.isEmpty) return data;
+
+    if (_selectedReport == 'GRN Reconciliation Report') {
+      return _ReportPreviewData(
+        grnRecons: data.grnRecons
+            .where((item) => _matchesSearchText(search, [
+                  item.gateEntryNo,
+                  item.challanNo,
+                  item.vendorName,
+                  item.vendor,
+                  item.poNumber,
+                  item.purchaseOrder,
+                  item.grnNo,
+                  item.materialDocument,
+                  item.referenceNo,
+                  item.status,
+                  item.matchedStatus,
+                ]))
+            .toList(),
+      );
+    }
+
+    if (_selectedReport == 'Exception Report') {
+      return _ReportPreviewData(
+        exceptions: data.exceptions
+            .where((item) => _matchesSearchText(search, [
+                  item.gateEntryNo,
+                  item.invoiceNo,
+                  item.partNo,
+                  item.vendorName,
+                  item.vendorCode,
+                  item.poNumber,
+                  item.status,
+                  item.description,
+                ]))
+            .toList(),
+      );
+    }
+
+    return data;
   }
 
   bool _usesServerPeriod() {
@@ -529,11 +573,19 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
             : '${_kListDateFormat.format(_startDate!)} - ${_kListDateFormat.format(_endDate!)}')
         : 'Select Date Range';
     final search = _searchQuery;
+    // Exception & GRN reports filter search CLIENT-SIDE (see
+    // _previewWithCardFilter), so keep it OUT of the provider key. Otherwise
+    // every debounced keystroke mints a new autoDispose key and re-runs the
+    // full network fetch (incl. the gate-entries enrichment join) just to
+    // re-apply an in-memory substring filter. Gate Entry Register searches on
+    // the server (q param), so it keeps search in the key.
+    final searchForKey =
+        _selectedReport == 'Gate Entry Register' ? search : '';
     final query = _ReportQuery(
       reportType: _selectedReport,
       startDate: _startDate,
       endDate: _endDate,
-      search: search.isEmpty ? null : search,
+      search: searchForKey.isEmpty ? null : searchForKey,
       gateEntryPeriod:
           _usesServerPeriod() ? _periodForGateEntryFilter() : null,
       gateEntryPage: _gateEntryPage,
@@ -582,7 +634,11 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _buildSummaryCards(context, isMob, data),
+                    // Use effectiveData so the summary reflects the active
+                    // in-memory search/card filter (Gate Entry Register keeps
+                    // its server-side summary, which _previewWithCardFilter
+                    // preserves).
+                    _buildSummaryCards(context, isMob, effectiveData),
                     const SizedBox(height: 12),
                     SizedBox(
                       height: isMob ? 430 : 560,
