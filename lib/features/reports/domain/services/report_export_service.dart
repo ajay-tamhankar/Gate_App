@@ -572,8 +572,12 @@ List<int> _buildExceptionExcelBytes(List<ExceptionReportItem> data) {
   final excel = xl.Excel.createExcel();
   final sheet = excel['Sheet1'];
   sheet.appendRow([
-    xl.TextCellValue('Exception ID'),
-    xl.TextCellValue('Gate Entry ID'),
+    xl.TextCellValue('Gate Entry No'),
+    xl.TextCellValue('Invoice No'),
+    xl.TextCellValue('Part No'),
+    xl.TextCellValue('Qty'),
+    xl.TextCellValue('Vendor Name'),
+    xl.TextCellValue('Vendor Code'),
     xl.TextCellValue('PO Number'),
     xl.TextCellValue('Status'),
     xl.TextCellValue('Description'),
@@ -581,12 +585,17 @@ List<int> _buildExceptionExcelBytes(List<ExceptionReportItem> data) {
   ]);
   for (final item in data) {
     sheet.appendRow([
-      xl.TextCellValue(item.id),
-      xl.TextCellValue(item.gateEntryId),
+      xl.TextCellValue(item.gateEntryNo),
+      xl.TextCellValue(item.invoiceNo),
+      xl.TextCellValue(item.partNo),
+      xl.IntCellValue(item.qty),
+      xl.TextCellValue(item.vendorName),
+      xl.TextCellValue(item.vendorCode),
       xl.TextCellValue(item.poNumber),
       xl.TextCellValue(item.status),
       xl.TextCellValue(item.description),
-      xl.TextCellValue(item.createdAt.toIso8601String()),
+      xl.TextCellValue(
+          '${_formatDate(item.createdAt)} ${_formatTime(item.createdAt)}'.trim()),
     ]);
   }
   return excel.encode()!;
@@ -606,8 +615,12 @@ Future<Uint8List> _buildExceptionPdfBytes(
         else
           _pdfTable(
             headers: const [
-              'Exception ID',
-              'Gate Entry ID',
+              'Gate Entry No',
+              'Invoice No',
+              'Part No',
+              'Qty',
+              'Vendor Name',
+              'Vendor Code',
               'PO',
               'Status',
               'Description',
@@ -615,16 +628,21 @@ Future<Uint8List> _buildExceptionPdfBytes(
             ],
             rows: data
                 .map((item) => [
-                      item.id,
-                      item.gateEntryId,
+                      item.gateEntryNo,
+                      item.invoiceNo,
+                      item.partNo,
+                      item.qty.toString(),
+                      item.vendorName,
+                      item.vendorCode,
                       item.poNumber,
                       item.status,
                       item.description,
-                      item.createdAt.toString().substring(0, 19),
+                      '${_formatDate(item.createdAt)} ${_formatTime(item.createdAt)}'
+                          .trim(),
                     ])
                 .toList(),
-            cellFontSize: 8,
-            headerFontSize: 9,
+            cellFontSize: 7,
+            headerFontSize: 8,
           ),
       ],
     ),

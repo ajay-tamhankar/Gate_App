@@ -389,17 +389,75 @@ class ReportsRepository {
     final success = response['success'] as bool? ?? false;
     if (!success) return [];
     final list = _extractList(response);
+
+    // The exception payload identifies the gate entry but doesn't reliably
+    // carry the vendor / invoice / part / qty captured at the gate. Pull the
+    // gate-entry register for the same filter once and join by gate-entry
+    // number so the report shows those human-readable fields. A failure here
+    // must never break the core exception list, so fall back to an empty
+    // lookup (enrichment columns just render blank).
+    Map<String, GateEntryReportItem> gateEntryByNo = const {};
+    try {
+      // Drop the date bounds for the join: an exception is filtered by its
+      // reconciliation date, but the gate entry it references was created
+      // earlier and can fall outside that window — matching on dates would
+      // leave the vendor/invoice/part/qty columns blank at the boundary.
+      // Vendor/PO filters are preserved so the payload stays scoped.
+      final entryFilter = filter.copyWith(startDate: null, endDate: null);
+      final entries = await getGateEntryRegister(entryFilter);
+      gateEntryByNo = {
+        for (final entry in entries)
+          if (entry.gateEntryNo.trim().isNotEmpty)
+            entry.gateEntryNo.trim(): entry,
+      };
+    } catch (_) {
+      // Non-fatal: leave enrichment fields blank if the join fetch fails.
+    }
+
     return list.map((e) {
       final map = e as Map<String, dynamic>;
+      final gateEntryId = map['gateEntryId']?.toString() ?? '';
+      final gateEntryNo =
+          (map['gateEntryNo'] ?? map['gate_entry_no'] ?? '').toString();
+      final lookupKey =
+          gateEntryNo.trim().isNotEmpty ? gateEntryNo.trim() : gateEntryId.trim();
+      final entry = gateEntryByNo[lookupKey];
+
+      // Prefer a value denormalised onto the exception payload; otherwise fall
+      // back to the joined gate entry, then to empty.
+      String pick(List<String> keys, String? joined) {
+        for (final k in keys) {
+          final raw = map[k];
+          if (raw != null && raw.toString().trim().isNotEmpty) {
+            return raw.toString();
+          }
+        }
+        return joined ?? '';
+      }
+
+      final payloadQty = _readNum(map['qty'] ?? map['quantity']).toInt();
+
       return ExceptionReportItem(
         id: map['id']?.toString() ?? '',
-        gateEntryId: map['gateEntryId']?.toString() ?? '',
+        gateEntryId: gateEntryId,
+        gateEntryNo: gateEntryNo.isNotEmpty ? gateEntryNo : gateEntryId,
         poNumber: (map['matchedGrnNumber'] ?? '').toString(),
         status: (map['statusLabel'] ?? map['status'] ?? '').toString(),
         description: (map['displayReason'] ?? map['reasonCode'] ?? '').toString(),
         createdAt: DateTime.tryParse(
                 (map['reconciledAt'] ?? map['createdAt'])?.toString() ?? '') ??
             DateTime.now(),
+        invoiceNo: pick(
+            ['challanNo', 'challan_no', 'invoiceNo', 'invoice_no'],
+            entry?.challanNo),
+        partNo: pick(
+            ['materialCode', 'material_code', 'material', 'partNo', 'part_no'],
+            entry?.material),
+        qty: payloadQty != 0 ? payloadQty : (entry?.qty ?? 0),
+        vendorName:
+            pick(['vendorName', 'vendor_name', 'vendor'], entry?.vendor),
+        vendorCode:
+            pick(['vendorCode', 'vendor_code'], entry?.vendorCode),
       );
     }).toList();
   }

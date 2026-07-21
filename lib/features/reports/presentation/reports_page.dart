@@ -140,11 +140,14 @@ final reportsPreviewProvider =
     final data = await repo.getExceptionReport(filter);
     final filtered = data.where((item) {
       return _matchesSearchText(search, [
-        item.gateEntryId,
+        item.gateEntryNo,
+        item.invoiceNo,
+        item.partNo,
+        item.vendorName,
+        item.vendorCode,
         item.poNumber,
         item.status,
         item.description,
-        item.id,
       ]);
     }).toList();
     return _ReportPreviewData(exceptions: filtered);
@@ -383,11 +386,14 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
         var data = await repo.getExceptionReport(filter);
         data = data
             .where((item) => _matchesSearchText(search, [
-                  item.gateEntryId,
+                  item.gateEntryNo,
+                  item.invoiceNo,
+                  item.partNo,
+                  item.vendorName,
+                  item.vendorCode,
                   item.poNumber,
                   item.status,
                   item.description,
-                  item.id,
                 ]))
             .toList();
         if (data.isEmpty) {
@@ -460,11 +466,14 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
         var data = await repo.getExceptionReport(filter);
         data = data
             .where((item) => _matchesSearchText(search, [
-                  item.gateEntryId,
+                  item.gateEntryNo,
+                  item.invoiceNo,
+                  item.partNo,
+                  item.vendorName,
+                  item.vendorCode,
                   item.poNumber,
                   item.status,
                   item.description,
-                  item.id,
                 ]))
             .toList();
         if (data.isEmpty) {
@@ -2034,6 +2043,11 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
         child: DataTable(
           columns: const [
             DataColumn(label: Text('Gate Entry No')),
+            DataColumn(label: Text('Invoice No')),
+            DataColumn(label: Text('Part No')),
+            DataColumn(label: Text('Qty')),
+            DataColumn(label: Text('Vendor')),
+            DataColumn(label: Text('Vendor Code')),
             DataColumn(label: Text('Exception Type')),
             DataColumn(label: Text('Status')),
             DataColumn(label: Text('Date')),
@@ -2041,7 +2055,12 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
           rows: items
               .map(
                 (e) => DataRow(cells: [
-                  DataCell(Text(e.gateEntryId)),
+                  DataCell(Text(e.gateEntryNo.isEmpty ? '-' : e.gateEntryNo)),
+                  DataCell(Text(e.invoiceNo.isEmpty ? '-' : e.invoiceNo)),
+                  DataCell(Text(e.partNo.isEmpty ? '-' : e.partNo)),
+                  DataCell(Text(e.qty.toString())),
+                  DataCell(Text(e.vendorName.isEmpty ? '-' : e.vendorName)),
+                  DataCell(Text(e.vendorCode.isEmpty ? '-' : e.vendorCode)),
                   DataCell(Text(e.description)),
                   DataCell(StatusChip(
                     label: e.status,
@@ -2095,7 +2114,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      e.gateEntryId,
+                      e.gateEntryNo.isEmpty ? '-' : e.gateEntryNo,
                       style: const TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 15,
@@ -2120,6 +2139,50 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                   Expanded(
                     child: _reportInfoCell(
                       context,
+                      icon: Icons.inventory_2_outlined,
+                      label: 'Invoice No',
+                      value: e.invoiceNo.isEmpty ? '-' : e.invoiceNo,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _reportInfoCell(
+                      context,
+                      icon: Icons.numbers_outlined,
+                      label: 'Part No',
+                      value: e.partNo.isEmpty ? '-' : e.partNo,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: _reportInfoCell(
+                      context,
+                      icon: Icons.factory_outlined,
+                      label: 'Vendor',
+                      value: e.vendorName.isEmpty ? '-' : e.vendorName,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _reportInfoCell(
+                      context,
+                      icon: Icons.qr_code_2_outlined,
+                      label: 'Vendor Code',
+                      value: e.vendorCode.isEmpty ? '-' : e.vendorCode,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: _reportInfoCell(
+                      context,
                       icon: Icons.receipt_long_outlined,
                       label: 'PO Number',
                       value: e.poNumber.isEmpty ? '-' : e.poNumber,
@@ -2129,12 +2192,19 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                   Expanded(
                     child: _reportInfoCell(
                       context,
-                      icon: Icons.calendar_today_outlined,
-                      label: 'Created',
-                      value: _kDayDateFormat.format(e.createdAt),
+                      icon: Icons.tag_outlined,
+                      label: 'Qty',
+                      value: e.qty.toString(),
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 8),
+              _reportInfoCell(
+                context,
+                icon: Icons.calendar_today_outlined,
+                label: 'Created',
+                value: _kDayDateFormat.format(e.createdAt),
               ),
             ],
           ),
