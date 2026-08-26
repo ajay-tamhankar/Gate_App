@@ -60,7 +60,8 @@ class _ChallanFieldState {
 
   String? get duplicateWarningText {
     if (!hasDuplicateWarning) return null;
-    return 'Challan already exists (Entry: ${duplicateGateEntryNo?.trim().isNotEmpty == true ? duplicateGateEntryNo!.trim() : '-'})';
+    return 'Invoice already exists in this financial year '
+        '(Entry: ${duplicateGateEntryNo?.trim().isNotEmpty == true ? duplicateGateEntryNo!.trim() : '-'})';
   }
 
   String? get blockingErrorText =>
@@ -325,6 +326,15 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
     return hasErrors;
   }
 
+  /// India-style financial year (April 1 → March 31) for [when], formatted
+  /// as "YYYY-YYYY" — e.g. 2025-01-15 → "2024-2025", 2025-05-15 → "2025-2026".
+  /// Passed to the backend so the challan uniqueness check is scoped to the
+  /// current FY rather than a per-vendor or all-time window.
+  String _currentFinancialYear(DateTime when) {
+    final startYear = when.month >= 4 ? when.year : when.year - 1;
+    return '$startYear-${startYear + 1}';
+  }
+
   bool _isCurrentEntryDuplicate({
     String? duplicateGateEntryId,
     String? duplicateGateEntryNo,
@@ -385,9 +395,15 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
     try {
       final repo = ref.read(gateEntryRepositoryProvider);
       final vendorCode = _vendorCodeCtrl.text.trim();
+      // Enforce cross-vendor duplicate detection for the invoice number by
+      // scoping to the current financial year (April-March). Vendor code is
+      // still passed so the backend can annotate the collision with the
+      // right vendor, but the FY scope is what makes this an FY-wide check
+      // rather than a per-vendor one.
       final result = await repo.checkChallanUniqueness(
         challanNo,
         vendorCode: vendorCode.isNotEmpty ? vendorCode : null,
+        financialYear: _currentFinancialYear(DateTime.now()),
       );
       if (!mounted) return;
 
@@ -410,7 +426,8 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
             field.duplicateGateEntryNo = null;
           } else {
             field.serverError =
-                'Challan already exists (Entry: ${result.data!.data?.existingGateEntryNo ?? '-'})';
+                'Invoice already exists in this financial year '
+                '(Entry: ${result.data!.data?.existingGateEntryNo ?? '-'})';
             field.duplicateGateEntryId = duplicateGateEntryId;
             field.duplicateGateEntryNo = duplicateGateEntryNo;
           }

@@ -975,15 +975,12 @@ class _GateEntrySecurityViewState extends ConsumerState<_GateEntrySecurityView> 
             : (((pagination.page - 1) * pagination.limit) + visibleCount)
                 .clamp(0, pagination.total));
 
-    // A search fans out to two requests and drops server pagination, so during
-    // search show a search-specific label instead of the (stale) global total.
+    // A search fans out across every page of two filters (see
+    // GateEntryController.searchEntries) and drops server pagination, so
+    // during search we know we're already showing everything that matched.
     final isSearchMode = pagination == null && _searchQuery.trim().isNotEmpty;
-    final searchTruncated =
-        isSearchMode && state.entries.length >= GateEntryController.searchResultLimit;
     final statusText = isSearchMode
-        ? (searchTruncated
-            ? 'Showing first $visibleCount matches — refine to narrow'
-            : 'Showing $visibleCount ${visibleCount == 1 ? 'result' : 'results'}')
+        ? 'Showing all $visibleCount ${visibleCount == 1 ? 'result' : 'results'}'
         : pagination == null
             ? 'Showing all $visibleCount of $total'
             : (visibleCount == pagination.limit || visibleCount == 0

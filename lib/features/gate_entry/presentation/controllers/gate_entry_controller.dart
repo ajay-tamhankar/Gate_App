@@ -90,7 +90,15 @@ class GateEntryController extends StateNotifier<GateEntryState> {
         super(GateEntryState());
 
   /// Per-request page size when a search is fanned across `q` + `vendor`.
+  /// The server caps `limit` at 100, so pages beyond page 1 are pulled in a
+  /// loop by [searchEntries] to collect every match — this constant is now
+  /// only the per-request batch size, not a cap on total results returned.
   static const int searchResultLimit = 100;
+
+  /// Safety valve so a runaway backend can't spin us forever. 200 pages ×
+  /// 100 rows = 20k rows per search term, well above any realistic vendor
+  /// or challan search on a live tenant.
+  static const int _searchMaxPages = 200;
 
   /// Monotonic token so a slow in-flight request can't clobber a newer one.
   int _requestSeq = 0;
@@ -165,17 +173,28 @@ class GateEntryController extends StateNotifier<GateEntryState> {
     state = state.copyWith(isLoading: true, error: null);
 
     try {
-      final responses = await Future.wait([
-        _getGateEntriesUseCase.execute(
-          query: GateEntryQuery(
-              q: trimmed, period: period, page: 1, limit: searchResultLimit),
+      // Walk *every* page of both q-search and vendor-search so a user
+      // searching for e.g. a vendor with 300 entries actually sees all 300,
+      // not just the first 100. The two fans still run in parallel; each
+      // fan pages internally.
+      final results = await Future.wait([
+        _fetchAllPages(
+          (page) => GateEntryQuery(
+            q: trimmed,
+            period: period,
+            page: page,
+            limit: searchResultLimit,
+          ),
+          seq: seq,
         ),
-        _getGateEntriesUseCase.execute(
-          query: GateEntryQuery(
-              vendor: trimmed,
-              period: period,
-              page: 1,
-              limit: searchResultLimit),
+        _fetchAllPages(
+          (page) => GateEntryQuery(
+            vendor: trimmed,
+            period: period,
+            page: page,
+            limit: searchResultLimit,
+          ),
+          seq: seq,
         ),
       ]);
 
@@ -183,16 +202,16 @@ class GateEntryController extends StateNotifier<GateEntryState> {
       // this stale result so it can't clobber the newer state / null pagination.
       if (seq != _requestSeq) return;
 
-      final qResponse = responses[0];
-      final vendorResponse = responses[1];
+      final qResult = results[0];
+      final vendorResult = results[1];
 
-      if (!qResponse.success && !vendorResponse.success) {
+      if (qResult.error != null && vendorResult.error != null) {
         state = state.copyWith(
           isLoading: false,
-          error: qResponse.message.isNotEmpty
-              ? qResponse.message
-              : (vendorResponse.message.isNotEmpty
-                  ? vendorResponse.message
+          error: qResult.error!.isNotEmpty
+              ? qResult.error
+              : (vendorResult.error!.isNotEmpty
+                  ? vendorResult.error
                   : 'Search failed'),
         );
         return;
@@ -202,32 +221,26 @@ class GateEntryController extends StateNotifier<GateEntryState> {
 
       // `q` results matched challan / LR / vehicle server-side — keep all,
       // preserving server order (inserted first; putIfAbsent keeps the first).
-      final qData = qResponse.data;
-      if (qResponse.success && qData != null) {
-        for (final entry in qData.items) {
-          merged.putIfAbsent(_entryKey(entry), () => entry);
-        }
+      for (final entry in qResult.items) {
+        merged.putIfAbsent(_entryKey(entry), () => entry);
       }
 
       // `vendor` results: guard against a backend that exact-matches or ignores
       // an unrecognized value (and returns unfiltered rows) by keeping only
       // genuine vendor matches. If the backend already filtered, this is a
       // no-op.
-      final vendorData = vendorResponse.data;
-      if (vendorResponse.success && vendorData != null) {
-        final lowerTerm = trimmed.toLowerCase();
-        for (final entry in vendorData.items) {
-          if (entry.vendorName.toLowerCase().contains(lowerTerm) ||
-              entry.vendorCode.toLowerCase().contains(lowerTerm)) {
-            merged.putIfAbsent(_entryKey(entry), () => entry);
-          }
+      final lowerTerm = trimmed.toLowerCase();
+      for (final entry in vendorResult.items) {
+        if (entry.vendorName.toLowerCase().contains(lowerTerm) ||
+            entry.vendorCode.toLowerCase().contains(lowerTerm)) {
+          merged.putIfAbsent(_entryKey(entry), () => entry);
         }
       }
 
       state = state.copyWith(
         isLoading: false,
         entries: merged.values.toList(),
-        // Results span two requests, so server pagination no longer applies.
+        // Results span multiple requests, so server pagination no longer applies.
         pagination: null,
         activeQuery: GateEntryQuery(q: trimmed, period: period),
         error: null,
@@ -236,6 +249,50 @@ class GateEntryController extends StateNotifier<GateEntryState> {
       if (seq != _requestSeq) return;
       state = state.copyWith(isLoading: false, error: 'Search failed');
     }
+  }
+
+  Future<_SearchFanResult> _fetchAllPages(
+    GateEntryQuery Function(int page) queryFor, {
+    required int seq,
+  }) async {
+    final collected = <GateEntry>[];
+    String? lastError;
+    var page = 1;
+
+    while (page <= _searchMaxPages) {
+      // Abort early if a newer search superseded us — don't waste requests.
+      if (seq != _requestSeq) break;
+
+      final response =
+          await _getGateEntriesUseCase.execute(query: queryFor(page));
+
+      if (!response.success || response.data == null) {
+        // Remember the failure but stop paging so we don't hammer a broken
+        // endpoint. Partial results (from earlier successful pages) are
+        // still returned.
+        lastError = response.message;
+        break;
+      }
+
+      final items = response.data!.items;
+      collected.addAll(items);
+
+      final pagination = response.data!.pagination;
+      if (pagination == null) {
+        // Server returned everything in one shot.
+        break;
+      }
+      if (!pagination.hasNext || page >= pagination.totalPages) {
+        break;
+      }
+      if (items.isEmpty) {
+        // Defensive: paginator says "more" but page is empty — bail out.
+        break;
+      }
+      page += 1;
+    }
+
+    return _SearchFanResult(items: collected, error: lastError);
   }
 
   String _entryKey(GateEntry entry) => entry.id.isNotEmpty
@@ -317,4 +374,11 @@ class GateEntryController extends StateNotifier<GateEntryState> {
     if (value > 100) return 100;
     return value;
   }
+}
+
+class _SearchFanResult {
+  final List<GateEntry> items;
+  final String? error;
+
+  const _SearchFanResult({required this.items, this.error});
 }

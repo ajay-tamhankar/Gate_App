@@ -681,7 +681,83 @@ class _GateEntryDetailSecurityViewState extends ConsumerState<_GateEntryDetailSe
     );
   }
 
+  String _formatMinutesInside(int minutes) {
+    if (minutes < 60) return '$minutes min';
+    final h = minutes ~/ 60;
+    final m = minutes % 60;
+    return m == 0 ? '${h}h' : '${h}h ${m}m';
+  }
+
+  Future<bool?> _showLongUnloadingWarning(
+    BuildContext context, {
+    required GateEntry entry,
+    required int minutesInside,
+    required int thresholdMinutes,
+  }) {
+    final thresholdLabel = thresholdMinutes % 60 == 0
+        ? '${thresholdMinutes ~/ 60} hour${thresholdMinutes ~/ 60 == 1 ? '' : 's'}'
+        : '$thresholdMinutes minutes';
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        icon: const Icon(Icons.warning_amber_rounded,
+            color: Colors.red, size: 32),
+        title: const Text('Long unloading time'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Vehicle ${entry.vehicleNo.isEmpty ? '(no vehicle no)' : entry.vehicleNo} '
+              'has been inside for ${_formatMinutesInside(minutesInside)} — '
+              'exceeding the $thresholdLabel unloading SLA.',
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Confirm that unloading is genuinely complete before recording '
+              'gate out. If the vehicle is leaving empty without unloading, '
+              'note that in the remarks on the next screen.',
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Acknowledge & Continue'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _gateOutWithRemarks(BuildContext context, GateEntry entry) async {
+    // Warehouse SLA: if a vehicle has been inside for >= 120 minutes the
+    // security operator must acknowledge the excessive unloading window
+    // before the gate-out is recorded — this is the "empty vehicle out"
+    // safeguard against undocumented waiting time.
+    const unloadingThresholdMinutes = 120;
+    final gateIn = entry.gateTimestamp;
+    final minutesInside = gateIn == null
+        ? 0
+        : DateTime.now().difference(gateIn).inMinutes;
+    if (minutesInside >= unloadingThresholdMinutes) {
+      final ack = await _showLongUnloadingWarning(
+        context,
+        entry: entry,
+        minutesInside: minutesInside,
+        thresholdMinutes: unloadingThresholdMinutes,
+      );
+      if (ack != true) return;
+      if (!context.mounted) return;
+    }
+
     final remarksController = TextEditingController();
     final proceed = await showDialog<bool>(
       context: context,
@@ -691,6 +767,22 @@ class _GateEntryDetailSecurityViewState extends ConsumerState<_GateEntryDetailSe
           mainAxisSize: MainAxisSize.min,
           children: [
             const Text('Are you sure you want to record the vehicle exit?'),
+            if (minutesInside > 0) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Vehicle has been inside for '
+                '${_formatMinutesInside(minutesInside)}.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: minutesInside >= unloadingThresholdMinutes
+                      ? Colors.red.shade700
+                      : Theme.of(ctx).colorScheme.onSurfaceVariant,
+                  fontWeight: minutesInside >= unloadingThresholdMinutes
+                      ? FontWeight.w600
+                      : FontWeight.normal,
+                ),
+              ),
+            ],
             const SizedBox(height: 16),
             TextField(
               controller: remarksController,

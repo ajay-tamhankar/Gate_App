@@ -221,6 +221,8 @@ class _SecurityDashboard extends ConsumerWidget {
                   );
                 },
               ),
+              const SizedBox(height: 24),
+              _TatCard(metrics: metrics),
               const SizedBox(height: 32),
               _buildActivityChart(context, metrics, isMob),
               const SizedBox(height: 32),
@@ -1122,10 +1124,10 @@ class _TatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final gateValue = metrics.gateTat > 0
+    final vtatValue = metrics.gateTat > 0
         ? '${metrics.gateTat.toStringAsFixed(0)} mins'
         : 'N/A';
-    final dockValue = metrics.dockTat > 0
+    final didoValue = metrics.dockTat > 0
         ? '${metrics.dockTat.toStringAsFixed(0)} mins'
         : 'N/A';
 
@@ -1153,10 +1155,21 @@ class _TatCard extends StatelessWidget {
                   ?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 18),
-            _infoRow(context, Icons.timer, Colors.blue, 'GATE TAT', gateValue),
+            _infoRow(
+              context,
+              Icons.timer,
+              Colors.blue,
+              'VTAT (Gate In → Gate Out)',
+              vtatValue,
+            ),
             const SizedBox(height: 14),
             _infoRow(
-                context, Icons.dock, Colors.blueGrey, 'DOCK TAT', dockValue),
+              context,
+              Icons.dock,
+              Colors.blueGrey,
+              'DIDO (Dock In → Dock Out)',
+              didoValue,
+            ),
           ],
         ),
       ),

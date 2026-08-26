@@ -508,12 +508,22 @@ class GateEntryRepositoryImpl implements GateEntryRepository {
 
   @override
   Future<ApiResponse<CheckChallanUniquenessResponse>> checkChallanUniqueness(
-      String challanNo,
-      {String? vendorCode}) async {
+    String challanNo, {
+    String? vendorCode,
+    String? financialYear,
+  }) async {
     try {
       final queryParams = {'challanNo': challanNo};
       if (vendorCode != null && vendorCode.isNotEmpty) {
         queryParams['vendorCode'] = vendorCode;
+      }
+      // Ask the backend to scope the uniqueness check to the given FY.
+      // Older servers that don't recognise this param will ignore it and
+      // fall back to their default (all-time) check, which is still
+      // strictly at-least-as-strict as FY.
+      if (financialYear != null && financialYear.isNotEmpty) {
+        queryParams['financialYear'] = financialYear;
+        queryParams['fy'] = financialYear;
       }
 
       final response = await _apiClient.getRaw(
