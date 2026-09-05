@@ -35,6 +35,13 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
+            // ML Kit references script-specific recogniser classes we do not
+            // ship (we use Latin only), so R8 fails the build without these.
+            // See proguard-rules.pro.
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
 }
