@@ -27,10 +27,17 @@ abstract class GateEntryRepository {
   /// attachment upload uses. Nothing is created: the result is a draft for
   /// the guard to confirm, which is why this is safe to call as often as the
   /// photo is retaken.
+  /// [recognized] is the result of reading the page ON THE PHONE (ML Kit),
+  /// JSON-encoded. When supplied the server uses it instead of running its own
+  /// OCR — the phone is far better at a handheld photo than server-side
+  /// Tesseract is. The photo is sent regardless: the server needs it to fall
+  /// back, and sending both lets the two engines be compared on identical
+  /// input while we decide.
   Future<ApiResponse<ScannedDocument>> scanDocument({
     required String fileName,
     String? filePath,
     List<int>? bytes,
+    String? recognized,
     String profile,
   });
 

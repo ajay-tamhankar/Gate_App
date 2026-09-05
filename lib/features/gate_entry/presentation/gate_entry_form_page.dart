@@ -20,6 +20,7 @@ import '../domain/services/e_invoice_qr_parser.dart';
 import '../domain/services/gate_pass_pdf_service.dart';
 import 'gate_entry_detail_page.dart';
 import '../domain/models/scanned_document.dart';
+import '../domain/services/on_device_ocr.dart';
 import 'widgets/e_invoice_qr_scanner_page.dart';
 import 'widgets/scan_review_sheet.dart';
 
@@ -498,6 +499,9 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
 
   @override
   void dispose() {
+    // The recogniser holds a native model; these phones do not have memory
+    // to spare for a screen nobody is on.
+    OnDeviceOcr.dispose();
     for (final field in _challanFields) {
       field.dispose();
     }
@@ -1781,11 +1785,29 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
     ApiResponse<ScannedDocument> result;
     try {
       final repo = ref.read(gateEntryRepositoryProvider);
+
+      // Read the page HERE first. ML Kit is built for camera frames and beats
+      // server-side Tesseract on a handheld photo — every early production
+      // scan came back flagged blurred. It costs well under a second and
+      // needs no network, so it happens before the upload rather than
+      // instead of it: the photo still goes up, so the server can fall back
+      // and so both engines can be judged on identical input.
+      //
+      // Null means recognition was unavailable or found nothing (web, a
+      // model still downloading, a device without Play Services). That is
+      // not an error — the server reads the photo exactly as it does today.
+      String? recognized;
+      if (!kIsWeb) {
+        final payload = await OnDeviceOcr.recognise(shot.path);
+        if (payload != null) recognized = OnDeviceOcr.encode(payload);
+      }
+
       // Mobile gives us a real file path; web only gives bytes.
       result = await repo.scanDocument(
         fileName: shot.name.isEmpty ? 'challan.jpg' : shot.name,
         filePath: kIsWeb ? null : shot.path,
         bytes: kIsWeb ? await shot.readAsBytes() : null,
+        recognized: recognized,
       );
     } catch (e) {
       if (!mounted) return;
