@@ -1,0 +1,110 @@
+{
+  "_comment": "The exact payload OnDeviceOcr posts as the `recognized` multipart field. THIS FILE IS THE CONTRACT between Gate_App and vistar_CRM: an identical copy lives at scripts/fixtures/mlkit_payload.json in the backend, where docscan's mlkit.service normalises it and the gate-challan profile extracts from it. If you change the shape here, change it there, or the phone will read the page perfectly and the server will find nothing. Content is the header of a real Sansera Engineering invoice photographed at the gate on 2026-09-05; coordinates are representative rather than measured.",
+  "text": "TAX INVOICE\nInvoice No: 526010829\nInvoice Date: 05.09.2026\nPO No: 5501232425 Po Date : 03.10.2024\nPayment Terms: 60 days net from GRN\nVendor Code: 376905447\nVehicle No: MH12KM7833\nTotal Invoice Value 107,269.08",
+  "blocks": [
+    {
+      "text": "TAX INVOICE",
+      "boundingBox": { "left": 240, "top": 40, "right": 420, "bottom": 68 },
+      "lines": [
+        {
+          "text": "TAX INVOICE",
+          "boundingBox": { "left": 240, "top": 40, "right": 420, "bottom": 68 },
+          "elements": [
+            { "text": "TAX", "boundingBox": { "left": 240, "top": 40, "right": 296, "bottom": 68 } },
+            { "text": "INVOICE", "boundingBox": { "left": 306, "top": 40, "right": 420, "bottom": 68 } }
+          ]
+        }
+      ]
+    },
+    {
+      "text": "Invoice No: 526010829\nInvoice Date: 05.09.2026\nPO No: 5501232425 Po Date : 03.10.2024",
+      "boundingBox": { "left": 60, "top": 110, "right": 700, "bottom": 210 },
+      "lines": [
+        {
+          "text": "Invoice No: 526010829",
+          "boundingBox": { "left": 60, "top": 110, "right": 400, "bottom": 134 },
+          "elements": [
+            { "text": "Invoice", "boundingBox": { "left": 60, "top": 110, "right": 144, "bottom": 134 } },
+            { "text": "No:", "boundingBox": { "left": 154, "top": 110, "right": 190, "bottom": 134 } },
+            { "text": "526010829", "boundingBox": { "left": 200, "top": 110, "right": 308, "bottom": 134 } }
+          ]
+        },
+        {
+          "text": "Invoice Date: 05.09.2026",
+          "boundingBox": { "left": 60, "top": 145, "right": 400, "bottom": 169 },
+          "elements": [
+            { "text": "Invoice", "boundingBox": { "left": 60, "top": 145, "right": 144, "bottom": 169 } },
+            { "text": "Date:", "boundingBox": { "left": 154, "top": 145, "right": 214, "bottom": 169 } },
+            { "text": "05.09.2026", "boundingBox": { "left": 224, "top": 145, "right": 344, "bottom": 169 } }
+          ]
+        },
+        {
+          "text": "PO No: 5501232425 Po Date : 03.10.2024",
+          "boundingBox": { "left": 60, "top": 180, "right": 700, "bottom": 204 },
+          "elements": [
+            { "text": "PO", "boundingBox": { "left": 60, "top": 180, "right": 96, "bottom": 204 } },
+            { "text": "No:", "boundingBox": { "left": 106, "top": 180, "right": 142, "bottom": 204 } },
+            { "text": "5501232425", "boundingBox": { "left": 152, "top": 180, "right": 272, "bottom": 204 } },
+            { "text": "Po", "boundingBox": { "left": 330, "top": 180, "right": 366, "bottom": 204 } },
+            { "text": "Date", "boundingBox": { "left": 376, "top": 180, "right": 424, "bottom": 204 } },
+            { "text": ":", "boundingBox": { "left": 434, "top": 180, "right": 446, "bottom": 204 } },
+            { "text": "03.10.2024", "boundingBox": { "left": 456, "top": 180, "right": 576, "bottom": 204 } }
+          ]
+        }
+      ]
+    },
+    {
+      "text": "Payment Terms: 60 days net from GRN\nVendor Code: 376905447\nVehicle No: MH12KM7833",
+      "boundingBox": { "left": 60, "top": 220, "right": 700, "bottom": 320 },
+      "lines": [
+        {
+          "text": "Payment Terms: 60 days net from GRN",
+          "boundingBox": { "left": 60, "top": 220, "right": 520, "bottom": 244 },
+          "elements": [
+            { "text": "Payment", "boundingBox": { "left": 60, "top": 220, "right": 156, "bottom": 244 } },
+            { "text": "Terms:", "boundingBox": { "left": 166, "top": 220, "right": 238, "bottom": 244 } },
+            { "text": "60", "boundingBox": { "left": 248, "top": 220, "right": 284, "bottom": 244 } },
+            { "text": "days", "boundingBox": { "left": 294, "top": 220, "right": 342, "bottom": 244 } },
+            { "text": "net", "boundingBox": { "left": 352, "top": 220, "right": 388, "bottom": 244 } },
+            { "text": "from", "boundingBox": { "left": 398, "top": 220, "right": 446, "bottom": 244 } },
+            { "text": "GRN", "boundingBox": { "left": 456, "top": 220, "right": 504, "bottom": 244 } }
+          ]
+        },
+        {
+          "text": "Vendor Code: 376905447",
+          "boundingBox": { "left": 60, "top": 255, "right": 400, "bottom": 279 },
+          "elements": [
+            { "text": "Vendor", "boundingBox": { "left": 60, "top": 255, "right": 132, "bottom": 279 } },
+            { "text": "Code:", "boundingBox": { "left": 142, "top": 255, "right": 202, "bottom": 279 } },
+            { "text": "376905447", "boundingBox": { "left": 212, "top": 255, "right": 320, "bottom": 279 } }
+          ]
+        },
+        {
+          "text": "Vehicle No: MH12KM7833",
+          "boundingBox": { "left": 60, "top": 290, "right": 400, "bottom": 314 },
+          "elements": [
+            { "text": "Vehicle", "boundingBox": { "left": 60, "top": 290, "right": 144, "bottom": 314 } },
+            { "text": "No:", "boundingBox": { "left": 154, "top": 290, "right": 190, "bottom": 314 } },
+            { "text": "MH12KM7833", "boundingBox": { "left": 200, "top": 290, "right": 332, "bottom": 314 } }
+          ]
+        }
+      ]
+    },
+    {
+      "text": "Total Invoice Value 107,269.08",
+      "boundingBox": { "left": 400, "top": 400, "right": 760, "bottom": 424 },
+      "lines": [
+        {
+          "text": "Total Invoice Value 107,269.08",
+          "boundingBox": { "left": 400, "top": 400, "right": 760, "bottom": 424 },
+          "elements": [
+            { "text": "Total", "boundingBox": { "left": 400, "top": 400, "right": 460, "bottom": 424 } },
+            { "text": "Invoice", "boundingBox": { "left": 470, "top": 400, "right": 554, "bottom": 424 } },
+            { "text": "Value", "boundingBox": { "left": 564, "top": 400, "right": 624, "bottom": 424 } },
+            { "text": "107,269.08", "boundingBox": { "left": 634, "top": 400, "right": 754, "bottom": 424 } }
+          ]
+        }
+      ]
+    }
+  ]
+}

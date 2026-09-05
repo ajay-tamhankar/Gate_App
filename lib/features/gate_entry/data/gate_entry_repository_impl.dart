@@ -346,6 +346,7 @@ class GateEntryRepositoryImpl implements GateEntryRepository {
     required String fileName,
     String? filePath,
     List<int>? bytes,
+    String? recognized,
     String profile = 'gate-challan',
   }) async {
     try {
@@ -368,6 +369,10 @@ class GateEntryRepositoryImpl implements GateEntryRepository {
         'file': filePart,
         'gateMovement': 'in',
         'profile': profile,
+        // On-device recognition, when the phone managed it. A server that does
+        // not yet understand this field simply ignores it and reads the photo
+        // as before, so this build is safe to ship ahead of the backend.
+        if (recognized != null && recognized.isNotEmpty) 'recognized': recognized,
       });
 
       final response = await _apiClient.postRaw(
