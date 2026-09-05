@@ -1,0 +1,119 @@
+{
+  "success": true,
+  "message": "Document scanned",
+  "data": {
+    "scanId": null,
+    "readable": true,
+    "engine": "tesseract",
+    "confidence": 84,
+    "draft": {
+      "gateMovement": "in",
+      "challanNo": "DC-88214",
+      "documentDate": "2026-12-25",
+      "transporterName": "VRL LOGISTICS LTD",
+      "vehicleNo": "MH12AB1234",
+      "vendorName": "ACME AUTO COMPONENTS PVT LTD",
+      "items": [
+        {
+          "materialCode": "BRK-1120",
+          "materialDescription": "BRAKE PAD SET",
+          "challanQty": 40
+        },
+        {
+          "materialCode": "CLT-2240",
+          "materialDescription": "CLUTCH PLATE",
+          "challanQty": 20
+        }
+      ]
+    },
+    "review": {
+      "challanNo": {
+        "confidence": 0.554,
+        "needsReview": true,
+        "source": "label:Challan No",
+        "reason": "reference shape"
+      },
+      "documentDate": {
+        "confidence": 0.873,
+        "needsReview": false,
+        "source": "label:Invoice Date",
+        "reason": "day-first (day > 12, unambiguous)"
+      },
+      "invoiceNo": {
+        "confidence": 0.554,
+        "needsReview": true,
+        "source": "label:Invoice No",
+        "reason": "reference shape"
+      },
+      "vehicleNo": {
+        "confidence": 0.608,
+        "needsReview": true,
+        "source": "label:Vehicle No",
+        "reason": "classic plate"
+      },
+      "poNumber": {
+        "confidence": 0.666,
+        "needsReview": true,
+        "source": "label:PO No",
+        "reason": "reference shape"
+      },
+      "vendorName": {
+        "confidence": 0.78,
+        "needsReview": false,
+        "source": "geometry",
+        "reason": "largest text in the letterhead, carrying a company suffix"
+      },
+      "gstin": {
+        "confidence": 0.88,
+        "needsReview": false,
+        "source": "label:GSTIN",
+        "reason": "checksum valid after OCR repair (read as 27AAPFU0939F12V)",
+        "note": "Read as \"27AAPFU0939F 12V\" and corrected to a valid format — please confirm.",
+        "verifiedBy": [
+          "checksum"
+        ]
+      },
+      "ewayBillNo": {
+        "confidence": 0.776,
+        "needsReview": false,
+        "source": "label:E-Way Bill No",
+        "reason": "12-digit e-way bill"
+      },
+      "transporterName": {
+        "confidence": 0.656,
+        "needsReview": true,
+        "source": "label:Transporter",
+        "reason": "free text beside label"
+      },
+      "vendorCode": {
+        "confidence": 0,
+        "needsReview": true,
+        "source": "vendor-master",
+        "reason": "scanned vendor name is not in vendor master"
+      }
+    },
+    "vendorMatch": {
+      "vendorCode": null,
+      "vendorName": "ACME AUTO COMPONENTS PVT LTD",
+      "confidence": 0,
+      "matchedOn": "scanned vendor name is not in vendor master",
+      "candidates": []
+    },
+    "duplicateChallan": {
+      "checked": false,
+      "reason": "vendor could not be resolved, and the duplicate rule is per vendor"
+    },
+    "lineItemsFound": 2,
+    "warnings": [
+      {
+        "code": "VENDOR_NOT_RESOLVED",
+        "message": "The scanned vendor is not in vendor master — select the vendor manually.",
+        "fields": [
+          "vendorCode"
+        ]
+      }
+    ],
+    "durationMs": 1169
+  },
+  "error": null
+}

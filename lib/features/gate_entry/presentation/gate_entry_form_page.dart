@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +9,7 @@ import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 
 import 'controllers/gate_entry_form_controller.dart';
+import '../../../core/network/api_response.dart';
 import '../../../core/ui/responsive.dart';
 import '../../../core/ui/widgets/loading_overlay.dart';
 import '../../../core/ui/widgets/logout_action.dart';
@@ -17,7 +19,9 @@ import '../domain/models/vendor.dart';
 import '../domain/services/e_invoice_qr_parser.dart';
 import '../domain/services/gate_pass_pdf_service.dart';
 import 'gate_entry_detail_page.dart';
+import '../domain/models/scanned_document.dart';
 import 'widgets/e_invoice_qr_scanner_page.dart';
+import 'widgets/scan_review_sheet.dart';
 
 class _ChallanFieldState {
   _ChallanFieldState({
@@ -128,6 +132,7 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
 
   // Challan uniqueness states
   bool _allowAlphaNumericChallan = false;
+  bool _isScanning = false;
   Timer? _challanOnChangedDebounce;
 
   List<TextInputFormatter> get _challanInputFormatters {
@@ -1111,9 +1116,30 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
         title: Text(widget.initialEntry != null
             ? 'Edit Gate Entry'
             : 'Create Gate Entry'),
-        actions: const [
-          LogoutAction(),
-          SizedBox(width: 8),
+        actions: [
+          // Scan-to-autofill. Offered only when CREATING: a scan fills a
+          // fresh form, and dropping a scanned challan over an entry being
+          // edited would silently overwrite values a person has already
+          // reviewed and corrected.
+          if (widget.initialEntry == null)
+            _isScanning
+                ? const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    child: Center(
+                      child: SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                  )
+                : IconButton(
+                    tooltip: 'Scan challan or invoice',
+                    icon: const Icon(Icons.document_scanner_outlined),
+                    onPressed: _scanChallanPhoto,
+                  ),
+          const LogoutAction(),
+          const SizedBox(width: 8),
         ],
       ),
       body: LoadingOverlay(
@@ -1714,6 +1740,187 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
         ),
         behavior: SnackBarBehavior.floating,
         backgroundColor: Colors.green,
+      ),
+    );
+  }
+
+  /// Photograph a challan / invoice and prefill the form from it.
+  ///
+  /// Deliberately a THREE step flow — capture, review, apply — rather than
+  /// capture-and-fill. The backend returns a confidence per field and flags
+  /// what it is unsure about, and pouring that straight into the form would
+  /// trade typing mistakes for something worse: a wrong value nobody looked
+  /// at, saved with the same confidence as a correct one. So everything goes
+  /// through [ScanReviewSheet] first.
+  Future<void> _scanChallanPhoto() async {
+    if (_isScanning) return;
+
+    final picker = ImagePicker();
+    XFile? shot;
+    try {
+      shot = await picker.pickImage(
+        // A guard at the barrier is holding the paper, so the camera is the
+        // point. On web there is no camera worth using, so fall back to a
+        // file chooser (the desk use-case is a PDF or a photo off email).
+        source: kIsWeb ? ImageSource.gallery : ImageSource.camera,
+        // The backend normalises to a 2200px long edge before OCR, so a
+        // larger upload buys nothing and costs the guard time on a gate's
+        // mobile connection. 88% JPEG keeps small print crisp — going lower
+        // starts eating the thin strokes OCR needs.
+        maxWidth: 2400,
+        imageQuality: 88,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      _showScanMessage('Could not open the camera: $e', isError: true);
+      return;
+    }
+    if (shot == null || !mounted) return;
+
+    setState(() => _isScanning = true);
+    ApiResponse<ScannedDocument> result;
+    try {
+      final repo = ref.read(gateEntryRepositoryProvider);
+      // Mobile gives us a real file path; web only gives bytes.
+      result = await repo.scanDocument(
+        fileName: shot.name.isEmpty ? 'challan.jpg' : shot.name,
+        filePath: kIsWeb ? null : shot.path,
+        bytes: kIsWeb ? await shot.readAsBytes() : null,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isScanning = false);
+      _showScanMessage('Scan failed: $e', isError: true);
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _isScanning = false);
+
+    if (!result.success || result.data == null) {
+      final reason = result.error?.message ??
+          (result.message.isNotEmpty ? result.message : null);
+      _showScanMessage(
+        reason ?? 'Scan failed. Enter the entry manually.',
+        isError: true,
+      );
+      return;
+    }
+
+    final scan = result.data!;
+    final accepted = await ScanReviewSheet.show(
+      context,
+      scan: scan,
+      // Retake loops straight back into the camera. On a blurred photo that
+      // fixes more than correcting six fields by hand does.
+      onRetake: _scanChallanPhoto,
+    );
+    if (accepted == null || !mounted) return;
+
+    _applyScannedValues(accepted);
+  }
+
+  /// Write reviewed values into the form controllers.
+  ///
+  /// Only keys the guard kept in the sheet arrive here, so this does not
+  /// second-guess them — it maps names to controllers and then re-runs the
+  /// form's own validation, which is what catches a duplicate challan or a
+  /// vendor code that no longer resolves.
+  void _applyScannedValues(Map<String, dynamic> values) {
+    String? str(String key) {
+      final v = values[key];
+      if (v == null) return null;
+      final s = v.toString().trim();
+      return s.isEmpty ? null : s;
+    }
+
+    setState(() {
+      final challanNo = str('challanNo');
+      if (challanNo != null && _challanFields.isNotEmpty) {
+        _challanFields.first.controller.text = challanNo;
+        // Real challan numbers are frequently alphanumeric — verified against
+        // the live gate database, forms like "TI/262701655" and
+        // "GSAAC6/37006" are common — so the numeric-only input formatter has
+        // to be relaxed or the value we just read would be stripped as the
+        // user touches the field.
+        if (!RegExp(r'^[0-9/-]+$').hasMatch(challanNo)) {
+          _allowAlphaNumericChallan = true;
+        }
+        _challanFields.first.clearRemoteState();
+      }
+
+      final documentDate = str('documentDate');
+      if (documentDate != null && _challanFields.isNotEmpty) {
+        _challanFields.first.documentDateController.text = documentDate;
+      }
+
+      final vendorCode = str('vendorCode');
+      if (vendorCode != null) _vendorCodeCtrl.text = vendorCode;
+      final vendorName = str('vendorName');
+      if (vendorName != null) _vendorCtrl.text = vendorName;
+
+      final vehicleNo = str('vehicleNo');
+      if (vehicleNo != null) _vehicleCtrl.text = vehicleNo;
+      final transporter = str('transporterName');
+      if (transporter != null) _transporterCtrl.text = transporter;
+      final lrNumber = str('lrNumber');
+      if (lrNumber != null) _lrNumberCtrl.text = lrNumber;
+      final driverContact = str('driverContactNo');
+      if (driverContact != null) _driverContactCtrl.text = driverContact;
+
+      // Line items. Only the first row is filled: the form starts with one
+      // challan row, and silently adding rows for every invoice line would
+      // hand the guard a form to prune rather than one to check.
+      final items = values['items'];
+      if (items is List && items.isNotEmpty && _challanFields.isNotEmpty) {
+        final first = items.first;
+        if (first is Map) {
+          final row = _challanFields.first;
+          final po = (first['poNumber'] ?? '').toString().trim();
+          final part = (first['materialCode'] ?? '').toString().trim();
+          final qty = first['challanQty'];
+          final uom = (first['uom'] ?? '').toString().trim();
+          if (po.isNotEmpty) {
+            row.poNumberController.text = po;
+            _poCtrl.text = po;
+          }
+          if (part.isNotEmpty) {
+            row.partNumberController.text = part;
+            _materialCtrl.text = part;
+          }
+          if (qty != null) {
+            row.quantityController.text = qty.toString();
+            _quantityCtrl.text = qty.toString();
+          }
+          if (uom.isNotEmpty) row.uomController.text = uom;
+        }
+      }
+
+      _refreshLocalDuplicateErrors();
+    });
+
+    // Re-run the server-side challan check on what was just filled. The scan
+    // already reported a duplicate, but the form owns that state and the
+    // guard may have picked a different vendor in the sheet — which changes
+    // the answer, since the rule is per (challan, vendor).
+    if (_challanFields.isNotEmpty &&
+        _challanFields.first.controller.text.trim().isNotEmpty) {
+      // ignore: unawaited_futures
+      _checkSingleChallan(0);
+    }
+
+    if (!mounted) return;
+    _showScanMessage(
+      'Filled ${values.keys.where((k) => k != 'items').length} field(s) from the document. Check the highlighted ones before saving.',
+    );
+  }
+
+  void _showScanMessage(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: isError ? Colors.redAccent : Colors.green,
+        duration: Duration(seconds: isError ? 5 : 4),
       ),
     );
   }
