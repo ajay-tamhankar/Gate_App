@@ -110,18 +110,21 @@ class CreateGateEntryRequest {
       'gateMovement': gateMovement,
       'vendorCode': vendorCode,
       'vendorName': vendorName,
-      'invoiceEntries': invoiceEntries.map((entry) => entry.toJson()).toList(),
     };
 
-    // The backend keeps line quantities on `items[].challanQty`, but this
-    // client used to send them ONLY inside `invoiceEntries[].quantity`. When
-    // the backend echoed the entry back, `items[].challanQty` came out as 0
-    // and the detail view rendered "Qty: 0 NOS". Emit a parallel `items`
-    // array here (also with snake_case fallbacks) so quantities land in
-    // every field the server or later reads may look at. Legacy callers that
-    // already populate `items` win — we don't overwrite their shape.
-    final synthesizedItems = items.isNotEmpty
-        ? items
+    // The server accepts two mutually exclusive create shapes and rejects any
+    // request that mixes them: "Use either challan fields or invoiceEntries/
+    // challanEntries for bulk create, not both". `invoiceEntries` is the bulk
+    // shape and already carries a challan number and quantity per line, so
+    // when it is present it travels alone and the server derives the line
+    // items from it. The top-level challan fields and the explicit `items`
+    // list belong to the legacy single-challan shape only.
+    if (invoiceEntries.isNotEmpty) {
+      map['invoiceEntries'] =
+          invoiceEntries.map((entry) => entry.toJson()).toList();
+    } else {
+      if (items.isNotEmpty) {
+        map['items'] = items
             .map((item) => <String, dynamic>{
                   if (item.id != null) 'id': item.id,
                   'materialCode': item.materialCode,
@@ -137,36 +140,16 @@ class CreateGateEntryRequest {
                   if (item.challanNo != null) 'challanNo': item.challanNo,
                   if (item.challanNo != null) 'challan_no': item.challanNo,
                 })
-            .toList()
-        : invoiceEntries
-            .map((entry) => <String, dynamic>{
-                  'materialCode': entry.partNumber,
-                  'material_code': entry.partNumber,
-                  'partNumber': entry.partNumber,
-                  'poNumber': entry.poNumber,
-                  'po_number': entry.poNumber,
-                  'challanQty': entry.quantity,
-                  'challan_qty': entry.quantity,
-                  'quantity': entry.quantity,
-                  'qty': entry.quantity,
-                  'uom': entry.uom,
-                  'challanNo': entry.challanNo,
-                  'challan_no': entry.challanNo,
-                })
             .toList();
-    if (synthesizedItems.isNotEmpty) {
-      map['items'] = synthesizedItems;
-    }
-
-    // Top-level challan fields — older endpoints require these alongside the
-    // invoiceEntries list. Sending both is harmless when both are accepted.
-    if (challanNo.isNotEmpty) {
-      map['challanNo'] = challanNo;
-      map['challan_no'] = challanNo;
-    }
-    if (challanNos != null && challanNos!.isNotEmpty) {
-      map['challanNos'] = challanNos;
-      map['challan_nos'] = challanNos;
+      }
+      if (challanNo.isNotEmpty) {
+        map['challanNo'] = challanNo;
+        map['challan_no'] = challanNo;
+      }
+      if (challanNos != null && challanNos!.isNotEmpty) {
+        map['challanNos'] = challanNos;
+        map['challan_nos'] = challanNos;
+      }
     }
 
     if (lrNumber.isNotEmpty) map['lrNumber'] = lrNumber;
