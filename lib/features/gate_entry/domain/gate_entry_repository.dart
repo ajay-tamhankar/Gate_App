@@ -5,6 +5,7 @@ import 'models/attachment.dart';
 import 'models/gate_entry.dart';
 import 'models/gate_entry_list_response.dart';
 import 'models/gate_entry_query.dart';
+import 'models/scanned_document.dart';
 import 'models/vendor.dart';
 
 abstract class GateEntryRepository {
@@ -20,6 +21,19 @@ abstract class GateEntryRepository {
   Future<ApiResponse<void>> approveGateEntry(String id);
   Future<ApiResponse<void>> closeGateEntry(String id);
   Future<ApiResponse<List<AttachmentInfo>>> getAttachments(String id);
+  /// Read a photographed challan / invoice into a draft gate entry.
+  ///
+  /// Pass either [filePath] (mobile) or [bytes] (web) — the same split the
+  /// attachment upload uses. Nothing is created: the result is a draft for
+  /// the guard to confirm, which is why this is safe to call as often as the
+  /// photo is retaken.
+  Future<ApiResponse<ScannedDocument>> scanDocument({
+    required String fileName,
+    String? filePath,
+    List<int>? bytes,
+    String profile,
+  });
+
   Future<ApiResponse<AttachmentInfo>> uploadAttachment(
     String id, {
     required String fileName,

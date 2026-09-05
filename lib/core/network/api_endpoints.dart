@@ -8,6 +8,9 @@ class ApiEndpoints {
 
   // Gate Entries
   static const String gateEntries = '/gate-entries';
+  // Scan a photographed challan/invoice into a draft gate entry. Reads the
+  // paperwork so the guard does not type it; see ScanReviewSheet.
+  static const String gateEntryScan = '/gate-entries/scan';
   static String gateEntryVerify(String id) => '/gate-entries/$id/verify';
   static String gateEntryApprove(String id) => '/gate-entries/$id/approve';
   static String gateEntryClose(String id) => '/gate-entries/$id/close';

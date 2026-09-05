@@ -1,0 +1,68 @@
+{
+  "success": true,
+  "message": "Document could not be read — see warnings",
+  "data": {
+    "scanId": null,
+    "readable": true,
+    "engine": "tesseract",
+    "confidence": 0,
+    "draft": null,
+    "review": {
+      "vendorCode": {
+        "confidence": 0,
+        "needsReview": true,
+        "source": "vendor-master",
+        "reason": "no vendor name could be read"
+      }
+    },
+    "vendorMatch": {
+      "vendorCode": null,
+      "vendorName": null,
+      "confidence": 0,
+      "matchedOn": "no vendor name could be read",
+      "candidates": []
+    },
+    "duplicateChallan": {
+      "checked": false,
+      "reason": "no challan number could be read"
+    },
+    "lineItemsFound": 0,
+    "warnings": [
+      {
+        "code": "NO_TEXT_DETECTED",
+        "message": "Almost no printed text was found in this image. Check that the document is in frame and in focus."
+      },
+      {
+        "code": "NO_VEHICLE_NUMBER",
+        "message": "No vehicle number could be read — type it from the plate, not the paperwork.",
+        "fields": [
+          "vehicleNo"
+        ]
+      },
+      {
+        "code": "NO_LINE_ITEMS_WITHOUT_GEOMETRY",
+        "message": "Line items need word positions, which a text-only PDF does not provide. Header fields were still extracted."
+      },
+      {
+        "code": "NO_FIELDS_FOUND",
+        "message": "No fields could be read from this document. If the photo looks clear, the layout may need a new profile."
+      },
+      {
+        "code": "VENDOR_NOT_RESOLVED",
+        "message": "The scanned vendor is not in vendor master — select the vendor manually.",
+        "fields": [
+          "vendorCode"
+        ]
+      },
+      {
+        "code": "NOTHING_TO_AUTOFILL",
+        "message": "No challan or invoice number could be read, so there is nothing to prefill. Check the photo, or enter the gate entry manually.",
+        "fields": [
+          "challanNo"
+        ]
+      }
+    ],
+    "durationMs": 875
+  },
+  "error": null
+}

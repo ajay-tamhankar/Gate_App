@@ -34,6 +34,12 @@ dependencies:
   # ---------- QR / Barcode Scanning (mobile only) ----------
   mobile_scanner: ^5.2.3
 
+  # ---------- Camera capture (scan-to-autofill) ----------
+  # mobile_scanner above is a BARCODE analyser, not a camera; reading a
+  # challan needs a full-resolution still. Camera permissions are already
+  # declared on both platforms for the QR scanner, so this adds none.
+  image_picker: ^1.1.2
+
   # ---------- Utilities ----------
   intl: ^0.20.2
 

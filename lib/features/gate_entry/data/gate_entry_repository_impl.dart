@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import '../../../../core/network/api_client.dart';
+import '../../../../core/network/api_endpoints.dart';
 import '../../../../core/network/api_response.dart';
 import '../../../../core/network/dio_provider.dart';
 import '../../../../core/network/pagination_model.dart';
@@ -11,6 +12,7 @@ import '../domain/models/gate_entry_item.dart';
 import '../domain/models/gate_entry_list_response.dart';
 import '../domain/models/gate_entry_query.dart';
 import '../domain/models/gate_entry_summary.dart';
+import '../domain/models/scanned_document.dart';
 import '../domain/models/vendor.dart';
 import 'dto/create_gate_entry_request.dart';
 import 'dto/gate_entry_response.dart';
@@ -334,6 +336,80 @@ class GateEntryRepositoryImpl implements GateEntryRepository {
       return ApiResponse(
         success: false,
         message: 'Failed to load attachments',
+        error: ApiError(message: e.toString()),
+      );
+    }
+  }
+
+  @override
+  Future<ApiResponse<ScannedDocument>> scanDocument({
+    required String fileName,
+    String? filePath,
+    List<int>? bytes,
+    String profile = 'gate-challan',
+  }) async {
+    try {
+      // Same two-way split as uploadAttachment: mobile hands us a path, web
+      // hands us bytes.
+      MultipartFile filePart;
+      if (filePath != null && filePath.isNotEmpty) {
+        filePart = await MultipartFile.fromFile(filePath, filename: fileName);
+      } else if (bytes != null && bytes.isNotEmpty) {
+        filePart = MultipartFile.fromBytes(bytes, filename: fileName);
+      } else {
+        return ApiResponse(
+          success: false,
+          message: 'No photo to scan',
+          error: ApiError(message: 'Missing file data'),
+        );
+      }
+
+      final formData = FormData.fromMap({
+        'file': filePart,
+        'gateMovement': 'in',
+        'profile': profile,
+      });
+
+      final response = await _apiClient.postRaw(
+        ApiEndpoints.gateEntryScan,
+        data: formData,
+      );
+
+      final success = response['success'] as bool? ?? false;
+      final message = response['message'] as String? ?? '';
+      if (!success) {
+        final error = response['error'] is Map<String, dynamic>
+            ? ApiError.fromJson(response['error'] as Map<String, dynamic>)
+            : null;
+        return ApiResponse<ScannedDocument>(
+          success: false,
+          message: message,
+          error: error ?? ApiError(message: message),
+        );
+      }
+
+      final data = response['data'];
+      if (data is! Map<String, dynamic>) {
+        return ApiResponse<ScannedDocument>(
+          success: false,
+          message: 'Unexpected scan response',
+          error: ApiError(message: 'Unexpected scan response'),
+        );
+      }
+
+      // A document that could not be read is still a SUCCESSFUL call — the
+      // scan ran, the paper was illegible, and the warnings say why. Passing
+      // it through as success lets the UI show "the photo is out of focus,
+      // retake it" instead of a generic failure.
+      return ApiResponse<ScannedDocument>(
+        success: true,
+        message: message,
+        data: ScannedDocument.fromJson(data),
+      );
+    } catch (e) {
+      return ApiResponse<ScannedDocument>(
+        success: false,
+        message: 'Could not scan the document',
         error: ApiError(message: e.toString()),
       );
     }
