@@ -1761,23 +1761,42 @@ class _GateEntryFormPageState extends ConsumerState<GateEntryFormPage> {
 
     final picker = ImagePicker();
     XFile? shot;
-    try {
-      shot = await picker.pickImage(
-        // A guard at the barrier is holding the paper, so the camera is the
-        // point. On web there is no camera worth using, so fall back to a
-        // file chooser (the desk use-case is a PDF or a photo off email).
-        source: kIsWeb ? ImageSource.gallery : ImageSource.camera,
-        // The backend normalises to a 2200px long edge before OCR, so a
-        // larger upload buys nothing and costs the guard time on a gate's
-        // mobile connection. 88% JPEG keeps small print crisp — going lower
-        // starts eating the thin strokes OCR needs.
-        maxWidth: 2400,
-        imageQuality: 88,
-      );
-    } catch (e) {
-      if (!mounted) return;
-      _showScanMessage('Could not open the camera: $e', isError: true);
-      return;
+
+    // On low-RAM Android devices (common at the gate), Android can kill this
+    // process while the system camera activity is fullscreen. When it does,
+    // image_picker stashes the returned photo for us — pick it up here before
+    // asking the guard to shoot the same paper twice.
+    if (!kIsWeb) {
+      try {
+        final lost = await picker.retrieveLostData();
+        if (lost.file != null && lost.exception == null) {
+          shot = lost.file;
+        }
+      } catch (_) {
+        // Recovery is best-effort; a failure here just means we fall through
+        // to the fresh camera launch below.
+      }
+    }
+
+    if (shot == null) {
+      try {
+        shot = await picker.pickImage(
+          // A guard at the barrier is holding the paper, so the camera is the
+          // point. On web there is no camera worth using, so fall back to a
+          // file chooser (the desk use-case is a PDF or a photo off email).
+          source: kIsWeb ? ImageSource.gallery : ImageSource.camera,
+          // The backend normalises to a 2200px long edge before OCR, so a
+          // larger upload buys nothing and costs the guard time on a gate's
+          // mobile connection. 88% JPEG keeps small print crisp — going lower
+          // starts eating the thin strokes OCR needs.
+          maxWidth: 2400,
+          imageQuality: 88,
+        );
+      } catch (e) {
+        if (!mounted) return;
+        _showScanMessage('Could not open the camera: $e', isError: true);
+        return;
+      }
     }
     if (shot == null || !mounted) return;
 
